@@ -1,0 +1,50 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
+
+class Auction extends Model
+{
+    use HasFactory;
+
+    protected $fillable = [
+        'user_id',
+        'title',
+        'description',
+        'starting_price',
+        'current_price',
+        'ends_at',
+        'status',
+    ];
+
+    protected function casts(): array
+    {
+        return [
+            'starting_price' => 'decimal:2',
+            'current_price' => 'decimal:2',
+            'ends_at' => 'datetime',
+        ];
+    }
+
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
+    public function bids(): HasMany
+    {
+        return $this->hasMany(Bid::class)->latest();
+    }
+
+    public function isOpen(): bool
+    {
+        $endsAt = $this->ends_at instanceof Carbon ? $this->ends_at : Carbon::parse($this->ends_at);
+
+        return $this->status === 'open' && $endsAt->isFuture();
+    }
+}
