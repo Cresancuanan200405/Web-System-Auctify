@@ -14,6 +14,7 @@ Route::prefix('auth')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('update-profile', [AuthController::class, 'updateProfile']);
+        Route::delete('delete-account', [AuthController::class, 'deleteAccount']);
     });
 });
 

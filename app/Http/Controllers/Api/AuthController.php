@@ -51,11 +51,7 @@ class AuthController extends Controller
 
     public function logout(Request $request)
     {
-        $token = $request->user()?->currentAccessToken();
-
-        if ($token) {
-            $token->delete();
-        }
+        $request->user()?->tokens()->delete();
 
         return response()->json([
             'message' => 'Signed out successfully.',
@@ -119,6 +115,24 @@ class AuthController extends Controller
         return response()->json([
             'user' => $user,
             'message' => 'Profile updated successfully.',
+        ]);
+    }
+
+    public function deleteAccount(Request $request)
+    {
+        $user = $request->user();
+
+        if (! $user) {
+            return response()->json([
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        $user->tokens()->delete();
+        $user->delete();
+
+        return response()->json([
+            'message' => 'Account deleted successfully.',
         ]);
     }
 }

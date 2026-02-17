@@ -16,15 +16,28 @@ async function request<T>(path: string, options: RequestInit) {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        throw data;
+        throw { response: { data } };
     }
 
     return data as T;
 }
 
+export async function apiGet<T>(path: string) {
+    return request<T>(path, {
+        method: 'GET',
+    });
+}
+
 export async function apiPost<T>(path: string, body: unknown) {
     return request<T>(path, {
         method: 'POST',
+        body: JSON.stringify(body),
+    });
+}
+
+export async function apiPut<T>(path: string, body: unknown) {
+    return request<T>(path, {
+        method: 'PUT',
         body: JSON.stringify(body),
     });
 }
