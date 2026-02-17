@@ -28,3 +28,9 @@ export async function apiPost<T>(path: string, body: unknown) {
         body: JSON.stringify(body),
     });
 }
+
+export async function apiDelete<T>(path: string) {
+    return request<T>(path, {
+        method: 'DELETE',
+    });
+}

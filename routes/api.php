@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AuctionController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
@@ -12,6 +13,7 @@ Route::prefix('auth')->group(function () {
     Route::middleware('auth:sanctum')->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('logout', [AuthController::class, 'logout']);
+        Route::post('update-profile', [AuthController::class, 'updateProfile']);
     });
 });
 
@@ -24,4 +26,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::delete('auctions/{auction}', [AuctionController::class, 'destroy']);
 
     Route::post('auctions/{auction}/bids', [BidController::class, 'store']);
+
+    Route::get('addresses', [AddressController::class, 'index']);
+    Route::post('addresses', [AddressController::class, 'store']);
+    Route::patch('addresses/{address}', [AddressController::class, 'update']);
+    Route::delete('addresses/{address}', [AddressController::class, 'destroy']);
 });
