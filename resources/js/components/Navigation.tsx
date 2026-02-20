@@ -4,6 +4,7 @@ export const Navigation: React.FC = () => {
     const [menuTopOffset, setMenuTopOffset] = useState(190);
     const activeNavWrapperRef = useRef<HTMLDivElement | null>(null);
     const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
+    const [isMegamenuHovering, setIsMegamenuHovering] = useState(false);
 
     const updateMenuTopOffset = (wrapper: HTMLDivElement | null) => {
         if (!wrapper) return;
@@ -24,6 +25,15 @@ export const Navigation: React.FC = () => {
         activeNavWrapperRef.current = null;
         setHoveredMenu(null);
         setMenuTopOffset(190);
+        setIsMegamenuHovering(false);
+    };
+
+    const handleMegamenuEnter = () => {
+        setIsMegamenuHovering(true);
+    };
+
+    const handleMegamenuLeave = () => {
+        setIsMegamenuHovering(false);
     };
 
     useEffect(() => {
@@ -45,13 +55,13 @@ export const Navigation: React.FC = () => {
 
     return (
         <nav
-            className="main-nav"
-            style={{ ['--menu-top-offset' as any]: `${menuTopOffset}px` }}
+            className={`main-nav ${isMegamenuHovering ? 'megamenu-hovering' : ''}`}
+            style={{ '--menu-top-offset': `${menuTopOffset}px` } as React.CSSProperties}
         >
             {/* Electronics */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#electronics" className="nav-item">ELECTRONICS</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Electronics</div>
                         <a href="#new-auctions" className="megamenu-link">New Auctions</a>
@@ -90,7 +100,7 @@ export const Navigation: React.FC = () => {
             {/* Collectibles */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#collectibles" className="nav-item">COLLECTIBLES</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Collectibles</div>
                         <a href="#coins" className="megamenu-link">Rare Coins</a>
@@ -128,7 +138,7 @@ export const Navigation: React.FC = () => {
             {/* Art */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#art" className="nav-item">ART</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Art</div>
                         <a href="#paintings" className="megamenu-link">Paintings</a>
@@ -280,7 +290,7 @@ export const Navigation: React.FC = () => {
             {/* Fashion */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#fashion" className="nav-item">FASHION</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Fashion</div>
                         <a href="#vintage-dresses" className="megamenu-link">Vintage Dresses</a>
@@ -318,7 +328,7 @@ export const Navigation: React.FC = () => {
             {/* Property */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#property" className="nav-item">PROPERTY</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Property</div>
                         <a href="#residential" className="megamenu-link">Residential</a>
@@ -356,7 +366,7 @@ export const Navigation: React.FC = () => {
             {/* Niche */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#niche" className="nav-item">NICHE</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Niche</div>
                         <a href="#rare-finds" className="megamenu-link">Rare Finds</a>
@@ -394,7 +404,7 @@ export const Navigation: React.FC = () => {
             {/* School */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
                 <a href="#school" className="nav-item">SCHOOL</a>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">School</div>
                         <a href="#textbooks" className="megamenu-link">Textbooks</a>

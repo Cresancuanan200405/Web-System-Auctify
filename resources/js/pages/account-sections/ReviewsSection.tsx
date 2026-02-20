@@ -5,6 +5,11 @@ type ReviewsTab = 'to-review' | 'submitted';
 export const ReviewsSection: React.FC = () => {
     const [activeTab, setActiveTab] = useState<ReviewsTab>('to-review');
 
+    const handleContinueShopping = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+
     return (
         <div className="reviews-main">
             <div className="reviews-tabs">
@@ -41,7 +46,7 @@ export const ReviewsSection: React.FC = () => {
                         No products to review yet. Start shopping and write a review after the
                         delivery!
                     </div>
-                    <button type="button" className="reviews-empty-button">
+                    <button type="button" className="reviews-empty-button" onClick={handleContinueShopping}>
                         Continue Shopping
                     </button>
                 </div>
@@ -65,7 +70,7 @@ export const ReviewsSection: React.FC = () => {
                     <div className="reviews-empty-text-main">
                         You haven&apos;t submitted any product reviews yet.
                     </div>
-                    <button type="button" className="reviews-empty-button">
+                    <button type="button" className="reviews-empty-button" onClick={handleContinueShopping}>
                         Continue Shopping
                     </button>
                 </div>

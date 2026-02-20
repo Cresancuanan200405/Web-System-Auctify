@@ -1,8 +1,9 @@
-import React, { useState, FormEvent } from 'react';
+import type { FormEvent } from 'react';
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
+import { InputField, SelectField, Button } from '../components/UI';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
-import { InputField, SelectField, Button } from '../components/UI';
-import { toast } from 'react-toastify';
 
 interface RegisterPageProps {
     onNavigateLogin: () => void;
@@ -10,7 +11,6 @@ interface RegisterPageProps {
 }
 
 type PreferredContent = 'electronics' | 'collectibles' | 'art' | 'luxury' | 'antiques' | 'vehicles' | 'fashion' | 'property' | 'niche' | 'school';
-type Gender = 'female' | 'male';
 
 export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onRegisterSuccess }) => {
     const { login } = useAuth();
@@ -19,7 +19,6 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [birthday, setBirthday] = useState('');
-    const [gender, setGender] = useState<Gender>('female');
     const [preferredContent, setPreferredContent] = useState<PreferredContent>('electronics');
     const [remember, setRemember] = useState(true);
     const [wantNotifications, setWantNotifications] = useState(false);
@@ -52,7 +51,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
                 email,
                 password,
                 password_confirmation: confirmPassword,
-                gender,
+                gender: 'female',
                 preferred_content: preferredContent,
                 want_notifications: wantNotifications
             });
@@ -63,8 +62,16 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
             login(response.token, response.user);
             toast.success('Registration successful! Welcome to Auctify!');
             onRegisterSuccess();
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Registration failed. Please try again.';
+        } catch (err: unknown) {
+            const responseMessage =
+                typeof err === 'object' &&
+                err !== null &&
+                'response' in err &&
+                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                    : undefined;
+
+            const errorMessage = responseMessage || 'Registration failed. Please try again.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {

@@ -1,6 +1,11 @@
 import React from 'react';
 
 export const CashbackSection: React.FC = () => {
+    const handleGoShopping = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+
     return (
         <div className="cashback-main">
             <div className="cashback-header">
@@ -42,7 +47,7 @@ export const CashbackSection: React.FC = () => {
                     </svg>
                 </div>
                 <div className="cashback-empty-text">Start shopping now to earn cashback!</div>
-                <button type="button" className="cashback-empty-button">
+                <button type="button" className="cashback-empty-button" onClick={handleGoShopping}>
                     Let&apos;s go Shopping!
                 </button>
             </div>

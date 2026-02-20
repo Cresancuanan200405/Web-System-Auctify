@@ -17,8 +17,21 @@ class Address extends Model
         'city',
         'barangay',
         'street',
+        'building_name',
+        'unit_floor',
+        'postal_code',
+        'notes',
         'house_no',
     ];
+
+    protected $appends = [
+        'street_address',
+    ];
+
+    public function getStreetAddressAttribute(): string
+    {
+        return $this->street;
+    }
 
     public function user(): BelongsTo
     {

@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useCards } from '../hooks/useCards';
+import type { AccountSection } from '../types';
 import { formatCurrency } from '../utils/helpers';
-import { AccountSection } from '../types';
 
 interface HeaderProps {
     onNavigateHome: () => void;
     onNavigateLogin: () => void;
     onNavigateRegister: () => void;
     onNavigateAccount: (section?: AccountSection) => void;
+    onNavigateOrdersLogin: () => void;
+    onNavigateBag: () => void;
     onLogout: () => void;
 }
 
@@ -17,12 +19,24 @@ export const Header: React.FC<HeaderProps> = ({
     onNavigateLogin,
     onNavigateRegister,
     onNavigateAccount,
+    onNavigateOrdersLogin,
+    onNavigateBag,
     onLogout
 }) => {
     const { authUser } = useAuth();
     const { savedCards, mainCardId } = useCards();
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+    const [searchQuery, setSearchQuery] = useState('');
 
     const mainCard = savedCards.find(card => card.id === mainCardId);
+
+    const handleSearch = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (searchQuery.trim()) {
+            // TODO: Implement search navigation
+            console.log('Search for:', searchQuery);
+        }
+    };
 
     const getCardLogo = (type: string) => {
         const extension = type === 'mastercard' ? 'jpg' : 'png';
@@ -33,15 +47,20 @@ export const Header: React.FC<HeaderProps> = ({
     return (
         <header className="topbar">
             <a onClick={onNavigateHome} className="brand">AUCTIFY</a>
-            <div className="search-bar">
-                <input type="text" placeholder="Search for auctions, items, categories..." />
-                <button className="search-btn">
+            <form className="search-bar" onSubmit={handleSearch}>
+                <input 
+                    type="text" 
+                    placeholder="Search for auctions, items, categories..." 
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <button type="submit" className="search-btn" aria-label="Search">
                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                     </svg>
                 </button>
-            </div>
+            </form>
             <div className="actions">
                 <div className="dropdown-wrapper">
                     <span
@@ -142,7 +161,7 @@ export const Header: React.FC<HeaderProps> = ({
                                     <span>FAQ</span>
                                 </div>
                                 <div
-                                    onClick={onLogout}
+                                    onClick={() => setIsLogoutModalOpen(true)}
                                     className="dropdown-item clickable"
                                 >
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -170,12 +189,49 @@ export const Header: React.FC<HeaderProps> = ({
                                     </svg>
                                     Register
                                 </div>
+                                <div className="dropdown-item clickable" onClick={onNavigateOrdersLogin}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="3" y="4" width="18" height="16" rx="2" />
+                                        <path d="M7 8h10M7 12h10M7 16h6" />
+                                    </svg>
+                                    <span>Orders</span>
+                                </div>
+                                <div className="dropdown-item">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <circle cx="12" cy="12" r="10" />
+                                        <path d="M9.09 9A3 3 0 0 1 15 10c0 2-3 3-3 3" />
+                                        <line x1="12" y1="17" x2="12.01" y2="17" />
+                                    </svg>
+                                    <span>FAQ</span>
+                                </div>
                             </>
                         )}
                     </div>
                 </div>
+                <span
+                    className="fav-link"
+                    aria-label="Favorites"
+                    onClick={() => (authUser ? onNavigateAccount('wishlist') : onNavigateLogin())}
+                >
+                    <svg
+                        width="22"
+                        height="22"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                    >
+                        <path d="M12 21s-5.5-3.2-8.2-6C1.7 12.8 1.5 9.3 3.7 7.1 5.3 5.5 7.9 5.4 9.6 6.7L12 8.9l2.4-2.2c1.7-1.3 4.3-1.2 5.9.4 2.2 2.2 2 5.7-.1 7.9-2.7 2.8-8.2 6-8.2 6z" />
+                    </svg>
+                </span>
                 <div className="dropdown-wrapper bag-dropdown">
-                    <span className="dropdown-trigger" aria-label="Shopping Bag">
+                    <span
+                        className="dropdown-trigger"
+                        aria-label="Shopping Bag"
+                        role="button"
+                        tabIndex={0}
+                        onClick={onNavigateBag}
+                    >
                         <svg
                             width="24"
                             height="24"
@@ -191,22 +247,76 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="dropdown-menu bag-menu">
                         <div className="bag-empty-state">
                             <div className="bag-icon-wrapper">
-                                <svg className="bag-icon" width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
-                                    <rect x="3" y="7" width="18" height="13" rx="2" ry="2"/>
-                                    <path d="M8 7V5a4 4 0 0 1 8 0v2"/>
-                                    <path d="M12 12v3" strokeLinecap="round"/>
-                                    <circle cx="12" cy="15" r="0.5" fill="currentColor"/>
+                                <svg
+                                    className="bag-icon"
+                                    width="80"
+                                    height="80"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="1.5"
+                                >
+                                    <rect x="3" y="7" width="18" height="13" rx="2" ry="2" />
+                                    <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+                                    <path d="M12 12v3" strokeLinecap="round" />
+                                    <circle cx="12" cy="15" r="0.5" fill="currentColor" />
                                 </svg>
                                 <div className="sparkle sparkle-1">✨</div>
                                 <div className="sparkle sparkle-2">✨</div>
                             </div>
                             <h3 className="bag-title">Your Bag is empty.</h3>
                             <p className="bag-subtitle">Start filling it up with your favourites.</p>
-                            <button className="bag-cta-btn">See what's new</button>
+                            <button
+                                type="button"
+                                className="bag-cta-btn"
+                                onClick={onNavigateHome}
+                            >
+                                Let's go Shopping!
+                            </button>
                         </div>
                     </div>
                 </div>
             </div>
+
+            {isLogoutModalOpen && (
+                <div
+                    className="delete-modal-overlay"
+                    onClick={() => setIsLogoutModalOpen(false)}
+                >
+                    <div
+                        className="delete-modal"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="delete-modal-header">
+                            <h2 className="delete-modal-title">Logout from account?</h2>
+                        </div>
+                        <div className="delete-modal-body">
+                            <p className="delete-modal-text">
+                                Are you sure you want to log out? You will need to sign in again to access your account.
+                            </p>
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-modal-cancel"
+                                    onClick={() => setIsLogoutModalOpen(false)}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    className="delete-modal-confirm"
+                                    onClick={() => {
+                                        setIsLogoutModalOpen(false);
+                                        onLogout();
+                                    }}
+                                >
+                                    Logout
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </header>
     );
 };

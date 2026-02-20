@@ -97,9 +97,14 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAc
                                                 autoClose: 3500,
                                             });
                                             onAccountDeleted();
-                                        } catch (apiError: any) {
+                                        } catch (apiError: unknown) {
                                             const errorMessage =
-                                                (apiError && (apiError.message as string)) ||
+                                                (typeof apiError === 'object' &&
+                                                    apiError !== null &&
+                                                    'message' in apiError &&
+                                                    typeof (apiError as { message?: unknown }).message === 'string'
+                                                    ? (apiError as { message: string }).message
+                                                    : undefined) ||
                                                 'Something went wrong while deleting your account.';
 
                                             toast.error(errorMessage);

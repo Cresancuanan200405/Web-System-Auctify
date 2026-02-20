@@ -1,5 +1,5 @@
 import React from 'react';
-import { AccountSection } from '../types';
+import type { AccountSection } from '../types';
 
 interface AccountSidebarProps {
     activeSection: AccountSection;

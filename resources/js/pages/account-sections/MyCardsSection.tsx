@@ -1,16 +1,16 @@
-import React, { useState, FormEvent } from 'react';
+import type { FormEvent } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'react-toastify';
 import { useCards } from '../../hooks/useCards';
-import { Card } from '../../types';
-import { generateId } from '../../utils/helpers';
+import type { Card } from '../../types';
 
 type CardActionModal = {
-    kind: 'remove' | 'set-main';
+    kind: 'remove';
     cardId: number;
 };
 
 export const MyCardsSection: React.FC = () => {
-    const { savedCards, mainCardId, addCard, deleteCard, setMainCardId, getCardDisplayName } = useCards();
+    const { savedCards, addCard, deleteCard, getCardDisplayName } = useCards();
     const [isAddingCard, setIsAddingCard] = useState(false);
     const [cardType, setCardType] = useState<Card['type']>('visa');
     const [number, setNumber] = useState('');
@@ -41,9 +41,6 @@ export const MyCardsSection: React.FC = () => {
         };
 
         addCard(newCard);
-        if (mainCardId === null && savedCards.length === 0) {
-            setMainCardId(newCard.id);
-        }
         toast.success('Card added successfully with ₱10,000 balance!', {
             autoClose: 3500,
         });
@@ -54,16 +51,6 @@ export const MyCardsSection: React.FC = () => {
     const handleRemoveCard = (card: Card) => {
         setCardActionModal({
             kind: 'remove',
-            cardId: card.id,
-        });
-    };
-
-    const handleSetMainCard = (card: Card) => {
-        if (mainCardId === card.id) {
-            return;
-        }
-        setCardActionModal({
-            kind: 'set-main',
             cardId: card.id,
         });
     };
@@ -85,18 +72,9 @@ export const MyCardsSection: React.FC = () => {
 
         const displayName = getCardDisplayName(targetCard.type);
 
-        if (cardActionModal.kind === 'remove') {
-            deleteCard(targetCard.id);
-            toast.success('Card removed successfully.', {
-                autoClose: 3500,
-            });
-            setCardActionModal(null);
-            return;
-        }
-
-        setMainCardId(targetCard.id);
-        toast.success(`${displayName} card set as main card.`, {
-            autoClose: 2500,
+        deleteCard(targetCard.id);
+        toast.success(`${displayName} card removed successfully.`, {
+            autoClose: 3500,
         });
         setCardActionModal(null);
     };
@@ -167,14 +145,6 @@ export const MyCardsSection: React.FC = () => {
                                 <div className="saved-card-balance">
                                     Balance: ₱{card.balance.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </div>
-                                <button
-                                    type="button"
-                                    className={`saved-card-action ${mainCardId === card.id ? 'main' : ''}`}
-                                    onClick={() => handleSetMainCard(card)}
-                                    disabled={mainCardId === card.id}
-                                >
-                                    {mainCardId === card.id ? '✓ Main Card' : 'Set as Main'}
-                                </button>
                             </div>
                         ))}
                         <button
@@ -293,21 +263,16 @@ export const MyCardsSection: React.FC = () => {
                 }
 
                 const displayName = getCardDisplayName(targetCard.type);
-                const isRemoveAction = cardActionModal.kind === 'remove';
 
                 return (
                     <div className="delete-modal-overlay" onClick={closeCardActionModal}>
                         <div className="delete-modal" onClick={(event) => event.stopPropagation()}>
                             <div className="delete-modal-header">
-                                <h2 className="delete-modal-title">
-                                    {isRemoveAction ? 'Remove this card?' : 'Set as main card?'}
-                                </h2>
+                                <h2 className="delete-modal-title">Remove this card?</h2>
                             </div>
                             <div className="delete-modal-body">
                                 <p className="delete-modal-text">
-                                    {isRemoveAction
-                                        ? `Are you sure you want to remove your ${displayName} card ending in ${targetCard.number.slice(-4)}?`
-                                        : `Set ${displayName} card ending in ${targetCard.number.slice(-4)} as your main card for transactions?`}
+                                    {`Are you sure you want to remove your ${displayName} card ending in ${targetCard.number.slice(-4)}?`}
                                 </p>
                                 <div className="delete-modal-actions">
                                     <button
@@ -319,10 +284,10 @@ export const MyCardsSection: React.FC = () => {
                                     </button>
                                     <button
                                         type="button"
-                                        className={isRemoveAction ? 'delete-modal-confirm' : 'confirm-modal-confirm'}
+                                        className="delete-modal-confirm"
                                         onClick={confirmCardAction}
                                     >
-                                        {isRemoveAction ? 'Remove card' : 'Set as main'}
+                                        Remove card
                                     </button>
                                 </div>
                             </div>

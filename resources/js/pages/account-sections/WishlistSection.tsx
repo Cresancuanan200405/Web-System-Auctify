@@ -1,6 +1,11 @@
 import React from 'react';
 
 export const WishlistSection: React.FC = () => {
+    const handleGoShopping = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+
     return (
         <div className="wishlist-main">
             <div className="wishlist-empty-card">
@@ -15,7 +20,7 @@ export const WishlistSection: React.FC = () => {
                 <div className="wishlist-text">
                     Start saving auctions you love and find them all in one place.
                 </div>
-                <button type="button" className="wishlist-button">
+                <button type="button" className="wishlist-button" onClick={handleGoShopping}>
                     Let's go Shopping!
                 </button>
             </div>

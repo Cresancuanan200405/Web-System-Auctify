@@ -1,8 +1,9 @@
-import React, { useState, FormEvent } from 'react';
+import type { FormEvent } from 'react';
+import React, { useState } from 'react';
+import { toast } from 'react-toastify';
+import { InputField, Button } from '../components/UI';
 import { useAuth } from '../contexts/AuthContext';
 import { authService } from '../services/api';
-import { InputField, Button } from '../components/UI';
-import { toast } from 'react-toastify';
 
 interface LoginPageProps {
     onNavigateRegister: () => void;
@@ -27,8 +28,16 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
             login(response.token, response.user);
             toast.success('Login successful!');
             onLoginSuccess();
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Login failed. Please check your credentials.';
+        } catch (err: unknown) {
+            const responseMessage =
+                typeof err === 'object' &&
+                err !== null &&
+                'response' in err &&
+                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                    : undefined;
+
+            const errorMessage = responseMessage || 'Login failed. Please check your credentials.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {

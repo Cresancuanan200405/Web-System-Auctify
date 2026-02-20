@@ -1,31 +1,51 @@
-import React, { FormEvent, useEffect, useMemo, useState } from 'react';
+import type { FormEvent} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import * as apiClient from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import type { AccountSection, User } from '../../types';
+import { addressService, authService } from '../../services/api';
+import type { AccountSection, Address, User } from '../../types';
 
 interface DetailsSectionProps {
     onNavigateSection: (section: AccountSection) => void;
 }
 
-type SavedAddress = {
-    id: string | number;
-    firstName?: string;
-    lastName?: string;
-    first_name?: string;
-    last_name?: string;
-    street?: string;
-    street_address?: string;
-    houseNo?: string;
-    house_no?: string;
-    barangay?: string;
-    city?: string;
-    province?: string;
-    region?: string;
+// Utility function to format ISO date strings to YYYY-MM-DD format
+const formatBirthdayForInput = (dateString: string): string => {
+    if (!dateString) return '';
+    try {
+        // Handle ISO format like "2005-10-29T00:00:00.000000Z"
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        // Format as YYYY-MM-DD for the date input
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    } catch {
+        return '';
+    }
+};
+
+// Utility function to format ISO date strings for display (YYYY-MM-DD)
+const formatBirthdayForDisplay = (dateString: string): string => {
+    if (!dateString) return '';
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return '';
+        const year = date.getUTCFullYear();
+        const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+        const day = String(date.getUTCDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    } catch {
+        return '';
+    }
 };
 
 export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSection }) => {
-    const { authUser, updateUser } = useAuth();
+    const { authUser, updateUser, logout } = useAuth();
+    const passwordCooldownMs = 10 * 60 * 1000;
+    const lastPasswordChangeKey = 'last_password_change_at';
     const [isEditingAccount, setIsEditingAccount] = useState(false);
     const [editEmail, setEditEmail] = useState('');
     const [editFirstName, setEditFirstName] = useState('');
@@ -36,22 +56,76 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
     const [editNewPassword, setEditNewPassword] = useState('');
     const [editConfirmPassword, setEditConfirmPassword] = useState('');
     const [accountEditError, setAccountEditError] = useState('');
-    const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+    const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+    const [birthday, setBirthday] = useState('');
+    const [gender, setGender] = useState<'female' | 'male' | ''>('');
 
-    const birthday = useMemo(() => localStorage.getItem('user_birthday') || '', []);
-    const gender = useMemo(() => (localStorage.getItem('user_gender') as 'female' | 'male') || '', []);
+    const userScopeKey = useMemo(() => {
+        if (!authUser) return 'anonymous';
+        if (authUser.id) return `user-${authUser.id}`;
+        return `email-${authUser.email.toLowerCase()}`;
+    }, [authUser]);
+
+    const birthdayStorageKey = `user_birthday_${userScopeKey}`;
+    const genderStorageKey = `user_gender_${userScopeKey}`;
 
     useEffect(() => {
-        const stored = localStorage.getItem('saved_addresses');
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored) as SavedAddress[];
-                setSavedAddresses(parsed);
-            } catch {
-                setSavedAddresses([]);
-            }
+        let timeoutId: number | null = null;
+
+        if (!authUser) {
+            timeoutId = window.setTimeout(() => {
+                setBirthday('');
+                setGender('');
+            }, 0);
+        } else {
+            const savedBirthday = localStorage.getItem(birthdayStorageKey) || '';
+            const savedGender = (localStorage.getItem(genderStorageKey) as 'female' | 'male' | null) || '';
+
+            timeoutId = window.setTimeout(() => {
+                setBirthday(savedBirthday);
+                setGender(savedGender);
+            }, 0);
         }
-    }, []);
+
+        return () => {
+            if (timeoutId !== null) {
+                window.clearTimeout(timeoutId);
+            }
+        };
+    }, [authUser, birthdayStorageKey, genderStorageKey]);
+
+    useEffect(() => {
+        if (!authUser) {
+            const timeoutId = window.setTimeout(() => {
+                setSavedAddresses([]);
+            }, 0);
+
+            return () => {
+                window.clearTimeout(timeoutId);
+            };
+        }
+
+        let isMounted = true;
+
+        const loadSavedAddresses = async () => {
+            try {
+                const addresses = await addressService.getAddresses();
+                if (isMounted) {
+                    setSavedAddresses(addresses);
+                }
+            } catch {
+                if (isMounted) {
+                    setSavedAddresses([]);
+                }
+            }
+        };
+
+        loadSavedAddresses();
+
+        return () => {
+            isMounted = false;
+        };
+    }, [authUser]);
 
     const openAccountEdit = () => {
         if (!authUser) return;
@@ -63,8 +137,8 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         setEditFirstName(first);
         setEditLastName(last);
         setEditEmail(authUser.email);
-        setEditGender(gender || 'female');
-        setEditBirthday(birthday || '');
+        setEditGender((gender === 'female' || gender === 'male') ? gender : 'female');
+        setEditBirthday(formatBirthdayForInput(birthday));
         setEditPassword('');
         setEditNewPassword('');
         setEditConfirmPassword('');
@@ -86,6 +160,15 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         }
 
         if (editPassword || editNewPassword || editConfirmPassword) {
+            const lastChangedRaw = localStorage.getItem(lastPasswordChangeKey);
+            const lastChangedAt = lastChangedRaw ? Number(lastChangedRaw) : 0;
+            if (lastChangedAt && Date.now() - lastChangedAt < passwordCooldownMs) {
+                const remainingMs = passwordCooldownMs - (Date.now() - lastChangedAt);
+                const remainingMinutes = Math.ceil(remainingMs / 60000);
+                setAccountEditError(`Password was changed recently. Please wait ${remainingMinutes} minute(s) before changing it again.`);
+                return;
+            }
+
             if (!editPassword) {
                 setAccountEditError('Current password is required to change password.');
                 return;
@@ -119,16 +202,14 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 updateData.password_confirmation = editConfirmPassword;
             }
 
-            const response = await apiClient.apiPost<{ user: { name: string; email: string }; token?: string }>(
+            const response = await apiClient.apiPost<{ user: User; token?: string }>(
                 '/api/auth/update-profile',
                 updateData
             );
 
-            const mergedName = `${editFirstName} ${editLastName}`.trim();
             const updatedUser = {
                 ...authUser,
-                name: mergedName || authUser?.name || '',
-                email: editEmail,
+                ...response.user,
             } satisfies User;
 
             updateUser(updatedUser);
@@ -137,15 +218,30 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 localStorage.setItem('auth_token', response.token);
             }
 
-            localStorage.setItem('user_birthday', editBirthday);
-            localStorage.setItem('user_gender', editGender);
+            localStorage.setItem(birthdayStorageKey, editBirthday);
+            localStorage.setItem(genderStorageKey, editGender);
+            setBirthday(editBirthday);
+            setGender(editGender);
 
             setIsEditingAccount(false);
 
             if (editPassword && editNewPassword) {
-                toast.success('Profile and password updated successfully!', {
+                localStorage.setItem(lastPasswordChangeKey, String(Date.now()));
+
+                toast.success('Password updated. Please log in again.', {
                     autoClose: 3500,
                 });
+
+                try {
+                    await authService.logout();
+                } catch {
+                    // Ignore logout API failures and continue with local logout.
+                }
+
+                logout();
+                localStorage.setItem('ui_auth_mode', 'login');
+                window.history.pushState({}, '', '/login');
+                window.dispatchEvent(new PopStateEvent('popstate'));
             } else {
                 toast.success('Profile updated successfully!', {
                     autoClose: 3500,
@@ -191,7 +287,7 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                     </div>
                     <div className="account-field-group">
                         <div className="account-field-label">Birthday</div>
-                        <div className="account-field-value">{birthday || '-'}</div>
+                        <div className="account-field-value">{formatBirthdayForDisplay(birthday) || '-'}</div>
                     </div>
                     <div className="account-field-group">
                         <div className="account-field-label">Gender</div>
@@ -237,17 +333,14 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 ) : (
                     <div className="account-card-body">
                         {savedAddresses.slice(0, 2).map((address) => {
-                            const first = address.firstName || address.first_name || '';
-                            const last = address.lastName || address.last_name || '';
-                            const street = address.street || address.street_address || '';
-                            const houseNo = address.houseNo || address.house_no || '';
+                            const houseNo = address.building_name || '';
                             return (
                                 <div key={address.id} className="account-field-group">
                                     <div className="account-field-label">
-                                        {first} {last}
+                                        {address.first_name} {address.last_name}
                                     </div>
                                     <div className="account-field-value">
-                                        {street}
+                                        {address.street_address}
                                         {houseNo && `, ${houseNo}`}, {address.barangay}, {address.city}
                                     </div>
                                 </div>
@@ -280,15 +373,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                         </div>
 
                         <form className="account-edit-form" onSubmit={handleAccountEditSave}>
-                            <div className="field">
-                                <label htmlFor="editEmail">Email Address</label>
-                                <input
-                                    id="editEmail"
-                                    type="email"
-                                    value={editEmail}
-                                    onChange={(event) => setEditEmail(event.target.value)}
-                                    required
-                                />
+                            <div className="account-edit-email-row">
+                                <div className="account-edit-email-label">Email Address</div>
+                                <div className="account-edit-email-value">{authUser.email}</div>
                             </div>
 
                             <div className="field">

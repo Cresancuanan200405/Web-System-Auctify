@@ -1,4 +1,5 @@
-import React, { FormEvent, useMemo, useState } from 'react';
+import type { FormEvent} from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import * as apiClient from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
@@ -16,6 +17,8 @@ type AuthResponse = {
         id: number;
         name: string;
         email: string;
+        birthday?: string | null;
+        gender?: string | null;
     };
 };
 
@@ -24,15 +27,45 @@ type AuthErrors = {
     errors?: Record<string, string[]>;
 };
 
+type PreferredContent =
+    | 'electronics'
+    | 'collectibles'
+    | 'art'
+    | 'luxury'
+    | 'antiques'
+    | 'vehicles'
+    | 'fashion'
+    | 'property'
+    | 'niche'
+    | 'school';
+
+const PREFERRED_CONTENT_OPTIONS: PreferredContent[] = [
+    'electronics',
+    'collectibles',
+    'art',
+    'luxury',
+    'antiques',
+    'vehicles',
+    'fashion',
+    'property',
+    'niche',
+    'school'
+];
+
 export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSuccess }) => {
     const { login } = useAuth();
+    const apiBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || 'http://127.0.0.1:8000';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [passwordConfirmation, setPasswordConfirmation] = useState('');
     const [name, setName] = useState('');
     const [birthday, setBirthday] = useState('');
-    const [preferredContent, setPreferredContent] = useState<'electronics' | 'collectibles' | 'art' | 'luxury' | 'antiques' | 'vehicles' | 'fashion' | 'property' | 'niche' | 'school'>(() => {
+    const [preferredContent, setPreferredContent] = useState<PreferredContent>(() => {
         const stored = localStorage.getItem('preferred_content');
-        return (stored as any) || 'electronics';
+        if (stored && PREFERRED_CONTENT_OPTIONS.includes(stored as PreferredContent)) {
+            return stored as PreferredContent;
+        }
+        return 'electronics';
     });
     const [remember, setRemember] = useState(true);
     const [wantNotifications, setWantNotifications] = useState(false);
@@ -40,7 +73,70 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
 
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const googleToken = params.get('google_token');
+        const googleUser = params.get('google_user');
+        const googleError = params.get('google_error');
+        const googleEmail = params.get('google_email');
+
+        if (googleError) {
+            if (googleError === 'account_not_found') {
+                const emailSuffix = googleEmail ? ` (${googleEmail})` : '';
+                setError(`Google account${emailSuffix} is not registered yet. Please use Sign up with Google first.`);
+                toast.warn('Google account is not registered. Use Sign up with Google first.', { autoClose: 4000 });
+            } else if (googleError === 'account_already_exists') {
+                setError('This Google account already exists. Please login with Google instead.');
+                toast.info('Account already exists. Please login with Google.', { autoClose: 3500 });
+            } else {
+                setError('Google sign-in failed. Please try again.');
+            }
+
+            window.history.replaceState({}, '', window.location.pathname);
+            return;
+        }
+
+        if (!googleToken || !googleUser) return;
+
+        try {
+            const parsedUser = JSON.parse(atob(googleUser)) as User;
+            localStorage.setItem('auth_token', googleToken);
+            localStorage.setItem('auth_user', JSON.stringify(parsedUser));
+            localStorage.setItem('account_section', 'details');
+
+            // Store birthday and gender in user-scoped localStorage keys
+            if (parsedUser && parsedUser.id) {
+                const userScopeKey = `user-${parsedUser.id}`;
+                if (parsedUser.birthday) {
+                    localStorage.setItem(`user_birthday_${userScopeKey}`, parsedUser.birthday);
+                }
+                if (parsedUser.gender) {
+                    localStorage.setItem(`user_gender_${userScopeKey}`, parsedUser.gender);
+                }
+            }
+
+            login(googleToken, parsedUser);
+            onAuthSuccess();
+            toast.success('Signed in with Google successfully.', { autoClose: 3500 });
+        } catch {
+            setError('Google sign-in failed. Please try again.');
+        } finally {
+            window.history.replaceState({}, '', window.location.pathname);
+        }
+    }, [login, onAuthSuccess]);
+
     const isRegister = mode === 'register';
+
+    useEffect(() => {
+        // Clear form when switching between login and register
+        setEmail('');
+        setPassword('');
+        setPasswordConfirmation('');
+        setName('');
+        setBirthday('');
+        setMessage('');
+        setError('');
+    }, [mode]);
 
     const submitLabel = useMemo(() => (isRegister ? 'Create Account' : 'Login'), [isRegister]);
 
@@ -52,7 +148,13 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
 
         try {
             const payload = isRegister
-                ? { name, email, password, password_confirmation: password }
+                ? {
+                      name,
+                      email,
+                      password,
+                      password_confirmation: passwordConfirmation,
+                      birthday: birthday || null,
+                  }
                 : { email, password, remember };
 
             const endpoint = isRegister ? '/api/auth/register' : '/api/auth/login';
@@ -62,8 +164,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             localStorage.setItem('auth_user', JSON.stringify(response.user));
             localStorage.setItem('account_section', 'details');
 
-            if (birthday) {
-                localStorage.setItem('user_birthday', birthday);
+            // Store birthday and gender in user-scoped localStorage keys
+            if (response.user && response.user.id) {
+                const userScopeKey = `user-${response.user.id}`;
+                if (response.user.birthday) {
+                    localStorage.setItem(`user_birthday_${userScopeKey}`, response.user.birthday);
+                }
+                if (response.user.gender) {
+                    localStorage.setItem(`user_gender_${userScopeKey}`, response.user.gender);
+                }
             }
 
             login(response.token, response.user as User);
@@ -121,40 +230,95 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
 
             <div className="social-row">
                 <img src="/icons/facebook.png" alt="Facebook" className="social-btn" />
-                <img src="/icons/google.png" alt="Google" className="social-btn" />
+                <button
+                    type="button"
+                    className="social-btn"
+                    onClick={() => {
+                        const frontendOrigin = window.location.origin;
+                        const flow = isRegister ? 'register' : 'login';
+                        const redirectUrl = `${apiBaseUrl}/api/auth/google/redirect?frontend=${encodeURIComponent(frontendOrigin)}&flow=${flow}`;
+                        window.location.href = redirectUrl;
+                    }}
+                    aria-label="Continue with Google"
+                >
+                    <img src="/icons/google.png" alt="Google" />
+                </button>
             </div>
 
             <div className="divider">Or continue with</div>
 
+            <p className="auth-google-hint">
+    
+            </p>
+
             <form onSubmit={handleSubmit}>
+                <div className={`field floating-field ${email ? 'has-value' : ''}`}>
+                    <label htmlFor="email">Email Address *</label>
+                    <input
+                        id="email"
+                        type="email"
+                        value={email}
+                        onChange={(event) => setEmail(event.target.value)}
+                        placeholder=" "
+                        required
+                    />
+                </div>
+                <div className={`field floating-field ${password ? 'has-value' : ''}`}>
+                    <label htmlFor="password">Password *</label>
+                    <input
+                        id="password"
+                        type="password"
+                        value={password}
+                        onChange={(event) => setPassword(event.target.value)}
+                        placeholder=" "
+                        required
+                    />
+                </div>
+
+                {isRegister && (
+                    <div className={`field floating-field ${passwordConfirmation ? 'has-value' : ''}`}>
+                        <label htmlFor="passwordConfirmation">Confirm Password *</label>
+                        <input
+                            id="passwordConfirmation"
+                            type="password"
+                            value={passwordConfirmation}
+                            onChange={(event) => setPasswordConfirmation(event.target.value)}
+                            placeholder=" "
+                            required
+                        />
+                    </div>
+                )}
+
                 {isRegister && (
                     <>
-                        <div className="field">
+                        <div className={`field floating-field ${name ? 'has-value' : ''}`}>
                             <label htmlFor="name">First Name *</label>
                             <input
                                 id="name"
                                 value={name}
                                 onChange={(event) => setName(event.target.value)}
-                                placeholder="Your first name"
+                                placeholder=" "
                                 required
                             />
                         </div>
-                        <div className="field">
+
+                        <div className="field birthday-field">
                             <label htmlFor="birthday">Birthday (optional)</label>
                             <input
                                 id="birthday"
                                 type="date"
                                 value={birthday}
                                 onChange={(event) => setBirthday(event.target.value)}
-                                className="date-input"
+                                className="date-input input-field"
                             />
                         </div>
-                        <div className="field">
+
+                        <div className={`field floating-field ${preferredContent ? 'has-value' : ''}`}>
                             <label htmlFor="category">Preferred auction category *</label>
                             <select
                                 id="category"
                                 value={preferredContent}
-                                onChange={(event) => setPreferredContent(event.target.value as any)}
+                                onChange={(event) => setPreferredContent(event.target.value as PreferredContent)}
                                 required
                             >
                                 <option value="electronics">Electronics</option>
@@ -171,28 +335,6 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                         </div>
                     </>
                 )}
-                <div className="field">
-                    <label htmlFor="email">Email Address *</label>
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(event) => setEmail(event.target.value)}
-                        placeholder="name@example.com"
-                        required
-                    />
-                </div>
-                <div className="field">
-                    <label htmlFor="password">Password *</label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(event) => setPassword(event.target.value)}
-                        placeholder="********"
-                        required
-                    />
-                </div>
 
                 {isRegister && (
                     <div className="checkbox-group">
@@ -225,7 +367,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                             />
                             Keep me signed in
                         </label>
-                        <span>Forgot Password?</span>
+                        <button type="button" className="auth-link">Forgot Password?</button>
                     </div>
                 )}
 
@@ -240,6 +382,9 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             <div className="hint">
                 By continuing you agree to our Terms and Conditions and Privacy Policy.
             </div>
+            <button type="button" className="auth-skip" onClick={onAuthSuccess}>
+                SKIP
+            </button>
         </section>
     );
 };

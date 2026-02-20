@@ -32,21 +32,41 @@ class AddressController extends Controller
                 'province' => 'required|string|max:255',
                 'city' => 'required|string|max:255',
                 'barangay' => 'required|string|max:255',
-                'street' => 'required|string|max:255',
-                'house_no' => 'required|string|max:50',
+                'street_address' => 'required|string|max:255',
+                'building_name' => 'nullable|string|max:255',
+                'unit_floor' => 'nullable|string|max:255',
+                'postal_code' => 'nullable|string|max:20',
+                'notes' => 'nullable|string|max:500',
             ]);
+
+            // Map frontend fields to database columns
+            $addressData = [
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'phone' => $validated['phone'],
+                'region' => $validated['region'],
+                'province' => $validated['province'],
+                'city' => $validated['city'],
+                'barangay' => $validated['barangay'],
+                'street' => $validated['street_address'],
+                'building_name' => $validated['building_name'] ?? null,
+                'unit_floor' => $validated['unit_floor'] ?? null,
+                'postal_code' => $validated['postal_code'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'house_no' => $this->buildHouseNoFromPayload($validated),
+            ];
 
             // Check if an identical address already exists for this user
             $existingAddress = $request->user()->addresses()
-                ->where('first_name', $validated['first_name'])
-                ->where('last_name', $validated['last_name'])
-                ->where('phone', $validated['phone'])
-                ->where('region', $validated['region'])
-                ->where('province', $validated['province'])
-                ->where('city', $validated['city'])
-                ->where('barangay', $validated['barangay'])
-                ->where('street', $validated['street'])
-                ->where('house_no', $validated['house_no'])
+                ->where('first_name', $addressData['first_name'])
+                ->where('last_name', $addressData['last_name'])
+                ->where('phone', $addressData['phone'])
+                ->where('region', $addressData['region'])
+                ->where('province', $addressData['province'])
+                ->where('city', $addressData['city'])
+                ->where('barangay', $addressData['barangay'])
+                ->where('street', $addressData['street'])
+                ->where('house_no', $addressData['house_no'])
                 ->first();
 
             if ($existingAddress) {
@@ -55,7 +75,7 @@ class AddressController extends Controller
                 ], 409);
             }
 
-            $address = $request->user()->addresses()->create($validated);
+            $address = $request->user()->addresses()->create($addressData);
 
             return response()->json($address, 201);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -96,11 +116,30 @@ class AddressController extends Controller
                 'province' => 'required|string|max:255',
                 'city' => 'required|string|max:255',
                 'barangay' => 'required|string|max:255',
-                'street' => 'required|string|max:255',
-                'house_no' => 'required|string|max:50',
+                'street_address' => 'required|string|max:255',
+                'building_name' => 'nullable|string|max:255',
+                'unit_floor' => 'nullable|string|max:255',
+                'postal_code' => 'nullable|string|max:20',
+                'notes' => 'nullable|string|max:500',
             ]);
 
-            $address->update($validated);
+            $addressData = [
+                'first_name' => $validated['first_name'],
+                'last_name' => $validated['last_name'],
+                'phone' => $validated['phone'],
+                'region' => $validated['region'],
+                'province' => $validated['province'],
+                'city' => $validated['city'],
+                'barangay' => $validated['barangay'],
+                'street' => $validated['street_address'],
+                'building_name' => $validated['building_name'] ?? null,
+                'unit_floor' => $validated['unit_floor'] ?? null,
+                'postal_code' => $validated['postal_code'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+                'house_no' => $this->buildHouseNoFromPayload($validated),
+            ];
+
+            $address->update($addressData);
 
             return response()->json($address);
         } catch (\Illuminate\Validation\ValidationException $e) {
@@ -142,5 +181,35 @@ class AddressController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Build a single house_no string from optional building/unit/postal/notes fields.
+     */
+    private function buildHouseNoFromPayload(array $data): string
+    {
+        $parts = [];
+
+        if (!empty($data['building_name'] ?? null)) {
+            $parts[] = $data['building_name'];
+        }
+
+        if (!empty($data['unit_floor'] ?? null)) {
+            $parts[] = 'Unit/Floor: ' . $data['unit_floor'];
+        }
+
+        if (!empty($data['postal_code'] ?? null)) {
+            $parts[] = 'Postal: ' . $data['postal_code'];
+        }
+
+        if (!empty($data['notes'] ?? null)) {
+            $parts[] = 'Notes: ' . $data['notes'];
+        }
+
+        if (empty($parts)) {
+            return 'N/A';
+        }
+
+        return implode(' | ', $parts);
     }
 }

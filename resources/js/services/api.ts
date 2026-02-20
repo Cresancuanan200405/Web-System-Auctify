@@ -1,4 +1,4 @@
-import { apiGet, apiPost, apiPut, apiDelete } from '../api/client';
+import { apiGet, apiPost, apiPatch, apiPut, apiDelete } from '../api/client';
 import type { User, Address } from '../types';
 
 export interface LoginCredentials {
@@ -65,7 +65,7 @@ export const addressService = {
     },
 
     updateAddress: async (id: string, address: Omit<Address, 'id' | 'user_id'>) => {
-        return apiPut<Address>(`/api/addresses/${id}`, address);
+        return apiPatch<Address>(`/api/addresses/${id}`, address);
     },
 
     deleteAddress: async (id: string) => {

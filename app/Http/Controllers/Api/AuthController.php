@@ -8,9 +8,127 @@ use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
+use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
 {
+    public function googleRedirect(Request $request)
+    {
+        $frontend = $this->resolveFrontendUrl($request->query('frontend'));
+        $flow = $request->query('flow') === 'register' ? 'register' : 'login';
+        $statePayload = base64_encode(json_encode([
+            'frontend' => $frontend,
+            'flow' => $flow,
+        ]));
+
+        /** @var \Laravel\Socialite\Two\AbstractProvider $provider */
+        $provider = Socialite::driver('google');
+
+        return $provider
+            ->stateless()
+            ->with(['state' => $statePayload])
+            ->redirect();
+    }
+
+    public function googleCallback(Request $request)
+    {
+        $state = $this->extractState($request);
+        $frontendUrl = $this->resolveFrontendUrl($state['frontend'] ?? null);
+        $flow = ($state['flow'] ?? 'login') === 'register' ? 'register' : 'login';
+
+        try {
+            /** @var \Laravel\Socialite\Two\AbstractProvider $provider */
+            $provider = Socialite::driver('google');
+            $googleUser = $provider->stateless()->user();
+        } catch (\Throwable $error) {
+            return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
+        }
+
+        $user = User::where('google_id', $googleUser->getId())
+            ->orWhere('email', $googleUser->getEmail())
+            ->first();
+
+        if (! $user) {
+            if ($flow === 'login') {
+                $warningUrl = $frontendUrl . '/login?google_error=account_not_found';
+
+                if ($googleUser->getEmail()) {
+                    $warningUrl .= '&google_email=' . urlencode($googleUser->getEmail());
+                }
+
+                return redirect()->away($warningUrl);
+            }
+
+            $user = User::create([
+                'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: 'Google User',
+                'email' => $googleUser->getEmail(),
+                'google_id' => $googleUser->getId(),
+                'avatar' => $googleUser->getAvatar(),
+                'password' => Hash::make(Str::random(64)),
+            ]);
+
+            $user->email_verified_at = now();
+            $user->save();
+        } elseif ($flow === 'register') {
+            $existingUrl = $frontendUrl . '/register?google_error=account_already_exists';
+            return redirect()->away($existingUrl);
+        } else {
+            if (! $user->google_id) {
+                $user->google_id = $googleUser->getId();
+            }
+
+            if (! $user->avatar && $googleUser->getAvatar()) {
+                $user->avatar = $googleUser->getAvatar();
+            }
+
+            if (! $user->email_verified_at) {
+                $user->email_verified_at = now();
+            }
+
+            $user->save();
+        }
+
+        $token = $user->createToken('auth')->plainTextToken;
+        $userPayload = base64_encode(json_encode([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+        ]));
+
+        $redirectUrl = $frontendUrl
+            . '/login?google_token=' . urlencode($token)
+            . '&google_user=' . urlencode($userPayload);
+
+        return redirect()->away($redirectUrl);
+    }
+
+    private function resolveFrontendUrl(?string $candidate): string
+    {
+        if (is_string($candidate) && preg_match('/^https?:\/\//i', $candidate)) {
+            return rtrim($candidate, '/');
+        }
+
+        return rtrim(config('services.frontend.url'), '/');
+    }
+
+    private function extractState(Request $request): array
+    {
+        $stateRaw = $request->query('state');
+
+        if (! is_string($stateRaw) || $stateRaw === '') {
+            return [];
+        }
+
+        $decoded = json_decode(base64_decode($stateRaw, true) ?: '', true);
+
+        if (is_array($decoded)) {
+            return $decoded;
+        }
+
+        return [];
+    }
+
     public function register(RegisterRequest $request)
     {
         $user = User::create($request->validated());
@@ -27,6 +145,12 @@ class AuthController extends Controller
         $credentials = $request->validated();
 
         $user = User::where('email', $credentials['email'])->first();
+
+        if ($user && ! empty($user->google_id)) {
+            return response()->json([
+                'message' => 'This account uses Google sign-in. Please continue with Google.',
+            ], 422);
+        }
 
         if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return response()->json([
@@ -72,39 +196,36 @@ class AuthController extends Controller
             'password' => ['nullable', 'string', 'min:8', 'confirmed'],
         ]);
 
-        // Update name from first_name and last_name
         if (isset($validated['first_name']) || isset($validated['last_name'])) {
             $firstName = $validated['first_name'] ?? '';
             $lastName = $validated['last_name'] ?? '';
             $user->name = trim($firstName . ' ' . $lastName);
         }
 
-        // Update email
         if (isset($validated['email'])) {
             $user->email = $validated['email'];
         }
 
-        // Handle password change
+        if (isset($validated['birthday'])) {
+            $user->birthday = $validated['birthday'];
+        }
+
         if (isset($validated['current_password']) && isset($validated['password'])) {
-            // Verify current password
-            if (!Hash::check($validated['current_password'], $user->password)) {
+            if (! Hash::check($validated['current_password'], $user->password)) {
                 return response()->json([
                     'message' => 'Current password is incorrect.',
                 ], 422);
             }
 
-            // Update to new password
             $user->password = Hash::make($validated['password']);
-
-            // Delete all other tokens to force re-login
             $user->tokens()->delete();
         }
 
         $user->save();
 
-        // Create new token if password was changed
         if (isset($validated['password'])) {
             $token = $user->createToken('auth')->plainTextToken;
+
             return response()->json([
                 'user' => $user,
                 'token' => $token,

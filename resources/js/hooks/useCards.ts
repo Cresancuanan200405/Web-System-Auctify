@@ -1,9 +1,48 @@
-import { useLocalStorage } from './useLocalStorage';
+import { useEffect } from 'react';
 import type { Card } from '../types';
+import { useLocalStorage } from './useLocalStorage';
 
 export function useCards() {
-    const [savedCards, setSavedCards] = useLocalStorage<Card[]>('saved_cards', []);
-    const [mainCardId, setMainCardIdState] = useLocalStorage<number | null>('main_card_id', null);
+    const userStorageScope = (() => {
+        try {
+            const rawUser = window.localStorage.getItem('auth_user');
+            if (!rawUser) return 'anonymous';
+
+            const parsedUser = JSON.parse(rawUser) as { id?: number; email?: string };
+            if (parsedUser.id) return `user-${parsedUser.id}`;
+            if (parsedUser.email) return `email-${parsedUser.email.toLowerCase()}`;
+        } catch {
+            // fall through to anonymous scope
+        }
+
+        return 'anonymous';
+    })();
+
+    const scopedSavedCardsKey = `saved_cards_${userStorageScope}`;
+    const scopedMainCardKey = `main_card_id_${userStorageScope}`;
+
+    const [savedCards, setSavedCards] = useLocalStorage<Card[]>(scopedSavedCardsKey, []);
+    const [mainCardId, setMainCardIdState] = useLocalStorage<number | null>(scopedMainCardKey, null);
+
+    useEffect(() => {
+        // One-time migration from legacy shared keys into the current user scope.
+        const legacyCardsRaw = window.localStorage.getItem('saved_cards');
+        const legacyMainCardRaw = window.localStorage.getItem('main_card_id');
+        const scopedCardsRaw = window.localStorage.getItem(scopedSavedCardsKey);
+        const scopedMainCardRaw = window.localStorage.getItem(scopedMainCardKey);
+
+        if (scopedCardsRaw === null && legacyCardsRaw) {
+            window.localStorage.setItem(scopedSavedCardsKey, legacyCardsRaw);
+        }
+
+        if (scopedMainCardRaw === null && legacyMainCardRaw) {
+            window.localStorage.setItem(scopedMainCardKey, legacyMainCardRaw);
+        }
+
+        // Remove legacy global keys to prevent cross-account leakage.
+        window.localStorage.removeItem('saved_cards');
+        window.localStorage.removeItem('main_card_id');
+    }, [scopedSavedCardsKey, scopedMainCardKey]);
 
     const addCard = (card: Card) => {
         setSavedCards([...savedCards, card]);

@@ -4,6 +4,10 @@ export interface User {
     id: number;
     name: string;
     email: string;
+    birthday?: string | null;
+    gender?: string | null;
+    google_id?: string | null;
+    avatar?: string | null;
     email_verified_at?: string;
     created_at?: string;
     updated_at?: string;
@@ -76,4 +80,4 @@ export type AccountSection =
     | 'zvip'
     | 'delete-account';
 
-export type ViewMode = 'home' | 'auth' | 'account';
+export type ViewMode = 'home' | 'auth' | 'account' | 'bag';

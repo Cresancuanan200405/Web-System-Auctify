@@ -13,6 +13,76 @@ type PreferredContent =
     | 'niche'
     | 'school';
 
+interface CategoryOption {
+    value: PreferredContent;
+    label: string;
+    icon: string;
+    description: string;
+}
+
+const CATEGORIES: CategoryOption[] = [
+    { 
+        value: 'electronics', 
+        label: 'Electronics', 
+        icon: '📱',
+        description: 'Phones, laptops, gadgets and more'
+    },
+    { 
+        value: 'collectibles', 
+        label: 'Collectibles', 
+        icon: '🎯',
+        description: 'Rare items and collectors\' editions'
+    },
+    { 
+        value: 'art', 
+        label: 'Art', 
+        icon: '🎨',
+        description: 'Paintings, sculptures and artwork'
+    },
+    { 
+        value: 'luxury', 
+        label: 'Luxury', 
+        icon: '✨',
+        description: 'Premium and high-end goods'
+    },
+    { 
+        value: 'antiques', 
+        label: 'Antiques', 
+        icon: '⏰',
+        description: 'Vintage and antique treasures'
+    },
+    { 
+        value: 'vehicles', 
+        label: 'Vehicles', 
+        icon: '🚗',
+        description: 'Cars, motorcycles and accessories'
+    },
+    { 
+        value: 'fashion', 
+        label: 'Fashion', 
+        icon: '👗',
+        description: 'Clothing, shoes and accessories'
+    },
+    { 
+        value: 'property', 
+        label: 'Property', 
+        icon: '🏠',
+        description: 'Real estate and property listings'
+    },
+    { 
+        value: 'niche', 
+        label: 'Niche', 
+        icon: '🎪',
+        description: 'Specialized and unique items'
+    },
+    { 
+        value: 'school', 
+        label: 'School', 
+        icon: '📚',
+        description: 'Educational supplies and books'
+    },
+];
+
 export const PreferencesSection: React.FC = () => {
     const [preferredContent, setPreferredContent] = React.useState<PreferredContent>(() => {
         const stored = localStorage.getItem('preferred_content');
@@ -40,133 +110,104 @@ export const PreferencesSection: React.FC = () => {
                 <div className="preferences-section">
                     <div className="preferences-section-title">Preferred Content</div>
                     <div className="preferences-section-text">
-                        Tell us what you like to see first on Auctify.
+                        Select your favorite category to personalize your Auctify experience. We'll show you relevant auctions and recommendations based on your preference.
                     </div>
-                    <div className="preferences-radio-row">
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'electronics' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="electronics"
-                                checked={preferredContent === 'electronics'}
-                                onChange={() => handlePreferredContentChange('electronics')}
-                            />
-                            <span>Electronics &amp; Tech</span>
-                        </label>
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'collectibles' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="collectibles"
-                                checked={preferredContent === 'collectibles'}
-                                onChange={() => handlePreferredContentChange('collectibles')}
-                            />
-                            <span>Collectibles &amp; Art</span>
-                        </label>
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'luxury' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="luxury"
-                                checked={preferredContent === 'luxury'}
-                                onChange={() => handlePreferredContentChange('luxury')}
-                            />
-                            <span>Luxury</span>
-                        </label>
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'antiques' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="antiques"
-                                checked={preferredContent === 'antiques'}
-                                onChange={() => handlePreferredContentChange('antiques')}
-                            />
-                            <span>Antiques</span>
-                        </label>
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'vehicles' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="vehicles"
-                                checked={preferredContent === 'vehicles'}
-                                onChange={() => handlePreferredContentChange('vehicles')}
-                            />
-                            <span>Vehicles</span>
-                        </label>
-                        <label
-                            className={`preferences-radio-option ${
-                                preferredContent === 'fashion' ? 'active' : ''
-                            }`}
-                        >
-                            <input
-                                type="radio"
-                                name="preferred-content"
-                                value="fashion"
-                                checked={preferredContent === 'fashion'}
-                                onChange={() => handlePreferredContentChange('fashion')}
-                            />
-                            <span>Fashion</span>
-                        </label>
+                    <div className="preferences-categories-grid">
+                        {CATEGORIES.map((category) => (
+                            <label
+                                key={category.value}
+                                className={`preferences-category-card ${
+                                    preferredContent === category.value ? 'active' : ''
+                                }`}
+                            >
+                                <input
+                                    type="radio"
+                                    name="preferred-content"
+                                    value={category.value}
+                                    checked={preferredContent === category.value}
+                                    onChange={() => handlePreferredContentChange(category.value)}
+                                    style={{ display: 'none' }}
+                                />
+                                <div className="preferences-category-icon">{category.icon}</div>
+                                <div className="preferences-category-name">{category.label}</div>
+                                <div className="preferences-category-description">{category.description}</div>
+                                <div className="preferences-category-checkmark">✓</div>
+                            </label>
+                        ))}
                     </div>
                 </div>
 
-                <div className="preferences-notifications">
-                    <div className="preferences-subsection">
-                        <div className="preferences-subsection-title">
-                            Exclusive Deals &amp; Insider Offers
+                <div className="preferences-recommendations">
+                    <div className="preferences-recommendations-header">
+                        <span className="preferences-recommendations-icon">💡</span>
+                        <span>Personalization Tips</span>
+                    </div>
+                    <div className="preferences-recommendations-content">
+                        <div className="preferences-recommendation-item">
+                            <span className="recommendations-checkmark">→</span>
+                            <span>Changing your preference updates your homepage recommendations instantly</span>
                         </div>
-                        <div className="preferences-subsection-text">
-                            Get the inside scoop on flash auctions, featured lots and last-minute
-                            bidding opportunities.
+                        <div className="preferences-recommendation-item">
+                            <span className="recommendations-checkmark">→</span>
+                            <span>You can still browse all categories even with a preferred category selected</span>
                         </div>
-                        <label className="preferences-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={notifyDealsEmail}
-                                onChange={(event) => setNotifyDealsEmail(event.target.checked)}
-                            />
-                            <span>Email</span>
-                        </label>
+                        <div className="preferences-recommendation-item">
+                            <span className="recommendations-checkmark">→</span>
+                            <span>Popular items in your category will appear in recommendations first</span>
+                        </div>
+                        <div className="preferences-recommendation-item">
+                            <span className="recommendations-checkmark">→</span>
+                            <span>Change your preference anytime to explore different auction categories</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="preferences-section">
+                    <div className="preferences-section-title">Notification Preferences</div>
+                    <div className="preferences-section-text">
+                        Stay informed about deals, reminders and exclusive opportunities.
                     </div>
 
-                    <div className="preferences-subsection">
-                        <div className="preferences-subsection-title">
-                            Reminders, Alerts &amp; Exclusive Rewards
+                    <div className="preferences-notifications">
+                        <div className="preferences-notification-item">
+                            <div className="preferences-notification-content">
+                                <div className="preferences-notification-title">
+                                    ⚡ Exclusive Deals &amp; Flash Auctions
+                                </div>
+                                <div className="preferences-notification-description">
+                                    Get notified about flash sales, featured lots, last-minute bidding opportunities and insider offers.
+                                </div>
+                            </div>
+                            <label className="preferences-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={notifyDealsEmail}
+                                    onChange={(event) => setNotifyDealsEmail(event.target.checked)}
+                                />
+                                <span>Email</span>
+                            </label>
                         </div>
-                        <div className="preferences-subsection-text">
-                            Stay in the loop with watchlist reminders, winner alerts and exclusive
-                            Auctify perks.
+
+                        <div className="preferences-notification-item">
+                            <div className="preferences-notification-content">
+                                <div className="preferences-notification-title">
+                                    🔔 Reminders, Alerts &amp; Rewards
+                                </div>
+                                <div className="preferences-notification-description">
+                                    Receive watchlist reminders, auction winner alerts, bidding activity updates and exclusive Auctify rewards.
+                                </div>
+                            </div>
+                            <label className="preferences-checkbox">
+                                <input
+                                    type="checkbox"
+                                    checked={notifyRemindersEmail}
+                                    onChange={(event) =>
+                                        setNotifyRemindersEmail(event.target.checked)
+                                    }
+                                />
+                                <span>Email</span>
+                            </label>
                         </div>
-                        <label className="preferences-checkbox">
-                            <input
-                                type="checkbox"
-                                checked={notifyRemindersEmail}
-                                onChange={(event) =>
-                                    setNotifyRemindersEmail(event.target.checked)
-                                }
-                            />
-                            <span>Email</span>
-                        </label>
                     </div>
                 </div>
 

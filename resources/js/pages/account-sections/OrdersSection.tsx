@@ -5,6 +5,11 @@ type OrdersTab = 'all' | 'unpaid' | 'processing' | 'delivered' | 'returns' | 'ca
 export const OrdersSection: React.FC = () => {
     const [activeTab, setActiveTab] = useState<OrdersTab>('all');
 
+    const handleContinueShopping = () => {
+        window.history.pushState({}, '', '/');
+        window.dispatchEvent(new PopStateEvent('popstate'));
+    };
+
     return (
         <div className="orders-main">
             <div className="orders-header">
@@ -84,7 +89,7 @@ export const OrdersSection: React.FC = () => {
                         Once you place an order, it will show here so you can
                         track its status.
                     </div>
-                    <button type="button" className="orders-empty-button">
+                    <button type="button" className="orders-empty-button" onClick={handleContinueShopping}>
                         Continue Shopping
                     </button>
                 </div>
@@ -110,7 +115,7 @@ export const OrdersSection: React.FC = () => {
                         Any orders waiting for payment will appear here until
                         you complete checkout.
                     </div>
-                    <button type="button" className="orders-empty-button">
+                    <button type="button" className="orders-empty-button" onClick={handleContinueShopping}>
                         Go to Checkout
                     </button>
                 </div>
@@ -136,7 +141,7 @@ export const OrdersSection: React.FC = () => {
                         When sellers are preparing your items, you&apos;ll see
                         those orders in this tab.
                     </div>
-                    <button type="button" className="orders-empty-button">
+                    <button type="button" className="orders-empty-button" onClick={handleContinueShopping}>
                         Continue Shopping
                     </button>
                 </div>
@@ -214,7 +219,7 @@ export const OrdersSection: React.FC = () => {
                         If any orders are cancelled, you&apos;ll see them listed
                         here for your reference.
                     </div>
-                    <button type="button" className="orders-empty-button">
+                    <button type="button" className="orders-empty-button" onClick={handleContinueShopping}>
                         Continue Shopping
                     </button>
                 </div>

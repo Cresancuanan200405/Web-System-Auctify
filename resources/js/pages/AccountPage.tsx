@@ -1,17 +1,17 @@
 import React from 'react';
-import { AccountSection } from '../types';
-import { AccountSidebar } from '../components/AccountSidebar';
-import { DetailsSection } from './account-sections/DetailsSection';
-import { AddressesSection } from './account-sections/AddressesSection';
-import { PreferencesSection } from './account-sections/PreferencesSection';
-import { WalletSection } from './account-sections/WalletSection';
-import { MyCardsSection } from './account-sections/MyCardsSection';
-import { ZVIPSection } from './account-sections/ZVIPSection';
-import { OrdersSection } from './account-sections/OrdersSection';
-import { ReviewsSection } from './account-sections/ReviewsSection';
-import { WishlistSection } from './account-sections/WishlistSection';
-import { CashbackSection } from './account-sections/CashbackSection';
 import { DeleteAccountSection } from '@/pages/account-sections/DeleteAccountSection';
+import { AccountSidebar } from '../components/AccountSidebar';
+import type { AccountSection } from '../types';
+import { AddressesSection } from './account-sections/AddressesSection';
+import { CashbackSection } from './account-sections/CashbackSection';
+import { DetailsSection } from './account-sections/DetailsSection';
+import { MyCardsSection } from './account-sections/MyCardsSection';
+import { OrdersSection } from './account-sections/OrdersSection';
+import { PreferencesSection } from './account-sections/PreferencesSection';
+import { ReviewsSection } from './account-sections/ReviewsSection';
+import { WalletSection } from './account-sections/WalletSection';
+import { WishlistSection } from './account-sections/WishlistSection';
+import { ZVIPSection } from './account-sections/ZVIPSection';
 
 interface AccountPageProps {
     activeSection: AccountSection;

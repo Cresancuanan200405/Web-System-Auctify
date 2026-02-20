@@ -1,11 +1,47 @@
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 
 interface HomePageProps {
     onNavigateToRegister: () => void;
 }
 
+const CAROUSEL_SLIDES = [
+    {
+        subtitle: 'WEEKEND SPECIAL',
+        title: 'Exceptional Finds',
+        price: 'Up to 60% Off',
+        brands: ['Rolex', 'Ferrari', 'Picasso'],
+        disclaimer: 'T&Cs apply. Ends February 18, 12 noon.\nLive Auction Starts at 2PM',
+        image: '/carousel/1.jpg'
+    },
+    {
+        subtitle: 'FLASH SALE',
+        title: 'Limited Edition',
+        price: 'Up to 70% Off',
+        brands: ['Omega', 'Tesla', 'Van Gogh'],
+        disclaimer: 'Limited time offer. While stocks last.\nExclusive members only',
+        image: '/carousel/2.jpg'
+    },
+    {
+        subtitle: 'LUXURY COLLECTION',
+        title: 'Premium Selection',
+        price: 'Up to 50% Off',
+        brands: ['Hermes', 'Mercedes', 'Monet'],
+        disclaimer: 'Curated by experts. Quality guaranteed.\nAuthenticity certified',
+        image: '/carousel/3.jpg'
+    },
+    {
+        subtitle: 'COLLECTORS CHOICE',
+        title: 'Rare Treasures',
+        price: 'Up to 80% Off',
+        brands: ['Patek Philippe', 'Ferrari', 'Picasso'],
+        disclaimer: 'Authenticated pieces. Certificate included.\nInvestment grade items',
+        image: '/carousel/4.jpg'
+    }
+];
+
 export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRegister }) => {
     const carouselRef = useRef<HTMLDivElement>(null);
+    const [currentSlide, setCurrentSlide] = useState(0);
 
     const scrollCarouselLeft = () => {
         if (carouselRef.current) {
@@ -18,6 +54,16 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRegister }) => {
             carouselRef.current.scrollBy({ left: 300, behavior: 'smooth' });
         }
     };
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+        }, 5000); // Auto-rotate every 5 seconds
+
+        return () => clearInterval(interval);
+    }, []);
+
+    const currentSlideData = CAROUSEL_SLIDES[currentSlide];
 
     return (
         <main className="content">
@@ -126,47 +172,36 @@ export const HomePage: React.FC<HomePageProps> = ({ onNavigateToRegister }) => {
                 </button>
             </div>
 
-            <div className="hero-banner">
+            <div className="hero-banner" style={{backgroundImage: `url('${currentSlideData.image}')`}}>
+                <div className="hero-banner-overlay"></div>
                 <div className="hero-content">
-                    <h2 className="hero-subtitle">WEEKEND SPECIAL</h2>
-                    <h1 className="hero-title">Exceptional Finds</h1>
-                    <h1 className="hero-price">Up to 60% Off</h1>
+                    <h2 className="hero-subtitle">{currentSlideData.subtitle}</h2>
+                    <h1 className="hero-title">{currentSlideData.title}</h1>
+                    <h1 className="hero-price">{currentSlideData.price}</h1>
                     <div className="hero-brands">
-                        <span>Rolex</span>
-                        <span>Ferrari</span>
-                        <span>Picasso</span>
+                        {currentSlideData.brands.map((brand, idx) => (
+                            <span key={idx}>{brand}</span>
+                        ))}
                     </div>
                     <button className="hero-btn" onClick={onNavigateToRegister}>BID NOW →</button>
-                    <p className="hero-disclaimer">T&Cs apply. Ends February 18, 12 noon.<br/>Live Auction Starts at 2PM</p>
+                    <p className="hero-disclaimer">{currentSlideData.disclaimer}</p>
                 </div>
-                <div className="hero-image">
-                    <div className="hero-placeholder">🏆</div>
+                <div className="hero-carousel-nav">
+                    {CAROUSEL_SLIDES.map((_, idx) => (
+                        <button
+                            key={idx}
+                            className={`carousel-dot ${currentSlide === idx ? 'active' : ''}`}
+                            onClick={() => setCurrentSlide(idx)}
+                            aria-label={`Go to slide ${idx + 1}`}
+                        />
+                    ))}
                 </div>
             </div>
 
-            <section className="features-section">
-                <h2 className="section-title">Why Choose Auctify?</h2>
-                <div className="features-grid">
-                    <div className="feature-card">
-                        <div className="feature-icon">🔄</div>
-                        <h3 className="feature-title">7 Days Returns</h3>
-                        <p className="feature-description">Easy returns within 7 days. T&Cs apply.</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">👑</div>
-                        <h3 className="feature-title">VIP Customer Service</h3>
-                        <p className="feature-description">24/7 support for all your auction needs.</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">📱</div>
-                        <h3 className="feature-title">App Exclusive Offers</h3>
-                        <p className="feature-description">25% Off + ₱150 Off + Free Shipping on app.</p>
-                    </div>
-                    <div className="feature-card">
-                        <div className="feature-icon">🚚</div>
-                        <h3 className="feature-title">Free Shipping</h3>
-                        <p className="feature-description">Free delivery on orders above ₱500.</p>
-                    </div>
+            <section className="video-ad-section" aria-label="Video Advertisement Placeholder">
+                <div className="video-ad-placeholder">
+                    <div className="video-ad-label">VIDEO ADS PLACEHOLDER</div>
+                    <div className="video-ad-size">1920 × 600 recommended</div>
                 </div>
             </section>
         </main>

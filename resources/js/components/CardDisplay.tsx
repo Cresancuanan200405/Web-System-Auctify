@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../types';
+import type { Card } from '../types';
 import { formatCurrency, maskCardNumber } from '../utils/helpers';
 
 interface CardDisplayProps {

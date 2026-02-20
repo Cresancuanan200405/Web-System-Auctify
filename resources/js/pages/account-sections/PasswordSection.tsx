@@ -1,7 +1,8 @@
-import React, { useState, FormEvent } from 'react';
-import { userService } from '../../services/api';
-import { InputField, Button } from '../../components/UI';
+import type { FormEvent } from 'react';
+import React, { useState } from 'react';
 import { toast } from 'react-toastify';
+import { InputField, Button } from '../../components/UI';
+import { userService } from '../../services/api';
 
 export const PasswordSection: React.FC = () => {
     const [currentPassword, setCurrentPassword] = useState('');
@@ -37,8 +38,15 @@ export const PasswordSection: React.FC = () => {
             setCurrentPassword('');
             setNewPassword('');
             setConfirmPassword('');
-        } catch (err: any) {
-            const errorMessage = err.response?.data?.message || 'Failed to change password';
+        } catch (err: unknown) {
+            const responseMessage =
+                typeof err === 'object' &&
+                err !== null &&
+                'response' in err &&
+                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                    : undefined;
+            const errorMessage = responseMessage || 'Failed to change password';
             toast.error(errorMessage);
         } finally {
             setLoading(false);
