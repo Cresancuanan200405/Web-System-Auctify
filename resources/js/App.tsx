@@ -9,6 +9,8 @@ import { AccountPage } from './pages/AccountPage';
 import { AuthPage } from './pages/AuthPage';
 import { BagPage } from './pages/BagPage';
 import { HomePage } from './pages/HomePage';
+import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
+import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
 import type { ViewMode, AccountSection } from './types';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -23,6 +25,8 @@ const VALID_ACCOUNT_SECTIONS: AccountSection[] = [
     'reviews',
     'cards',
     'zvip',
+    'seller',
+    'verification',
     'delete-account',
 ];
 
@@ -31,6 +35,10 @@ const AppContent: React.FC = () => {
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const savedViewMode = localStorage.getItem('ui_view_mode');
         if (savedViewMode === 'home' || savedViewMode === 'auth' || savedViewMode === 'account' || savedViewMode === 'bag') {
+            return savedViewMode as ViewMode;
+        }
+
+        if (savedViewMode === 'seller') {
             return savedViewMode as ViewMode;
         }
 
@@ -49,6 +57,8 @@ const AppContent: React.FC = () => {
             ? (savedAccountSection as AccountSection)
             : 'details';
     });
+
+    const [sellerSubView, setSellerSubView] = useState<'dashboard' | 'add-product'>('dashboard');
 
     useEffect(() => {
         localStorage.setItem('ui_view_mode', viewMode);
@@ -98,6 +108,12 @@ const AppContent: React.FC = () => {
             return;
         }
 
+        if (segments[0] === 'seller') {
+            setViewMode('seller');
+            setSellerSubView(segments[1] === 'add-product' ? 'add-product' : 'dashboard');
+            return;
+        }
+
         setViewMode('home');
     }, []);
 
@@ -131,6 +147,20 @@ const AppContent: React.FC = () => {
         setViewMode('account');
         const path = section && section !== 'details' ? `/account/${section}` : '/account';
         window.history.pushState({}, '', path);
+        window.scrollTo(0, 0);
+    };
+
+    const handleNavigateSellerDashboard = () => {
+        setSellerSubView('dashboard');
+        setViewMode('seller');
+        window.history.pushState({}, '', '/seller/dashboard');
+        window.scrollTo(0, 0);
+    };
+
+    const handleNavigateSellerAddProduct = () => {
+        setSellerSubView('add-product');
+        setViewMode('seller');
+        window.history.pushState({}, '', '/seller/add-product');
         window.scrollTo(0, 0);
     };
 
@@ -232,15 +262,15 @@ const AppContent: React.FC = () => {
                 onLogout={handleLogout}
             />
 
-            <Navigation />
+            {viewMode !== 'seller' && <Navigation />}
 
             {viewMode === 'home' && <HomePage onNavigateToRegister={handleNavigateRegister} />}
 
             {viewMode === 'bag' && <BagPage onNavigateHome={handleNavigateHome} />}
 
-            {(viewMode === 'auth' || (viewMode === 'account' && !authUser)) && (
+            {(viewMode === 'auth' || ((viewMode === 'account' || viewMode === 'seller') && !authUser)) && (
                 <AuthPage
-                    mode={viewMode === 'account' && !authUser ? 'login' : authMode}
+                    mode={(viewMode === 'account' || viewMode === 'seller') && !authUser ? 'login' : authMode}
                     onModeChange={setAuthMode}
                     onAuthSuccess={handleAuthSuccess}
                 />
@@ -254,11 +284,21 @@ const AppContent: React.FC = () => {
                 />
             )}
 
-            <Footer />
+            {viewMode === 'seller' && authUser && sellerSubView === 'dashboard' && (
+                <SellerDashboardPage onNavigateAddProduct={handleNavigateSellerAddProduct} />
+            )}
 
-            <button className="chat-button" aria-label="Help">
-                <span>A</span>
-            </button>
+            {viewMode === 'seller' && authUser && sellerSubView === 'add-product' && (
+                <SellerAddProductPage onNavigateDashboard={handleNavigateSellerDashboard} />
+            )}
+
+            {viewMode !== 'seller' && <Footer />}
+
+            {viewMode !== 'seller' && (
+                <button className="chat-button" aria-label="Help">
+                    <span>A</span>
+                </button>
+            )}
 
             <ToastContainer
                 position="top-center"

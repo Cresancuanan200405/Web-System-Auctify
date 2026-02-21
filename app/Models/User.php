@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
@@ -26,6 +27,9 @@ class User extends Authenticatable
         'birthday',
         'google_id',
         'avatar',
+        'is_verified',
+        'verified_at',
+        'verification_revoked_at',
     ];
 
     /**
@@ -49,6 +53,9 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'birthday' => 'date',
+            'is_verified' => 'boolean',
+            'verified_at' => 'datetime',
+            'verification_revoked_at' => 'datetime',
         ];
     }
 
@@ -65,5 +72,15 @@ class User extends Authenticatable
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);
+    }
+
+    public function accountVerifications(): HasMany
+    {
+        return $this->hasMany(AccountVerification::class);
+    }
+
+    public function sellerRegistration(): HasOne
+    {
+        return $this->hasOne(SellerRegistration::class);
     }
 }

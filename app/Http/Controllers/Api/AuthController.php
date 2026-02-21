@@ -40,6 +40,7 @@ class AuthController extends Controller
         try {
             /** @var \Laravel\Socialite\Two\AbstractProvider $provider */
             $provider = Socialite::driver('google');
+            /** @var \Laravel\Socialite\Two\User $googleUser */
             $googleUser = $provider->stateless()->user();
         } catch (\Throwable $error) {
             return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
@@ -94,6 +95,8 @@ class AuthController extends Controller
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
+            'is_verified' => (bool) $user->is_verified,
+            'verified_at' => $user->verified_at,
         ]));
 
         $redirectUrl = $frontendUrl

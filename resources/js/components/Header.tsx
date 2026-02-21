@@ -81,6 +81,7 @@ export const Header: React.FC<HeaderProps> = ({
                         <span>
                             {authUser ? `Hi, ${authUser.name.split(' ')[0]}` : 'Login / Register'}
                         </span>
+                        {authUser?.is_verified && <span className="verified-badge">✓ Verified</span>}
                     </span>
                     <div className="dropdown-menu">
                         {authUser ? (

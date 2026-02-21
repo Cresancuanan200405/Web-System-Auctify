@@ -71,6 +71,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
     const [wantNotifications, setWantNotifications] = useState(false);
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
+    const [googleHint, setGoogleHint] = useState('');
     const [loading, setLoading] = useState(false);
 
     useEffect(() => {
@@ -83,13 +84,19 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
         if (googleError) {
             if (googleError === 'account_not_found') {
                 const emailSuffix = googleEmail ? ` (${googleEmail})` : '';
-                setError(`Google account${emailSuffix} is not registered yet. Please use Sign up with Google first.`);
-                toast.warn('Google account is not registered. Use Sign up with Google first.', { autoClose: 4000 });
+                const warningMessage = `No Auctify account is linked to this Google account${emailSuffix}. Please sign up with Google first.`;
+                setError(warningMessage);
+                setGoogleHint(`⚠ ${warningMessage}`);
+                toast.warn('No Auctify account is linked to this Google account. Please sign up with Google first.', {
+                    autoClose: 4000,
+                });
             } else if (googleError === 'account_already_exists') {
                 setError('This Google account already exists. Please login with Google instead.');
+                setGoogleHint('ℹ This Google account already exists. Please login with Google instead.');
                 toast.info('Account already exists. Please login with Google.', { autoClose: 3500 });
             } else {
                 setError('Google sign-in failed. Please try again.');
+                setGoogleHint('⚠ Google sign-in failed. Please try again.');
             }
 
             window.history.replaceState({}, '', window.location.pathname);
@@ -117,9 +124,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
 
             login(googleToken, parsedUser);
             onAuthSuccess();
+            setGoogleHint('');
             toast.success('Signed in with Google successfully.', { autoClose: 3500 });
         } catch {
             setError('Google sign-in failed. Please try again.');
+            setGoogleHint('⚠ Google sign-in failed. Please try again.');
         } finally {
             window.history.replaceState({}, '', window.location.pathname);
         }
@@ -136,6 +145,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
         setBirthday('');
         setMessage('');
         setError('');
+        setGoogleHint('');
     }, [mode]);
 
     const submitLabel = useMemo(() => (isRegister ? 'Create Account' : 'Login'), [isRegister]);
@@ -195,7 +205,15 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                       .flat()
                       .join(' ')
                 : parsed.message || 'Authentication failed.';
+
             setError(details);
+
+            if (isRegister && details.toLowerCase().includes('email')) {
+                const signupWarning =
+                    'An account already exists with this email. Please log in instead or continue with Google if your account is linked.';
+                setGoogleHint(`⚠ ${signupWarning}`);
+                toast.warn(signupWarning, { autoClose: 4000 });
+            }
 
             setTimeout(() => {
                 setError('');
@@ -247,9 +265,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
 
             <div className="divider">Or continue with</div>
 
-            <p className="auth-google-hint">
-    
-            </p>
+            {googleHint && (
+                <p className="auth-google-hint auth-google-hint-warning">
+                    {googleHint}
+                </p>
+            )}
 
             <form onSubmit={handleSubmit}>
                 <div className={`field floating-field ${email ? 'has-value' : ''}`}>

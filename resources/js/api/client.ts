@@ -71,3 +71,40 @@ export async function apiDelete<T>(path: string) {
         method: 'DELETE',
     });
 }
+
+export async function apiPostForm<T>(path: string, formData: FormData) {
+    const token = localStorage.getItem('auth_token');
+
+    let response: Response;
+
+    try {
+        response = await fetch(`${baseUrl}${path}`, {
+            method: 'POST',
+            headers: {
+                Accept: 'application/json',
+                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+            },
+            body: formData,
+        });
+    } catch {
+        const message = 'Unable to connect to the server. Please refresh and try again.';
+        throw {
+            message,
+            response: {
+                data: { message },
+            },
+        };
+    }
+
+    const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+        const message = data?.message || `Request failed with status ${response.status}.`;
+        throw {
+            message,
+            response: { data: { ...data, message } },
+        };
+    }
+
+    return data as T;
+}

@@ -4,11 +4,15 @@ import type { AccountSection } from '../types';
 interface AccountSidebarProps {
     activeSection: AccountSection;
     onSectionChange: (section: AccountSection) => void;
+    isVerified: boolean;
+    onBecomeSellerClick: () => void;
 }
 
 export const AccountSidebar: React.FC<AccountSidebarProps> = ({
     activeSection,
-    onSectionChange
+    onSectionChange,
+    isVerified,
+    onBecomeSellerClick,
 }) => {
     const menuItems: { section: AccountSection; label: string }[] = [
         { section: 'details', label: 'Account information' },
@@ -20,8 +24,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         { section: 'cards', label: 'My Cards' },
         { section: 'addresses', label: 'Saved Addresses' },
         { section: 'preferences', label: 'Preferences' },
-        { section: 'wishlist', label: 'Wishlist' },
-        { section: 'delete-account', label: 'Request Account Deletion' }
+        { section: 'wishlist', label: 'Wishlist' }
     ];
 
     return (
@@ -36,6 +39,33 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
                     {item.label}
                 </button>
             ))}
+
+            <div className="account-sidebar-secondary">
+                <button
+                    className={`account-sidebar-item account-sidebar-item-secondary ${
+                        activeSection === 'verification' ? 'active' : ''
+                    }`}
+                    onClick={() => onSectionChange('verification')}
+                >
+                    Account Verification
+                </button>
+                <button
+                    className={`account-sidebar-item account-sidebar-item-secondary become-seller-item ${
+                        activeSection === 'seller' ? 'active' : ''
+                    } ${!isVerified ? 'disabled' : ''}`}
+                    type="button"
+                    onClick={onBecomeSellerClick}
+                >
+                    Become a Seller
+                </button>
+            </div>
+
+            <button
+                className={`account-sidebar-item ${activeSection === 'delete-account' ? 'active' : ''}`}
+                onClick={() => onSectionChange('delete-account')}
+            >
+                Request Account Deletion
+            </button>
         </aside>
     );
 };
