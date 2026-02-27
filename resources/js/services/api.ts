@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete, apiPostForm } from '../api/client';
-import type { User, Address, SellerRegistration } from '../types';
+import type { User, Address, SellerRegistration, AuctionProduct, AuctionProductDetail } from '../types';
 
 export interface LoginCredentials {
     email: string;
@@ -148,6 +148,10 @@ export const verificationService = {
 };
 
 export const sellerService = {
+    getMyProducts: async () => {
+        return apiGet<AuctionProduct[]>('/api/seller/products');
+    },
+
     getRegistration: async () => {
         return apiGet<{ registration: SellerRegistration | null }>('/api/seller/registration');
     },
@@ -185,5 +189,32 @@ export const sellerService = {
             '/api/seller/registration',
             data
         );
+    },
+
+    createProduct: async (formData: FormData) => {
+        return apiPostForm<AuctionProduct>('/api/auctions', formData);
+    },
+
+    updateProduct: async (productId: number, formData: FormData) => {
+        formData.append('_method', 'PATCH');
+        return apiPostForm<AuctionProduct>(`/api/auctions/${productId}`, formData);
+    },
+
+    deleteProduct: async (productId: number) => {
+        return apiDelete<{ message: string }>(`/api/auctions/${productId}`);
+    },
+};
+
+export const auctionService = {
+    getAllProducts: async () => {
+        return apiGet<AuctionProduct[]>('/api/auctions');
+    },
+
+    getProductDetails: async (productId: number) => {
+        return apiGet<AuctionProductDetail>(`/api/auctions/${productId}`);
+    },
+
+    placeBid: async (productId: number, amount: number) => {
+        return apiPost<{ id: number; amount: string }>(`/api/auctions/${productId}/bids`, { amount });
     },
 };

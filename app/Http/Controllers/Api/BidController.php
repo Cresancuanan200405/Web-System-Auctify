@@ -5,11 +5,23 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Bid\StoreBidRequest;
 use App\Models\Auction;
+use Illuminate\Support\Carbon;
 
 class BidController extends Controller
 {
     public function store(StoreBidRequest $request, Auction $auction)
     {
+        if ($auction->status === 'open' && $auction->ends_at && Carbon::parse($auction->ends_at)->isPast()) {
+            $auction->update(['status' => 'closed']);
+            $auction->refresh();
+        }
+
+        if ($auction->starts_at && Carbon::parse($auction->starts_at)->isFuture()) {
+            return response()->json([
+                'message' => 'This auction has not started yet.',
+            ], 422);
+        }
+
         if (! $auction->isOpen()) {
             return response()->json([
                 'message' => 'This auction is closed.',

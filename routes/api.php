@@ -31,10 +31,13 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+Route::get('media/{path}', [AuctionController::class, 'media'])->where('path', '.*');
+
 Route::get('auctions', [AuctionController::class, 'index']);
 Route::get('auctions/{auction}', [AuctionController::class, 'show']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('seller/products', [AuctionController::class, 'mine']);
     Route::post('auctions', [AuctionController::class, 'store']);
     Route::patch('auctions/{auction}', [AuctionController::class, 'update']);
     Route::delete('auctions/{auction}', [AuctionController::class, 'destroy']);

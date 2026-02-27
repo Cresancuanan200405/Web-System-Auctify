@@ -79,25 +79,11 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
         const googleToken = params.get('google_token');
         const googleUser = params.get('google_user');
         const googleError = params.get('google_error');
-        const googleEmail = params.get('google_email');
+        const googleCreated = params.get('google_created') === '1';
 
         if (googleError) {
-            if (googleError === 'account_not_found') {
-                const emailSuffix = googleEmail ? ` (${googleEmail})` : '';
-                const warningMessage = `No Auctify account is linked to this Google account${emailSuffix}. Please sign up with Google first.`;
-                setError(warningMessage);
-                setGoogleHint(`⚠ ${warningMessage}`);
-                toast.warn('No Auctify account is linked to this Google account. Please sign up with Google first.', {
-                    autoClose: 4000,
-                });
-            } else if (googleError === 'account_already_exists') {
-                setError('This Google account already exists. Please login with Google instead.');
-                setGoogleHint('ℹ This Google account already exists. Please login with Google instead.');
-                toast.info('Account already exists. Please login with Google.', { autoClose: 3500 });
-            } else {
-                setError('Google sign-in failed. Please try again.');
-                setGoogleHint('⚠ Google sign-in failed. Please try again.');
-            }
+            setError('Google sign-in failed. Please try again.');
+            setGoogleHint('⚠ Google sign-in failed. Please try again.');
 
             window.history.replaceState({}, '', window.location.pathname);
             return;
@@ -123,9 +109,17 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             }
 
             login(googleToken, parsedUser);
-            onAuthSuccess();
             setGoogleHint('');
-            toast.success('Signed in with Google successfully.', { autoClose: 3500 });
+            sessionStorage.setItem(
+                'post_auth_success_toast',
+                JSON.stringify({
+                    message: googleCreated
+                        ? 'Your account was successfully created with Google.'
+                        : 'Signed in with Google successfully.',
+                    autoClose: googleCreated ? 4500 : 3500,
+                })
+            );
+            onAuthSuccess();
         } catch {
             setError('Google sign-in failed. Please try again.');
             setGoogleHint('⚠ Google sign-in failed. Please try again.');
@@ -253,8 +247,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                     className="social-btn"
                     onClick={() => {
                         const frontendOrigin = window.location.origin;
-                        const flow = isRegister ? 'register' : 'login';
-                        const redirectUrl = `${apiBaseUrl}/api/auth/google/redirect?frontend=${encodeURIComponent(frontendOrigin)}&flow=${flow}`;
+                        const redirectUrl = `${apiBaseUrl}/api/auth/google/redirect?frontend=${encodeURIComponent(frontendOrigin)}`;
                         window.location.href = redirectUrl;
                     }}
                     aria-label="Continue with Google"

@@ -16,10 +16,8 @@ class AuthController extends Controller
     public function googleRedirect(Request $request)
     {
         $frontend = $this->resolveFrontendUrl($request->query('frontend'));
-        $flow = $request->query('flow') === 'register' ? 'register' : 'login';
         $statePayload = base64_encode(json_encode([
             'frontend' => $frontend,
-            'flow' => $flow,
         ]));
 
         /** @var \Laravel\Socialite\Two\AbstractProvider $provider */
@@ -35,7 +33,7 @@ class AuthController extends Controller
     {
         $state = $this->extractState($request);
         $frontendUrl = $this->resolveFrontendUrl($state['frontend'] ?? null);
-        $flow = ($state['flow'] ?? 'login') === 'register' ? 'register' : 'login';
+        $googleUser = null;
 
         try {
             /** @var \Laravel\Socialite\Two\AbstractProvider $provider */
@@ -46,21 +44,17 @@ class AuthController extends Controller
             return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
         }
 
+        if (! $googleUser) {
+            return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
+        }
+
         $user = User::where('google_id', $googleUser->getId())
             ->orWhere('email', $googleUser->getEmail())
             ->first();
+        $isNewGoogleAccount = false;
 
         if (! $user) {
-            if ($flow === 'login') {
-                $warningUrl = $frontendUrl . '/login?google_error=account_not_found';
-
-                if ($googleUser->getEmail()) {
-                    $warningUrl .= '&google_email=' . urlencode($googleUser->getEmail());
-                }
-
-                return redirect()->away($warningUrl);
-            }
-
+            $isNewGoogleAccount = true;
             $user = User::create([
                 'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: 'Google User',
                 'email' => $googleUser->getEmail(),
@@ -71,9 +65,6 @@ class AuthController extends Controller
 
             $user->email_verified_at = now();
             $user->save();
-        } elseif ($flow === 'register') {
-            $existingUrl = $frontendUrl . '/register?google_error=account_already_exists';
-            return redirect()->away($existingUrl);
         } else {
             if (! $user->google_id) {
                 $user->google_id = $googleUser->getId();
@@ -101,7 +92,8 @@ class AuthController extends Controller
 
         $redirectUrl = $frontendUrl
             . '/login?google_token=' . urlencode($token)
-            . '&google_user=' . urlencode($userPayload);
+            . '&google_user=' . urlencode($userPayload)
+            . '&google_created=' . ($isNewGoogleAccount ? '1' : '0');
 
         return redirect()->away($redirectUrl);
     }

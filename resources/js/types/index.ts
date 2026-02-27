@@ -107,6 +107,49 @@ export interface SellerRegistration {
     updated_at?: string;
 }
 
+export interface AuctionMedia {
+    id: number;
+    auction_id: number;
+    file_path: string;
+    media_type: 'image' | 'video';
+    url: string;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AuctionProduct {
+    id: number;
+    user_id: number;
+    title: string;
+    category?: string | null;
+    description?: string | null;
+    starting_price: string;
+    max_increment: string;
+    current_price: string;
+    starts_at?: string | null;
+    ends_at: string;
+    status: 'open' | 'closed';
+    media?: AuctionMedia[];
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AuctionBid {
+    id: number;
+    auction_id: number;
+    user_id: number;
+    amount: string;
+    user?: Pick<User, 'id' | 'name' | 'email'>;
+    created_at?: string;
+    updated_at?: string;
+}
+
+export interface AuctionProductDetail extends AuctionProduct {
+    user?: Pick<User, 'id' | 'name' | 'email'>;
+    bids?: AuctionBid[];
+    bids_count?: number;
+}
+
 export type AccountSection = 
     | 'details' 
     | 'addresses' 
