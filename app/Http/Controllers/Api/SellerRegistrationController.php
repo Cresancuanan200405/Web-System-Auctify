@@ -65,4 +65,33 @@ class SellerRegistrationController extends Controller
             'registration' => $registration,
         ]);
     }
+
+    public function updateShippingSettings(Request $request): JsonResponse
+    {
+        $validated = $request->validate([
+            'shop_name' => 'nullable|string|max:255',
+            'contact_email' => 'nullable|email|max:255',
+            'contact_phone' => 'nullable|string|max:50',
+            'pickup_address_summary' => 'nullable|string|max:2000',
+            'general_location' => 'nullable|string|max:255',
+            'zip_code' => 'nullable|string|max:20',
+        ]);
+
+        $registration = SellerRegistration::firstOrNew(['user_id' => $request->user()->id]);
+
+        $registration->fill($validated);
+        if (! $registration->exists) {
+            $registration->agree_business_terms = true;
+            $registration->submit_business_mode = 'now';
+            $registration->status = 'submitted';
+            $registration->submitted_at = now();
+        }
+
+        $registration->save();
+
+        return response()->json([
+            'message' => 'Shipping settings updated successfully.',
+            'registration' => $registration,
+        ]);
+    }
 }

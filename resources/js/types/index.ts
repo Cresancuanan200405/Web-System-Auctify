@@ -120,6 +120,9 @@ export interface AuctionMedia {
 export interface AuctionProduct {
     id: number;
     user_id: number;
+    user?: Pick<User, 'id' | 'name' | 'email'> & {
+        seller_registration?: Pick<SellerRegistration, 'shop_name'>;
+    };
     title: string;
     category?: string | null;
     description?: string | null;
@@ -130,6 +133,10 @@ export interface AuctionProduct {
     ends_at: string;
     status: 'open' | 'closed';
     media?: AuctionMedia[];
+    page_views?: number;
+    bids_count?: number;
+    messages_count?: number;
+    unique_bidders_count?: number;
     created_at?: string;
     updated_at?: string;
 }
@@ -144,10 +151,108 @@ export interface AuctionBid {
     updated_at?: string;
 }
 
+export interface AuctionMessage {
+    id: number;
+    auction_id: number;
+    user_id: number;
+    message: string;
+    created_at?: string;
+    updated_at?: string;
+    is_unread?: boolean;
+    user?: Pick<User, 'id' | 'name' | 'email'> & {
+        seller_registration?: Pick<SellerRegistration, 'shop_name'>;
+    };
+}
+
+export interface AuctionMessageListResponse {
+    messages: AuctionMessage[];
+    unread_count: number;
+}
+
+export interface DirectMessageParticipant extends Pick<User, 'id' | 'name' | 'email'> {
+    seller_registration?: Pick<SellerRegistration, 'shop_name'> | null;
+}
+
+export interface DirectMessageAttachment {
+    id: number;
+    file_name: string;
+    mime_type?: string | null;
+    file_size?: number | null;
+    url: string;
+}
+
+export interface DirectMessage {
+    id: number;
+    sender_id: number;
+    recipient_id: number;
+    message: string;
+    read_at?: string | null;
+    created_at?: string;
+    updated_at?: string;
+    sender?: DirectMessageParticipant | null;
+    recipient?: DirectMessageParticipant | null;
+    attachments?: DirectMessageAttachment[];
+}
+
+export interface DirectMessageThread {
+    user: DirectMessageParticipant | null;
+    latest_message: string;
+    latest_message_at?: string;
+    unread_count: number;
+}
+
+export interface DirectMessageThreadListResponse {
+    threads: DirectMessageThread[];
+}
+
+export interface DirectMessageThreadResponse {
+    user: DirectMessageParticipant | null;
+    messages: DirectMessage[];
+}
+
 export interface AuctionProductDetail extends AuctionProduct {
-    user?: Pick<User, 'id' | 'name' | 'email'>;
+    user?: Pick<User, 'id' | 'name' | 'email'> & {
+        seller_registration?: Pick<SellerRegistration, 'shop_name'>;
+    };
     bids?: AuctionBid[];
+    messages?: AuctionMessage[];
     bids_count?: number;
+}
+
+export interface BagAuctionItem extends AuctionProduct {
+    user?: Pick<User, 'id' | 'name' | 'email'> & {
+        seller_registration?: Pick<SellerRegistration, 'shop_name'>;
+    };
+    winning_bid_amount: string;
+    winning_bid_at?: string | null;
+}
+
+export interface BagAuctionListResponse {
+    items: BagAuctionItem[];
+}
+
+export interface OrderHistoryItem {
+    id: string;
+    auction_id: number;
+    title: string;
+    category?: string | null;
+    seller_name: string;
+    amount_paid: string;
+    status: 'processing' | 'delivered' | 'cancelled';
+    address_summary: string;
+    payment_card_label: string;
+    media_url?: string;
+    media_type?: 'image' | 'video';
+    purchased_at: string;
+}
+
+export interface WishlistItem {
+    id: number;
+    title: string;
+    category?: string | null;
+    price: string;
+    mediaUrl?: string;
+    mediaType?: 'image' | 'video';
 }
 
 export type AccountSection = 
@@ -165,4 +270,4 @@ export type AccountSection =
     | 'seller'
     | 'delete-account';
 
-export type ViewMode = 'home' | 'auth' | 'account' | 'bag' | 'seller';
+export type ViewMode = 'home' | 'category' | 'auth' | 'account' | 'bag' | 'seller' | 'auction' | 'seller-store';

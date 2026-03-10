@@ -1,14 +1,29 @@
 import React, { useState } from 'react';
+import { useOrderHistory } from '../../hooks/useOrderHistory';
+import { formatCurrency } from '../../utils/helpers';
 
 type OrdersTab = 'all' | 'unpaid' | 'processing' | 'delivered' | 'returns' | 'cancelled';
 
 export const OrdersSection: React.FC = () => {
     const [activeTab, setActiveTab] = useState<OrdersTab>('all');
+    const { orders } = useOrderHistory();
 
     const handleContinueShopping = () => {
         window.history.pushState({}, '', '/');
         window.dispatchEvent(new PopStateEvent('popstate'));
     };
+
+    const visibleOrders = orders.filter((order) => {
+        if (activeTab === 'all') {
+            return true;
+        }
+
+        if (activeTab === 'unpaid' || activeTab === 'returns') {
+            return false;
+        }
+
+        return order.status === activeTab;
+    });
 
     return (
         <div className="orders-main">
@@ -69,7 +84,27 @@ export const OrdersSection: React.FC = () => {
                 </button>
             </div>
 
-            {activeTab === 'all' && (
+            {visibleOrders.length > 0 ? (
+                <div className="orders-list">
+                    {visibleOrders.map((order) => (
+                        <article key={order.id} className="orders-item-card">
+                            <div className="orders-item-head">
+                                <div>
+                                    <p className="orders-item-title">{order.title}</p>
+                                    <p className="orders-item-meta">Seller: {order.seller_name}</p>
+                                </div>
+                                <span className={`orders-item-status orders-item-status-${order.status}`}>{order.status}</span>
+                            </div>
+                            <div className="orders-item-grid">
+                                <p className="orders-item-detail">Paid: {formatCurrency(Number(order.amount_paid ?? 0))}</p>
+                                <p className="orders-item-detail">Card: {order.payment_card_label}</p>
+                                <p className="orders-item-detail">Purchased: {new Date(order.purchased_at).toLocaleString()}</p>
+                                <p className="orders-item-detail">Ship to: {order.address_summary}</p>
+                            </div>
+                        </article>
+                    ))}
+                </div>
+            ) : activeTab === 'all' ? (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg
@@ -93,9 +128,9 @@ export const OrdersSection: React.FC = () => {
                         Continue Shopping
                     </button>
                 </div>
-            )}
+            ) : null}
 
-            {activeTab === 'unpaid' && (
+            {activeTab === 'unpaid' && visibleOrders.length === 0 && (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg
@@ -121,7 +156,7 @@ export const OrdersSection: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'processing' && (
+            {activeTab === 'processing' && visibleOrders.length === 0 && (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg
@@ -147,7 +182,7 @@ export const OrdersSection: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'delivered' && (
+            {activeTab === 'delivered' && visibleOrders.length === 0 && (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg
@@ -173,7 +208,7 @@ export const OrdersSection: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'returns' && (
+            {activeTab === 'returns' && visibleOrders.length === 0 && (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg
@@ -199,7 +234,7 @@ export const OrdersSection: React.FC = () => {
                 </div>
             )}
 
-            {activeTab === 'cancelled' && (
+            {activeTab === 'cancelled' && visibleOrders.length === 0 && (
                 <div className="orders-empty-card">
                     <div className="orders-empty-icon" aria-hidden="true">
                         <svg

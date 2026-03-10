@@ -1,10 +1,20 @@
 import React, { useState, useRef, useEffect } from 'react';
 
-export const Navigation: React.FC = () => {
+interface NavigationProps {
+    activeCategory?: string | null;
+    onSelectCategory?: (category: string) => void;
+}
+
+export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, onSelectCategory }) => {
     const [menuTopOffset, setMenuTopOffset] = useState(190);
     const activeNavWrapperRef = useRef<HTMLDivElement | null>(null);
     const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
     const [isMegamenuHovering, setIsMegamenuHovering] = useState(false);
+
+    const handleSelectCategory = (event: React.MouseEvent<HTMLButtonElement>, category: string) => {
+        event.preventDefault();
+        onSelectCategory?.(category);
+    };
 
     const updateMenuTopOffset = (wrapper: HTMLDivElement | null) => {
         if (!wrapper) return;
@@ -60,7 +70,13 @@ export const Navigation: React.FC = () => {
         >
             {/* Electronics */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#electronics" className="nav-item">ELECTRONICS</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'electronics' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Electronics')}
+                >
+                    ELECTRONICS
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Electronics</div>
@@ -99,7 +115,13 @@ export const Navigation: React.FC = () => {
 
             {/* Collectibles */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#collectibles" className="nav-item">COLLECTIBLES</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'collectibles' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Collectibles')}
+                >
+                    COLLECTIBLES
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Collectibles</div>
@@ -137,7 +159,13 @@ export const Navigation: React.FC = () => {
 
             {/* Art */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#art" className="nav-item">ART</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'art' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Art')}
+                >
+                    ART
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Art</div>
@@ -175,7 +203,13 @@ export const Navigation: React.FC = () => {
 
             {/* Luxury */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#luxury" className="nav-item">LUXURY</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'luxury' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Luxury')}
+                >
+                    LUXURY
+                </button>
                 <div className="nav-megamenu">
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Luxury</div>
@@ -213,7 +247,13 @@ export const Navigation: React.FC = () => {
 
             {/* Antiques */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#antiques" className="nav-item">ANTIQUES</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'antiques' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Antiques')}
+                >
+                    ANTIQUES
+                </button>
                 <div className="nav-megamenu">
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Antiques</div>
@@ -251,7 +291,13 @@ export const Navigation: React.FC = () => {
 
             {/* Vehicles */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#vehicles" className="nav-item">VEHICLES</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'vehicles' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Vehicles')}
+                >
+                    VEHICLES
+                </button>
                 <div className="nav-megamenu">
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Vehicles</div>
@@ -289,7 +335,13 @@ export const Navigation: React.FC = () => {
 
             {/* Fashion */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#fashion" className="nav-item">FASHION</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'fashion' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Fashion')}
+                >
+                    FASHION
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Fashion</div>
@@ -327,7 +379,13 @@ export const Navigation: React.FC = () => {
 
             {/* Property */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#property" className="nav-item">PROPERTY</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'property' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Property')}
+                >
+                    PROPERTY
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Property</div>
@@ -365,7 +423,13 @@ export const Navigation: React.FC = () => {
 
             {/* Niche */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#niche" className="nav-item">NICHE</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'niche' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'Niche')}
+                >
+                    NICHE
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Niche</div>
@@ -403,7 +467,13 @@ export const Navigation: React.FC = () => {
 
             {/* School */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
-                <a href="#school" className="nav-item">SCHOOL</a>
+                <button
+                    type="button"
+                    className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'school' ? 'active' : ''}`}
+                    onClick={(event) => handleSelectCategory(event, 'School')}
+                >
+                    SCHOOL
+                </button>
                 <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">School</div>

@@ -64,6 +64,10 @@ export function useCards() {
         setMainCardIdState(cardId);
     };
 
+    const updateCard = (cardId: number, updater: (card: Card) => Card) => {
+        setSavedCards(savedCards.map((card) => (card.id === cardId ? updater(card) : card)));
+    };
+
     const getMainCard = (): Card | undefined => {
         return savedCards.find(card => card.id === mainCardId);
     };
@@ -82,6 +86,7 @@ export function useCards() {
         addCard,
         deleteCard,
         setMainCardId,
+        updateCard,
         getMainCard,
         getCardDisplayName,
         getCardLogoPath

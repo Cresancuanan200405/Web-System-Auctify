@@ -1,10 +1,10 @@
 <?php
 
-namespace App\Http\Requests\Bid;
+namespace App\Http\Requests\Auction;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class StoreBidRequest extends FormRequest
+class StoreAuctionMessageRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -14,7 +14,7 @@ class StoreBidRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'amount' => ['required', 'integer', 'min:1'],
+            'message' => ['required', 'string', 'max:2000'],
         ];
     }
 }

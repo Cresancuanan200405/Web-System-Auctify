@@ -3,9 +3,13 @@
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\AccountVerificationController;
 use App\Http\Controllers\Api\AuctionController;
+use App\Http\Controllers\Api\AuctionMessageController;
+use App\Http\Controllers\Api\DirectMessageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\SellerRegistrationController;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('auth')->group(function () {
@@ -32,17 +36,32 @@ Route::prefix('auth')->group(function () {
 });
 
 Route::get('media/{path}', [AuctionController::class, 'media'])->where('path', '.*');
+Route::get('direct-message-attachments/{attachment}', [DirectMessageController::class, 'attachment']);
 
 Route::get('auctions', [AuctionController::class, 'index']);
 Route::get('auctions/{auction}', [AuctionController::class, 'show']);
+Route::get('auctions/{auction}/messages', [AuctionMessageController::class, 'index']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('broadcasting/auth', function (Request $request) {
+        return Broadcast::auth($request);
+    });
+
     Route::get('seller/products', [AuctionController::class, 'mine']);
+    Route::get('bag/won-auctions', [AuctionController::class, 'won']);
     Route::post('auctions', [AuctionController::class, 'store']);
     Route::patch('auctions/{auction}', [AuctionController::class, 'update']);
     Route::delete('auctions/{auction}', [AuctionController::class, 'destroy']);
 
     Route::post('auctions/{auction}/bids', [BidController::class, 'store']);
+    Route::post('auctions/{auction}/messages', [AuctionMessageController::class, 'store']);
+    Route::patch('auctions/{auction}/messages/{message}', [AuctionMessageController::class, 'update']);
+    Route::delete('auctions/{auction}/messages/{message}', [AuctionMessageController::class, 'destroy']);
+    Route::post('auctions/{auction}/messages/read', [AuctionMessageController::class, 'markRead']);
+
+    Route::get('direct-messages/threads', [DirectMessageController::class, 'threads']);
+    Route::get('direct-messages/threads/{user}', [DirectMessageController::class, 'index']);
+    Route::post('direct-messages/threads/{user}', [DirectMessageController::class, 'store']);
 
     Route::get('addresses', [AddressController::class, 'index']);
     Route::post('addresses', [AddressController::class, 'store']);
@@ -51,4 +70,5 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::post('seller/registration', [SellerRegistrationController::class, 'store']);
     Route::get('seller/registration', [SellerRegistrationController::class, 'show']);
+    Route::patch('seller/shipping-settings', [SellerRegistrationController::class, 'updateShippingSettings']);
 });

@@ -1,5 +1,17 @@
 import { apiGet, apiPost, apiPatch, apiPut, apiDelete, apiPostForm } from '../api/client';
-import type { User, Address, SellerRegistration, AuctionProduct, AuctionProductDetail } from '../types';
+import type {
+    User,
+    Address,
+    SellerRegistration,
+    AuctionProduct,
+    AuctionProductDetail,
+    AuctionMessage,
+    AuctionMessageListResponse,
+    BagAuctionListResponse,
+    DirectMessage,
+    DirectMessageThreadListResponse,
+    DirectMessageThreadResponse,
+} from '../types';
 
 export interface LoginCredentials {
     email: string;
@@ -156,6 +168,20 @@ export const sellerService = {
         return apiGet<{ registration: SellerRegistration | null }>('/api/seller/registration');
     },
 
+    updateShippingSettings: async (data: {
+        shop_name?: string;
+        contact_email?: string;
+        contact_phone?: string;
+        pickup_address_summary?: string;
+        general_location?: string;
+        zip_code?: string;
+    }) => {
+        return apiPatch<{ message: string; registration: SellerRegistration }>(
+            '/api/seller/shipping-settings',
+            data,
+        );
+    },
+
     submitRegistration: async (data: {
         shop_name?: string;
         contact_email?: string;
@@ -214,7 +240,47 @@ export const auctionService = {
         return apiGet<AuctionProductDetail>(`/api/auctions/${productId}`);
     },
 
+    getWonAuctions: async () => {
+        return apiGet<BagAuctionListResponse>('/api/bag/won-auctions');
+    },
+
     placeBid: async (productId: number, amount: number) => {
         return apiPost<{ id: number; amount: string }>(`/api/auctions/${productId}/bids`, { amount });
+    },
+
+    getMessages: async (productId: number) => {
+        return apiGet<AuctionMessageListResponse>(`/api/auctions/${productId}/messages`);
+    },
+
+    postMessage: async (productId: number, message: string) => {
+        return apiPost<AuctionMessage>(`/api/auctions/${productId}/messages`, { message });
+    },
+
+    markMessagesRead: async (productId: number) => {
+        return apiPost<{ message: string }>(`/api/auctions/${productId}/messages/read`, {});
+    },
+};
+
+export const directMessageService = {
+    getThreads: async () => {
+        return apiGet<DirectMessageThreadListResponse>('/api/direct-messages/threads');
+    },
+
+    getThread: async (userId: number) => {
+        return apiGet<DirectMessageThreadResponse>(`/api/direct-messages/threads/${userId}`);
+    },
+
+    sendMessage: async (userId: number, payload: { message?: string; attachments?: File[] }) => {
+        const formData = new FormData();
+
+        if (payload.message) {
+            formData.append('message', payload.message);
+        }
+
+        payload.attachments?.forEach((file) => {
+            formData.append('attachments[]', file);
+        });
+
+        return apiPostForm<DirectMessage>(`/api/direct-messages/threads/${userId}`, formData);
     },
 };

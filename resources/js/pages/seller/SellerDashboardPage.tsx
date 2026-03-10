@@ -3,15 +3,27 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import { HOME_CATEGORY_OPTIONS } from '../../lib/homeCategories';
 import { sellerService } from '../../services/api';
-import type { AuctionProduct } from '../../types';
+import type { AuctionProduct, SellerRegistration } from '../../types';
+import { getAuctionDisplayStatus, parseAuctionTimestamp } from '../../utils/auctionStatus';
 
 interface SellerDashboardPageProps {
     onNavigateAddProduct: () => void;
+    onNavigateSellerStore: (shopName?: string) => void;
+    activeSection: 'products' | 'shipping';
+    onSectionChange: (section: 'products' | 'shipping') => void;
 }
 
-export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavigateAddProduct }) => {
+export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
+    onNavigateAddProduct,
+    onNavigateSellerStore,
+    activeSection,
+    onSectionChange,
+}) => {
     const MAX_MEDIA_ENTRIES = 10;
     const { authUser } = useAuth();
+    const [registration, setRegistration] = useState<SellerRegistration | null>(null);
+    const [useRegistrationAddress, setUseRegistrationAddress] = useState(false);
+    const [savingShippingSettings, setSavingShippingSettings] = useState(false);
     const [products, setProducts] = useState<AuctionProduct[]>([]);
     const [productFilter, setProductFilter] = useState<'all' | 'open' | 'closed' | 'scheduled'>('all');
     const [loadingProducts, setLoadingProducts] = useState(true);
@@ -23,6 +35,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
     const [featuredImageZoomOrigin, setFeaturedImageZoomOrigin] = useState('50% 50%');
     const [isEditingProduct, setIsEditingProduct] = useState(false);
     const [isActionMenuOpen, setIsActionMenuOpen] = useState(false);
+    const [now, setNow] = useState(() => Date.now());
     const [savingProduct, setSavingProduct] = useState(false);
     const [deletingProduct, setDeletingProduct] = useState(false);
     const [removedMediaIds, setRemovedMediaIds] = useState<number[]>([]);
@@ -39,24 +52,40 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
         status: 'open' as 'open' | 'closed',
         endsAt: '',
     });
+    const [shippingForm, setShippingForm] = useState({
+        shopName: '',
+        contactEmail: '',
+        contactPhone: '',
+        pickupAddressSummary: '',
+        generalLocation: '',
+        zipCode: '',
+    });
+
+    const registrationShippingSnapshot = useMemo(
+        () => ({
+            shopName: registration?.shop_name ?? '',
+            contactEmail: registration?.contact_email ?? '',
+            contactPhone: registration?.contact_phone ?? '',
+            pickupAddressSummary: registration?.pickup_address_summary ?? '',
+            generalLocation: registration?.general_location ?? '',
+            zipCode: registration?.zip_code ?? '',
+        }),
+        [registration],
+    );
+
+    const hasUnsavedShippingChanges = useMemo(() => {
+        return (
+            shippingForm.shopName.trim() !== registrationShippingSnapshot.shopName.trim() ||
+            shippingForm.contactEmail.trim() !== registrationShippingSnapshot.contactEmail.trim() ||
+            shippingForm.contactPhone.trim() !== registrationShippingSnapshot.contactPhone.trim() ||
+            shippingForm.pickupAddressSummary.trim() !== registrationShippingSnapshot.pickupAddressSummary.trim() ||
+            shippingForm.generalLocation.trim() !== registrationShippingSnapshot.generalLocation.trim() ||
+            shippingForm.zipCode.trim() !== registrationShippingSnapshot.zipCode.trim()
+        );
+    }, [registrationShippingSnapshot, shippingForm]);
 
     function getProductDisplayStatus(product: AuctionProduct): 'open' | 'closed' | 'scheduled' {
-        if (product.status === 'closed') {
-            return 'closed';
-        }
-
-        const now = new Date();
-        const endsAt = product.ends_at ? new Date(product.ends_at) : null;
-        if (endsAt && !Number.isNaN(endsAt.getTime()) && endsAt <= now) {
-            return 'closed';
-        }
-
-        const startsAt = product.starts_at ? new Date(product.starts_at) : null;
-        if (startsAt && !Number.isNaN(startsAt.getTime()) && startsAt > now) {
-            return 'scheduled';
-        }
-
-        return 'open';
+        return getAuctionDisplayStatus(product);
     }
 
     const formatDateTimeLocal = (value?: string) => {
@@ -73,7 +102,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
         return new Date(date.getTime() - offsetMs).toISOString().slice(0, 16);
     };
 
-    const toIsoFromDateTimeLocal = (value: string) => {
+    const toDateTimeFromDateTimeLocal = (value: string) => {
         if (!value) {
             return '';
         }
@@ -83,7 +112,14 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             return '';
         }
 
-        return date.toISOString();
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
     };
 
     const mapProductToEditForm = (product: AuctionProduct) => ({
@@ -126,6 +162,40 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
         };
     }, []);
 
+    useEffect(() => {
+        let isActive = true;
+
+        const fetchRegistration = async () => {
+            try {
+                const data = await sellerService.getRegistration();
+                if (!isActive) {
+                    return;
+                }
+
+                const reg = data.registration;
+                setRegistration(reg);
+                setShippingForm({
+                    shopName: reg?.shop_name ?? '',
+                    contactEmail: reg?.contact_email ?? '',
+                    contactPhone: reg?.contact_phone ?? '',
+                    pickupAddressSummary: reg?.pickup_address_summary ?? '',
+                    generalLocation: reg?.general_location ?? '',
+                    zipCode: reg?.zip_code ?? '',
+                });
+            } catch {
+                if (isActive) {
+                    setRegistration(null);
+                }
+            }
+        };
+
+        fetchRegistration();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
     const refreshProducts = async () => {
         setLoadingProducts(true);
         setProductsError('');
@@ -158,6 +228,32 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             open: openCount,
             closed: closedCount,
             scheduled: scheduledCount,
+        };
+    }, [products]);
+
+    const businessInsights = useMemo(() => {
+        const soldProducts = products.filter((product) => {
+            return getProductDisplayStatus(product) === 'closed' && Number(product.bids_count ?? 0) > 0;
+        });
+
+        const sales = soldProducts.reduce((sum, product) => {
+            const amount = Number(product.current_price ?? 0);
+            return sum + (Number.isFinite(amount) ? amount : 0);
+        }, 0);
+
+        const visitors = products.reduce((sum, product) => {
+            return sum + Number(product.unique_bidders_count ?? 0);
+        }, 0);
+
+        const pageViews = products.reduce((sum, product) => {
+            return sum + Number(product.page_views ?? 0);
+        }, 0);
+
+        return {
+            sales,
+            visitors,
+            pageViews,
+            orders: soldProducts.length,
         };
     }, [products]);
 
@@ -254,12 +350,23 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             return [];
         }
 
+        const sortedMedia = [...selectedProduct.media].sort((left, right) => {
+            const leftIsVideo = left.media_type === 'video';
+            const rightIsVideo = right.media_type === 'video';
+
+            if (leftIsVideo === rightIsVideo) {
+                return 0;
+            }
+
+            return leftIsVideo ? -1 : 1;
+        });
+
         if (!isEditingProduct || removedMediaIds.length === 0) {
-            return selectedProduct.media;
+            return sortedMedia;
         }
 
         const removedSet = new Set(removedMediaIds);
-        return selectedProduct.media.filter((media) => !removedSet.has(media.id));
+        return sortedMedia.filter((media) => !removedSet.has(media.id));
     }, [isEditingProduct, removedMediaIds, selectedProduct]);
 
     const removedExistingMedia = useMemo(() => {
@@ -276,6 +383,49 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             setActiveMediaIndex(Math.max(0, visibleExistingMedia.length - 1));
         }
     }, [activeMediaIndex, visibleExistingMedia.length]);
+
+    useEffect(() => {
+        if (!isDetailDialogOpen || !selectedProduct) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            setNow(Date.now());
+        }, 1000);
+
+        return () => {
+            window.clearInterval(interval);
+        };
+    }, [isDetailDialogOpen, selectedProduct]);
+
+    const formatRelativeTime = (targetTime: number | null, referenceTime: number, mode: 'until' | 'since') => {
+        if (!targetTime) {
+            return '--';
+        }
+
+        const diff = mode === 'until'
+            ? Math.max(0, targetTime - referenceTime)
+            : Math.max(0, referenceTime - targetTime);
+
+        const totalSeconds = Math.floor(diff / 1000);
+        const days = Math.floor(totalSeconds / 86400);
+        const hours = Math.floor((totalSeconds % 86400) / 3600);
+        const minutes = Math.floor((totalSeconds % 3600) / 60);
+        const seconds = totalSeconds % 60;
+
+        if (days > 0) {
+            return `${days}d ${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        if (hours > 0) {
+            return `${hours}h ${minutes}m ${seconds}s`;
+        }
+
+        return `${minutes}m ${seconds}s`;
+    };
+
+    const selectedProductStartsAt = parseAuctionTimestamp(selectedProduct?.starts_at ?? null);
+    const selectedProductEndsAt = parseAuctionTimestamp(selectedProduct?.ends_at ?? null);
 
     const handleAddMoreMediaChange = (event: React.ChangeEvent<HTMLInputElement>) => {
         if (!selectedProduct) {
@@ -396,7 +546,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             return;
         }
 
-        const endsAtIso = toIsoFromDateTimeLocal(editForm.endsAt);
+        const endsAtIso = toDateTimeFromDateTimeLocal(editForm.endsAt);
         if (!endsAtIso || new Date(endsAtIso) <= new Date()) {
             toast.error('End date and time must be in the future.');
             return;
@@ -411,6 +561,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
             formData.append('starting_price', String(startPrice));
             formData.append('max_increment', String(increment));
             formData.append('ends_at', endsAtIso);
+            formData.append('end_time_mode', 'custom');
             formData.append('status', editForm.status);
 
             removedMediaIds.forEach((id) => {
@@ -479,21 +630,100 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
         }
     };
 
+    const handleSaveShippingSettings = async () => {
+        setSavingShippingSettings(true);
+
+        try {
+            const response = await sellerService.updateShippingSettings({
+                shop_name: shippingForm.shopName.trim() || undefined,
+                contact_email: shippingForm.contactEmail.trim() || undefined,
+                contact_phone: shippingForm.contactPhone.trim() || undefined,
+                pickup_address_summary: shippingForm.pickupAddressSummary.trim() || undefined,
+                general_location: shippingForm.generalLocation.trim() || undefined,
+                zip_code: shippingForm.zipCode.trim() || undefined,
+            });
+
+            setRegistration(response.registration);
+            setUseRegistrationAddress(false);
+            toast.success('Shipping settings updated.');
+        } catch (error) {
+            const message =
+                typeof error === 'object' &&
+                error !== null &&
+                'message' in error &&
+                typeof (error as { message?: unknown }).message === 'string'
+                    ? (error as { message: string }).message
+                    : 'Failed to update shipping settings.';
+            toast.error(message);
+        } finally {
+            setSavingShippingSettings(false);
+        }
+    };
+
+    const shopName = registration?.shop_name?.trim() || `${authUser?.name || 'Seller'}'s Shop`;
+
+    const handleUseRegistrationAddressToggle = (checked: boolean) => {
+        setUseRegistrationAddress(checked);
+
+        if (!checked) {
+            return;
+        }
+
+        const hasRegisteredAddress = Boolean(
+            registration?.registered_address?.trim() ||
+            registration?.general_location?.trim() ||
+            registration?.zip_code?.trim(),
+        );
+
+        if (!hasRegisteredAddress) {
+            toast.info('No registration address found yet.');
+            setUseRegistrationAddress(false);
+            return;
+        }
+
+        setShippingForm((prev) => ({
+            ...prev,
+            pickupAddressSummary: registration?.registered_address ?? prev.pickupAddressSummary,
+            generalLocation: registration?.general_location ?? prev.generalLocation,
+            zipCode: registration?.zip_code ?? prev.zipCode,
+        }));
+    };
+
     return (
         <section className="seller-dashboard-page">
             <aside className="seller-dashboard-sidebar">
                 <h3 className="seller-dashboard-brand">Seller Center</h3>
+                <div className="seller-dashboard-shop-chip" title={shopName}>{shopName}</div>
                 <div className="seller-dashboard-group">
                     <p className="seller-dashboard-group-title">Order</p>
                     <button type="button" className="seller-dashboard-link">My Orders</button>
                     <button type="button" className="seller-dashboard-link">Mass Ship</button>
-                    <button type="button" className="seller-dashboard-link">Shipping Setting</button>
+                    <button
+                        type="button"
+                        className={`seller-dashboard-link ${activeSection === 'shipping' ? 'seller-dashboard-link-active' : ''}`}
+                        onClick={() => onSectionChange('shipping')}
+                    >
+                        Shipping Setting
+                    </button>
                 </div>
                 <div className="seller-dashboard-group">
                     <p className="seller-dashboard-group-title">Product</p>
-                    <button type="button" className="seller-dashboard-link seller-dashboard-link-active">My Products</button>
+                    <button
+                        type="button"
+                        className={`seller-dashboard-link ${activeSection === 'products' ? 'seller-dashboard-link-active' : ''}`}
+                        onClick={() => onSectionChange('products')}
+                    >
+                        My Products
+                    </button>
                     <button type="button" className="seller-dashboard-link" onClick={onNavigateAddProduct}>
                         Add New Product
+                    </button>
+                    <button
+                        type="button"
+                        className="seller-dashboard-link"
+                        onClick={() => onNavigateSellerStore(registration?.shop_name ?? authUser?.name ?? undefined)}
+                    >
+                        Seller Page
                     </button>
                 </div>
                 <div className="seller-dashboard-group">
@@ -507,7 +737,9 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                 <header className="seller-dashboard-topbar">
                     <div>
                         <h2>Seller Dashboard</h2>
-                        <p className="seller-dashboard-subtext">Manage orders, products, and campaigns in one place.</p>
+                        <p className="seller-dashboard-subtext">
+                            {shopName} • Manage orders, products, and campaigns in one place.
+                        </p>
                     </div>
                     <div className="seller-dashboard-topbar-right">
                         <div className="seller-dashboard-profile">{authUser?.name || 'Seller'}</div>
@@ -519,6 +751,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
 
                 <div className="seller-dashboard-layout">
                     <div className="seller-dashboard-content">
+                        {activeSection === 'products' && (
                         <article className="seller-dashboard-card seller-dashboard-card-wide">
                             <h3 className="seller-dashboard-card-title">To Do List</h3>
                             <div className="seller-dashboard-stats">
@@ -540,29 +773,33 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                                 </div>
                             </div>
                         </article>
+                        )}
 
+                        {activeSection === 'products' && (
                         <article className="seller-dashboard-card seller-dashboard-card-wide seller-dashboard-highlight">
                             <h3 className="seller-dashboard-card-title">Business Insights</h3>
                             <div className="seller-dashboard-stats">
                                 <div>
-                                    <p className="seller-dashboard-stat-value">₱0</p>
+                                    <p className="seller-dashboard-stat-value">{formatPeso(String(businessInsights.sales))}</p>
                                     <p className="seller-dashboard-stat-label">Sales</p>
                                 </div>
                                 <div>
-                                    <p className="seller-dashboard-stat-value">0</p>
+                                    <p className="seller-dashboard-stat-value">{businessInsights.visitors}</p>
                                     <p className="seller-dashboard-stat-label">Visitors</p>
                                 </div>
                                 <div>
-                                    <p className="seller-dashboard-stat-value">0</p>
+                                    <p className="seller-dashboard-stat-value">{businessInsights.pageViews}</p>
                                     <p className="seller-dashboard-stat-label">Page Views</p>
                                 </div>
                                 <div>
-                                    <p className="seller-dashboard-stat-value">0</p>
+                                    <p className="seller-dashboard-stat-value">{businessInsights.orders}</p>
                                     <p className="seller-dashboard-stat-label">Orders</p>
                                 </div>
                             </div>
                         </article>
+                        )}
 
+                        {activeSection === 'products' && (
                         <article className="seller-dashboard-card seller-dashboard-card-wide">
                             <div className="seller-products-head">
                                 <div>
@@ -662,7 +899,106 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                                 </div>
                             )}
                         </article>
+                        )}
 
+                        {activeSection === 'shipping' && (
+                            <article className="seller-dashboard-card seller-dashboard-card-wide seller-shipping-card">
+                                <div className="seller-products-head">
+                                    <div>
+                                        <h3 className="seller-dashboard-card-title">Shipping Settings</h3>
+                                        <p className="seller-dashboard-card-text">
+                                            Update shipping contact and pickup details for your shop.
+                                        </p>
+                                    </div>
+                                    <p className={`seller-shipping-status ${hasUnsavedShippingChanges ? 'dirty' : 'clean'}`}>
+                                        {hasUnsavedShippingChanges ? 'Unsaved changes' : 'All changes saved'}
+                                    </p>
+                                </div>
+
+                                <label className="seller-shipping-toggle">
+                                    <input
+                                        type="checkbox"
+                                        checked={useRegistrationAddress}
+                                        onChange={(event) => handleUseRegistrationAddressToggle(event.target.checked)}
+                                    />
+                                    <span>Same as registration address</span>
+                                </label>
+
+                                <div className="seller-shipping-grid">
+                                    <div className="seller-input-wrap">
+                                        <label className="seller-add-label">Shop Name</label>
+                                        <input
+                                            className="seller-input"
+                                            value={shippingForm.shopName}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, shopName: event.target.value }))}
+                                            placeholder="Your shop name"
+                                        />
+                                    </div>
+                                    <div className="seller-input-wrap">
+                                        <label className="seller-add-label">Contact Email</label>
+                                        <input
+                                            className="seller-input"
+                                            type="email"
+                                            value={shippingForm.contactEmail}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, contactEmail: event.target.value }))}
+                                            placeholder="shop@email.com"
+                                        />
+                                    </div>
+                                    <div className="seller-input-wrap">
+                                        <label className="seller-add-label">Contact Phone</label>
+                                        <input
+                                            className="seller-input"
+                                            value={shippingForm.contactPhone}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, contactPhone: event.target.value }))}
+                                            placeholder="09xxxxxxxxx"
+                                        />
+                                    </div>
+                                    <div className="seller-input-wrap">
+                                        <label className="seller-add-label">General Location</label>
+                                        <input
+                                            className="seller-input"
+                                            value={shippingForm.generalLocation}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, generalLocation: event.target.value }))}
+                                            placeholder="City, Province"
+                                        />
+                                    </div>
+                                    <div className="seller-input-wrap">
+                                        <label className="seller-add-label">ZIP Code</label>
+                                        <input
+                                            className="seller-input"
+                                            value={shippingForm.zipCode}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, zipCode: event.target.value }))}
+                                            placeholder="e.g. 1100"
+                                        />
+                                    </div>
+                                    <div className="seller-input-wrap seller-add-grid-full">
+                                        <label className="seller-add-label">Pickup Address Summary</label>
+                                        <textarea
+                                            className="seller-textarea"
+                                            rows={4}
+                                            value={shippingForm.pickupAddressSummary}
+                                            onChange={(event) => setShippingForm((prev) => ({ ...prev, pickupAddressSummary: event.target.value }))}
+                                            placeholder="Complete pickup address and landmark"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="seller-product-edit-actions">
+                                    <button
+                                        type="button"
+                                        className="seller-primary-btn"
+                                        onClick={() => {
+                                            void handleSaveShippingSettings();
+                                        }}
+                                        disabled={savingShippingSettings || !hasUnsavedShippingChanges}
+                                    >
+                                        {savingShippingSettings ? 'Saving...' : 'Save Shipping Settings'}
+                                    </button>
+                                </div>
+                            </article>
+                        )}
+
+                        {activeSection === 'products' && (
                         <div className="seller-dashboard-grid">
                             <article className="seller-dashboard-card">
                                 <h3 className="seller-dashboard-card-title">Auctify Ads</h3>
@@ -692,8 +1028,10 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                                 </p>
                             </article>
                         </div>
+                        )}
                     </div>
 
+                    {activeSection === 'products' && (
                     <aside className="seller-dashboard-rail">
                         <article className="seller-dashboard-card">
                             <h3 className="seller-dashboard-card-title">Shop Performance</h3>
@@ -708,6 +1046,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                             </ul>
                         </article>
                     </aside>
+                    )}
                 </div>
             </div>
 
@@ -1056,6 +1395,27 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({ onNavi
                                     <div>
                                         <p className="seller-product-detail-label">Created At</p>
                                         <p className="seller-product-detail-value">{formatDate(selectedProduct.created_at)}</p>
+                                    </div>
+                                    <div className="seller-product-detail-live-wrap">
+                                        <p className="seller-product-detail-label">Live Bid Timer</p>
+                                        <div className="seller-product-detail-live-grid">
+                                            <div className="seller-product-detail-live-item">
+                                                <p className="seller-product-detail-live-label">Start</p>
+                                                <p className="seller-product-detail-live-value">
+                                                    {selectedProductStartsAt && selectedProductStartsAt > now
+                                                        ? `Starts in ${formatRelativeTime(selectedProductStartsAt, now, 'until')}`
+                                                        : `Started ${formatRelativeTime(selectedProductStartsAt, now, 'since')} ago`}
+                                                </p>
+                                            </div>
+                                            <div className="seller-product-detail-live-item">
+                                                <p className="seller-product-detail-live-label">End</p>
+                                                <p className="seller-product-detail-live-value">
+                                                    {selectedProductEndsAt && selectedProductEndsAt > now
+                                                        ? `Ends in ${formatRelativeTime(selectedProductEndsAt, now, 'until')}`
+                                                        : `Ended ${formatRelativeTime(selectedProductEndsAt, now, 'since')} ago`}
+                                                </p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
 

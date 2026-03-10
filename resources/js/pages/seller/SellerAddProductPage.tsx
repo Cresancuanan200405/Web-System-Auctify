@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { HOME_CATEGORY_OPTIONS } from '../../lib/homeCategories';
 import { sellerService } from '../../services/api';
@@ -9,11 +9,20 @@ interface SellerAddProductPageProps {
 
 export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNavigateDashboard }) => {
     const MAX_MEDIA_ENTRIES = 10;
+    const formatDateTimeForApi = (date: Date) => {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hours = String(date.getHours()).padStart(2, '0');
+        const minutes = String(date.getMinutes()).padStart(2, '0');
+        const seconds = String(date.getSeconds()).padStart(2, '0');
+
+        return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+    };
     const [startMode, setStartMode] = useState<'now' | 'scheduled'>('now');
     const [scheduledStartDateTime, setScheduledStartDateTime] = useState('');
-    const [endTimeMode, setEndTimeMode] = useState<'days' | 'hours' | 'minutes' | 'custom'>('days');
+    const [endTimeMode, setEndTimeMode] = useState<'days' | 'hours' | 'minutes'>('days');
     const [endTimeValue, setEndTimeValue] = useState('7');
-    const [customEndDateTime, setCustomEndDateTime] = useState('');
     const [productName, setProductName] = useState('');
     const [category, setCategory] = useState('');
     const [startingPrice, setStartingPrice] = useState('');
@@ -84,24 +93,78 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
         });
     };
 
-    const resetForm = () => {
-        mediaEntriesRef.current.forEach((entry) => {
-            URL.revokeObjectURL(entry.previewUrl);
-        });
+    const getDurationMs = (mode: 'days' | 'hours' | 'minutes', value: number) => {
+        if (mode === 'hours') {
+            return value * 60 * 60 * 1000;
+        }
 
-        setProductName('');
-        setCategory('');
-        setStartingPrice('');
-        setMaxIncrement('');
-        setStartMode('now');
-        setScheduledStartDateTime('');
-        setEndTimeMode('days');
-        setEndTimeValue('7');
-        setCustomEndDateTime('');
-        setDescription('');
-        setMediaEntries([]);
-        setMediaError('');
+        if (mode === 'minutes') {
+            return value * 60 * 1000;
+        }
+
+        return value * 24 * 60 * 60 * 1000;
     };
+
+    const buildBidSchedule = () => {
+        const now = new Date();
+        let startsAt = now;
+
+        if (startMode === 'scheduled') {
+            if (!scheduledStartDateTime) {
+                return { error: 'Please choose when bidding should start.' };
+            }
+
+            const scheduledDate = new Date(scheduledStartDateTime);
+            if (Number.isNaN(scheduledDate.getTime()) || scheduledDate <= now) {
+                return { error: 'Scheduled start time must be a valid future date and time.' };
+            }
+
+            startsAt = scheduledDate;
+        }
+
+        const durationValue = Number.parseInt(endTimeValue, 10);
+        if (!Number.isInteger(durationValue) || durationValue <= 0) {
+            return { error: `Please enter a valid number of ${endTimeMode}.` };
+        }
+
+        const endsAt = new Date(startsAt.getTime() + getDurationMs(endTimeMode, durationValue));
+        if (endsAt <= startsAt) {
+            return { error: 'End date and time must be after the bidding start time.' };
+        }
+
+        return { startsAt, endsAt };
+    };
+
+    const formatSchedulePreview = (date: Date) => {
+        return new Intl.DateTimeFormat('en-PH', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+        }).format(date);
+    };
+
+    const bidSchedulePreview = useMemo(() => {
+        const schedule = buildBidSchedule();
+        if ('error' in schedule) {
+            return schedule.error;
+        }
+
+        return `Bidding will run from ${formatSchedulePreview(schedule.startsAt)} to ${formatSchedulePreview(schedule.endsAt)}.`;
+    }, [startMode, scheduledStartDateTime, endTimeMode, endTimeValue]);
+
+    const durationModeMeaning = useMemo(() => {
+        if (endTimeMode === 'hours') {
+            return 'Example: 1 hour means bidding ends 1 hour after the selected start time.';
+        }
+
+        if (endTimeMode === 'minutes') {
+            return 'Example: 30 minutes means bidding ends 30 minutes after the selected start time.';
+        }
+
+        return 'Example: 2 days means bidding ends exactly 2 days after the selected start time.';
+    }, [endTimeMode]);
 
     const handleSaveProduct = async () => {
         if (!productName.trim()) {
@@ -129,60 +192,13 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
             return;
         }
 
-        let endsAtIso = '';
-        let startsAtIso = '';
-
-        if (startMode === 'scheduled') {
-            if (!scheduledStartDateTime) {
-                toast.error('Please choose a start date and time for scheduled bidding.');
-                return;
-            }
-
-            const scheduledDate = new Date(scheduledStartDateTime);
-            if (Number.isNaN(scheduledDate.getTime()) || scheduledDate <= new Date()) {
-                toast.error('Scheduled start time must be a valid future date and time.');
-                return;
-            }
-
-            startsAtIso = scheduledDate.toISOString();
-        }
-
-        if (endTimeMode === 'custom') {
-            if (!customEndDateTime) {
-                toast.error('Please choose a custom end date and time.');
-                return;
-            }
-
-            const customDate = new Date(customEndDateTime);
-            if (Number.isNaN(customDate.getTime()) || customDate <= new Date()) {
-                toast.error('Custom end time must be a valid future date and time.');
-                return;
-            }
-
-            endsAtIso = customDate.toISOString();
-        } else {
-            const numericValue = Number(endTimeValue);
-
-            if (!Number.isFinite(numericValue) || numericValue <= 0) {
-                toast.error(`Please enter a valid number of ${endTimeMode}.`);
-                return;
-            }
-
-            let durationMs = numericValue * 24 * 60 * 60 * 1000;
-
-            if (endTimeMode === 'hours') {
-                durationMs = numericValue * 60 * 60 * 1000;
-            } else if (endTimeMode === 'minutes') {
-                durationMs = numericValue * 60 * 1000;
-            }
-
-            endsAtIso = new Date(Date.now() + durationMs).toISOString();
-        }
-
-        if (startsAtIso && new Date(endsAtIso) <= new Date(startsAtIso)) {
-            toast.error('End date and time must be after the scheduled start date and time.');
+        const schedule = buildBidSchedule();
+        if ('error' in schedule) {
+            toast.error(schedule.error);
             return;
         }
+
+        const startsAtIso = formatDateTimeForApi(schedule.startsAt);
 
         const formData = new FormData();
         formData.append('title', productName.trim());
@@ -190,20 +206,35 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
         formData.append('starting_price', startingPrice);
         formData.append('max_increment', maxIncrement);
         formData.append('description', description.trim());
-        if (startsAtIso) {
+        formData.append('start_mode', startMode);
+        formData.append('end_time_mode', endTimeMode);
+        formData.append('end_time_value', endTimeValue);
+
+        // Backend is the source of truth for schedule math to avoid client-side drift.
+        if (startMode === 'scheduled') {
             formData.append('starts_at', startsAtIso);
         }
-        formData.append('ends_at', endsAtIso);
 
-        mediaEntries.forEach((entry) => {
+        const mediaEntriesOrderedForDisplay = [...mediaEntries].sort((left, right) => {
+            const leftIsVideo = left.file.type.startsWith('video/');
+            const rightIsVideo = right.file.type.startsWith('video/');
+
+            if (leftIsVideo === rightIsVideo) {
+                return 0;
+            }
+
+            return leftIsVideo ? -1 : 1;
+        });
+
+        mediaEntriesOrderedForDisplay.forEach((entry) => {
             formData.append('media[]', entry.file);
         });
 
         setSaving(true);
         try {
             await sellerService.createProduct(formData);
-            toast.success('Product saved successfully.');
-            resetForm();
+            toast.success('Product listed successfully.');
+            onNavigateDashboard();
         } catch (error) {
             const message =
                 typeof error === 'object' &&
@@ -220,11 +251,14 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
 
     return (
         <section className="seller-add-page">
+            <div className="page-breadcrumb seller-add-breadcrumb">
+                <button type="button" onClick={() => onNavigateDashboard()}>Seller Dashboard</button>
+                <span>›</span>
+                <span className="page-breadcrumb-current">Add Product</span>
+            </div>
+
             <div className="seller-add-header">
                 <h2>Add New Product</h2>
-                <button type="button" className="seller-secondary-btn" onClick={onNavigateDashboard}>
-                    Back to Dashboard
-                </button>
             </div>
 
             <div className="seller-add-card">
@@ -279,18 +313,18 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                         />
                     </div>
                     <div className="seller-input-wrap">
-                        <label className="seller-add-label">Bidding Starts</label>
+                        <label className="seller-add-label">When should bidding start?</label>
                         <select
                             className="seller-input"
                             value={startMode}
                             onChange={(event) => setStartMode(event.target.value as 'now' | 'scheduled')}
                         >
-                            <option value="now">Start now</option>
-                            <option value="scheduled">Schedule start</option>
+                            <option value="now">Start immediately</option>
+                            <option value="scheduled">Start at scheduled date/time</option>
                         </select>
                     </div>
                     <div className="seller-input-wrap">
-                        <label className="seller-add-label">Start Date & Time</label>
+                        <label className="seller-add-label">Scheduled start date & time</label>
                         <input
                             type="datetime-local"
                             className="seller-input"
@@ -300,41 +334,32 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                         />
                     </div>
                     <div className="seller-input-wrap">
-                        <label className="seller-add-label">Bidding Ends In</label>
+                        <label className="seller-add-label">How long should bidding run?</label>
                         <select
                             className="seller-input"
                             value={endTimeMode}
-                            onChange={(event) => setEndTimeMode(event.target.value as 'days' | 'hours' | 'minutes' | 'custom')}
+                            onChange={(event) => setEndTimeMode(event.target.value as 'days' | 'hours' | 'minutes')}
                         >
                             <option value="days">Days</option>
                             <option value="hours">Hours</option>
                             <option value="minutes">Minutes</option>
-                            <option value="custom">Custom date & time</option>
                         </select>
                     </div>
                     <div className="seller-input-wrap">
-                        <label className="seller-add-label">
-                            {endTimeMode === 'custom'
-                                ? 'Custom End Date & Time'
-                                : `Number of ${endTimeMode}`}
-                        </label>
-                        {endTimeMode === 'custom' ? (
-                            <input
-                                type="datetime-local"
-                                className="seller-input"
-                                value={customEndDateTime}
-                                onChange={(event) => setCustomEndDateTime(event.target.value)}
-                            />
-                        ) : (
-                            <input
-                                type="number"
-                                className="seller-input"
-                                min="1"
-                                step="1"
-                                value={endTimeValue}
-                                onChange={(event) => setEndTimeValue(event.target.value)}
-                            />
-                        )}
+                        <label className="seller-add-label">Duration value ({endTimeMode})</label>
+                        <input
+                            type="number"
+                            className="seller-input"
+                            min="1"
+                            step="1"
+                            value={endTimeValue}
+                            onChange={(event) => {
+                                const digitsOnly = event.target.value.replace(/[^\d]/g, '');
+                                setEndTimeValue(digitsOnly);
+                            }}
+                        />
+                        <p className="seller-field-help">{durationModeMeaning}</p>
+                        <p className="seller-field-help">{bidSchedulePreview}</p>
                     </div>
                     <div className="seller-input-wrap seller-add-grid-full">
                         <label className="seller-add-label">Product Media (Images or Videos, up to 10)</label>
@@ -384,11 +409,11 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                     </div>
                 </div>
                 <div className="seller-add-actions">
-                    <button type="button" className="seller-ghost-btn" onClick={onNavigateDashboard}>
+                    <button type="button" className="seller-ghost-btn" onClick={() => onNavigateDashboard()}>
                         Cancel
                     </button>
                     <button type="button" className="seller-primary-btn" onClick={handleSaveProduct} disabled={saving}>
-                        {saving ? 'Saving...' : 'Save Product'}
+                        {saving ? 'Selling...' : 'Sell'}
                     </button>
                 </div>
             </div>

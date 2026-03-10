@@ -5,35 +5,38 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Bid\StoreBidRequest;
 use App\Models\Auction;
-use Illuminate\Support\Carbon;
-
 class BidController extends Controller
 {
     public function store(StoreBidRequest $request, Auction $auction)
     {
-        if ($auction->status === 'open' && $auction->ends_at && Carbon::parse($auction->ends_at)->isPast()) {
-            $auction->update(['status' => 'closed']);
-            $auction->refresh();
+        if ((int) $auction->user_id === (int) $request->user()->id) {
+            return response()->json([
+                'message' => 'You cannot bid on your own product.',
+            ], 422);
         }
 
-        if ($auction->starts_at && Carbon::parse($auction->starts_at)->isFuture()) {
+        $computedStatus = $auction->getComputedStatus();
+
+        if ($computedStatus === 'scheduled') {
             return response()->json([
                 'message' => 'This auction has not started yet.',
             ], 422);
         }
 
-        if (! $auction->isOpen()) {
+        if ($computedStatus === 'closed') {
             return response()->json([
                 'message' => 'This auction is closed.',
             ], 422);
         }
 
-        $amount = $request->validated()['amount'];
-        $minBid = max($auction->starting_price, $auction->current_price ?? 0);
+        $amount = (int) $request->validated()['amount'];
+        $currentBase = (int) ceil(max((float) $auction->starting_price, (float) ($auction->current_price ?? 0)));
+        $minimumStep = max(1, (int) ceil((float) ($auction->max_increment ?? 0)));
+        $minBid = $currentBase + $minimumStep;
 
-        if ($amount <= $minBid) {
+        if ($amount < $minBid) {
             return response()->json([
-                'message' => 'Bid amount must be higher than the current price.',
+                'message' => sprintf('Bid must be at least %d based on the configured increment.', $minBid),
             ], 422);
         }
 
@@ -43,7 +46,7 @@ class BidController extends Controller
         ]);
 
         $auction->update([
-            'current_price' => $amount,
+            'current_price' => number_format($amount, 2, '.', ''),
         ]);
 
         return response()->json($bid, 201);

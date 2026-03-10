@@ -69,6 +69,26 @@ class User extends Authenticatable
         return $this->hasMany(Bid::class);
     }
 
+    public function auctionMessages(): HasMany
+    {
+        return $this->hasMany(AuctionMessage::class);
+    }
+
+    public function auctionMessageReads(): HasMany
+    {
+        return $this->hasMany(AuctionMessageRead::class);
+    }
+
+    public function sentDirectMessages(): HasMany
+    {
+        return $this->hasMany(DirectMessage::class, 'sender_id');
+    }
+
+    public function receivedDirectMessages(): HasMany
+    {
+        return $this->hasMany(DirectMessage::class, 'recipient_id');
+    }
+
     public function addresses(): HasMany
     {
         return $this->hasMany(Address::class);

@@ -296,9 +296,13 @@ export const BecomeSellerSection: React.FC = () => {
     };
 
     const navigateToSellerProductListing = () => {
-        window.history.pushState({}, '', '/seller/dashboard');
-        window.dispatchEvent(new PopStateEvent('popstate'));
-        window.scrollTo(0, 0);
+        const popup = window.open('/seller/add-product', '_blank', 'noopener,noreferrer');
+
+        if (!popup) {
+            window.history.pushState({}, '', '/seller/add-product');
+            window.dispatchEvent(new PopStateEvent('popstate'));
+            window.scrollTo(0, 0);
+        }
     };
 
     const sellerTypeLabel =

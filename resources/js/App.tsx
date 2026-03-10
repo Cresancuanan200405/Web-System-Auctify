@@ -3,14 +3,19 @@ import { ToastContainer, toast } from 'react-toastify';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
 import { Navigation } from './components/Navigation';
+import { SellerChatDialog } from './components/SellerChatDialog';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
 import { AccountPage } from './pages/AccountPage';
+import { AuctionDetailPage } from './pages/AuctionDetailPage';
 import { AuthPage } from './pages/AuthPage';
 import { BagPage } from './pages/BagPage';
 import { HomePage } from './pages/HomePage';
 import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
+import { SellerStorePage } from './pages/SellerStorePage';
+import { HOME_CATEGORY_OPTIONS } from './lib/homeCategories';
+import { sellerService } from './services/api';
 import type { ViewMode, AccountSection } from './types';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -34,7 +39,7 @@ const AppContent: React.FC = () => {
     const { authUser, logout } = useAuth();
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const savedViewMode = localStorage.getItem('ui_view_mode');
-        if (savedViewMode === 'home' || savedViewMode === 'auth' || savedViewMode === 'account' || savedViewMode === 'bag') {
+        if (savedViewMode === 'home' || savedViewMode === 'category' || savedViewMode === 'auth' || savedViewMode === 'account' || savedViewMode === 'bag' || savedViewMode === 'auction' || savedViewMode === 'seller-store') {
             return savedViewMode as ViewMode;
         }
 
@@ -59,7 +64,32 @@ const AppContent: React.FC = () => {
     });
 
     const [sellerSubView, setSellerSubView] = useState<'dashboard' | 'add-product'>('dashboard');
+    const [sellerDashboardSection, setSellerDashboardSection] = useState<'products' | 'shipping'>('products');
+    const [canAccessSellerDashboard, setCanAccessSellerDashboard] = useState(false);
     const [isSellerChatOpen, setIsSellerChatOpen] = useState(false);
+    const [activeAuctionId, setActiveAuctionId] = useState<number | null>(null);
+    const [activeSellerStoreId, setActiveSellerStoreId] = useState<number | null>(null);
+    const [activeSellerStoreName, setActiveSellerStoreName] = useState<string>('');
+    const [activeSellerChatName, setActiveSellerChatName] = useState<string>('');
+    const [activeSellerChatUserId, setActiveSellerChatUserId] = useState<number | null>(null);
+    const [selectedHomeCategory, setSelectedHomeCategory] = useState<string | null>(null);
+    const [auctionOrigin, setAuctionOrigin] = useState<'home' | 'seller-store' | null>(null);
+    const [sellerStoreOrigin, setSellerStoreOrigin] = useState<'seller-dashboard' | null>(null);
+
+    const resolveHomeCategoryFromLocation = useCallback(() => {
+        const path = window.location.pathname;
+        const segments = path.split('/').filter(Boolean);
+        const categorySegment = segments[0] === 'category' ? segments[1]?.trim().toLowerCase() : null;
+        const queryCategory = new URLSearchParams(window.location.search).get('category')?.trim().toLowerCase();
+        const rawCategory = categorySegment || queryCategory;
+
+        if (!rawCategory) {
+            return null;
+        }
+
+        const matchedOption = HOME_CATEGORY_OPTIONS.find((option) => option.value === rawCategory || option.label.toLowerCase() === rawCategory);
+        return matchedOption?.label ?? null;
+    }, []);
 
     useEffect(() => {
         localStorage.setItem('ui_view_mode', viewMode);
@@ -99,28 +129,74 @@ const AppContent: React.FC = () => {
         }
     }, [authUser]);
 
+    useEffect(() => {
+        let isActive = true;
+
+        const fetchSellerAccess = async () => {
+            if (!authUser) {
+                if (isActive) {
+                    setCanAccessSellerDashboard(false);
+                }
+                return;
+            }
+
+            try {
+                const response = await sellerService.getRegistration();
+                if (!isActive) {
+                    return;
+                }
+
+                const status = response.registration?.status ?? '';
+                const hasAccess = status === 'submitted' || status === 'approved';
+                setCanAccessSellerDashboard(hasAccess);
+            } catch {
+                if (isActive) {
+                    setCanAccessSellerDashboard(false);
+                }
+            }
+        };
+
+        fetchSellerAccess();
+
+        return () => {
+            isActive = false;
+        };
+    }, [authUser]);
+
     const applyRouteFromLocation = useCallback(() => {
         const path = window.location.pathname;
         const segments = path.split('/').filter(Boolean);
 
         if (segments.length === 0) {
-            setViewMode('home');
+            const resolvedCategory = resolveHomeCategoryFromLocation();
+            setSelectedHomeCategory(resolvedCategory);
+            setViewMode(resolvedCategory ? 'category' : 'home');
+            return;
+        }
+
+        if (segments[0] === 'category') {
+            const resolvedCategory = resolveHomeCategoryFromLocation();
+            setSelectedHomeCategory(resolvedCategory);
+            setViewMode(resolvedCategory ? 'category' : 'home');
             return;
         }
 
         if (segments[0] === 'login') {
+            setSelectedHomeCategory(null);
             setAuthMode('login');
             setViewMode('auth');
             return;
         }
 
         if (segments[0] === 'register') {
+            setSelectedHomeCategory(null);
             setAuthMode('register');
             setViewMode('auth');
             return;
         }
 
         if (segments[0] === 'account') {
+            setSelectedHomeCategory(null);
             setViewMode('account');
             const sectionFromPath = segments[1] as AccountSection | undefined;
             const section = sectionFromPath && VALID_ACCOUNT_SECTIONS.includes(sectionFromPath)
@@ -131,31 +207,168 @@ const AppContent: React.FC = () => {
         }
 
         if (segments[0] === 'bag') {
+            setSelectedHomeCategory(null);
             setViewMode('bag');
             return;
         }
 
-        if (segments[0] === 'seller') {
-            setViewMode('seller');
-            setSellerSubView(segments[1] === 'add-product' ? 'add-product' : 'dashboard');
+        if (segments[0] === 'auction') {
+            setSelectedHomeCategory(null);
+            setAuctionOrigin(null);
+            const auctionId = Number(segments[1]);
+            if (Number.isInteger(auctionId) && auctionId > 0) {
+                setActiveAuctionId(auctionId);
+                setViewMode('auction');
+                return;
+            }
+
+            setActiveAuctionId(null);
+            setViewMode('home');
             return;
         }
 
+        if (segments[0] === 'seller-store') {
+            setSelectedHomeCategory(null);
+            setSellerStoreOrigin(null);
+            const sellerId = Number(segments[1]);
+            if (Number.isInteger(sellerId) && sellerId > 0) {
+                const sellerName = new URLSearchParams(window.location.search).get('name') || '';
+                setActiveSellerStoreId(sellerId);
+                setActiveSellerStoreName(sellerName);
+                setViewMode('seller-store');
+                return;
+            }
+
+            setActiveSellerStoreId(null);
+            setActiveSellerStoreName('');
+            setViewMode('home');
+            return;
+        }
+
+        if (segments[0] === 'seller') {
+            setSelectedHomeCategory(null);
+            setViewMode('seller');
+            if (segments[1] === 'add-product') {
+                setSellerSubView('add-product');
+                setSellerDashboardSection('products');
+                return;
+            }
+
+            setSellerSubView('dashboard');
+            setSellerDashboardSection(segments[1] === 'shipping-settings' ? 'shipping' : 'products');
+            return;
+        }
+
+        setSelectedHomeCategory(null);
         setViewMode('home');
-    }, []);
+    }, [resolveHomeCategoryFromLocation]);
 
     const handleNavigateHome = () => {
         setViewMode('home');
+        setSelectedHomeCategory(null);
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
+        setActiveAuctionId(null);
+        setActiveSellerStoreId(null);
+        setActiveSellerStoreName('');
+        setIsSellerChatOpen(false);
+        setActiveSellerChatName('');
+        setActiveSellerChatUserId(null);
         window.history.pushState({}, '', '/');
     };
 
+    const handleNavigateHomeCategory = (categoryLabel: string) => {
+        const normalized = categoryLabel.trim().toLowerCase();
+        const matchedOption = HOME_CATEGORY_OPTIONS.find((option) => option.label.toLowerCase() === normalized || option.value === normalized);
+
+        setViewMode('category');
+        setSelectedHomeCategory(matchedOption?.label ?? categoryLabel);
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
+        setActiveAuctionId(null);
+        setActiveSellerStoreId(null);
+        setActiveSellerStoreName('');
+
+        const path = matchedOption ? `/category/${matchedOption.value}` : '/category';
+        window.history.pushState({}, '', path);
+        window.scrollTo(0, 0);
+    };
+
+    const handleNavigateAuction = (auctionId: number) => {
+        setAuctionOrigin(viewMode === 'seller-store' ? 'seller-store' : 'home');
+        setActiveAuctionId(auctionId);
+        setViewMode('auction');
+        window.history.pushState({}, '', `/auction/${auctionId}`);
+        window.scrollTo(0, 0);
+    };
+
+    const handleNavigateSellerStore = (sellerId: number, sellerName?: string, source: 'seller-dashboard' | null = null) => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(source);
+        setActiveSellerStoreId(sellerId);
+        setActiveSellerStoreName(sellerName ?? '');
+        setViewMode('seller-store');
+        const params = new URLSearchParams();
+        if (sellerName?.trim()) {
+            params.set('name', sellerName.trim());
+        }
+        const query = params.toString();
+        window.history.pushState({}, '', `/seller-store/${sellerId}${query ? `?${query}` : ''}`);
+        window.scrollTo(0, 0);
+    };
+
+    const handleOpenSellerChat = () => {
+        if (!activeSellerStoreId) {
+            return;
+        }
+
+        if (!authUser) {
+            localStorage.setItem(
+                'post_login_target',
+                JSON.stringify({
+                    viewMode: 'seller-store',
+                    sellerStoreId: activeSellerStoreId,
+                    sellerStoreName: activeSellerStoreName,
+                    openSellerChat: true,
+                }),
+            );
+            setAuthMode('login');
+            setViewMode('auth');
+            window.history.pushState({}, '', '/login');
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        setActiveSellerChatUserId(activeSellerStoreId);
+        setActiveSellerChatName(activeSellerStoreName.trim() || `Shop #${activeSellerStoreId}`);
+        setIsSellerChatOpen(true);
+    };
+
+    const handleOpenUserMessages = () => {
+        if (!authUser) {
+            setAuthMode('login');
+            setViewMode('auth');
+            window.history.pushState({}, '', '/login');
+            window.scrollTo(0, 0);
+            return;
+        }
+
+        setActiveSellerChatUserId(null);
+        setActiveSellerChatName('');
+        setIsSellerChatOpen(true);
+    };
+
     const handleNavigateBag = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setViewMode('bag');
         window.history.pushState({}, '', '/bag');
         window.scrollTo(0, 0);
     };
 
     const handleNavigateLogin = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setAuthMode('login');
         setViewMode('auth');
         window.history.pushState({}, '', '/login');
@@ -163,13 +376,33 @@ const AppContent: React.FC = () => {
     };
 
     const handleNavigateRegister = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setAuthMode('register');
         setViewMode('auth');
         window.history.pushState({}, '', '/register');
         window.scrollTo(0, 0);
     };
 
+    const handleNavigateWishlistFromHome = () => {
+        if (authUser) {
+            handleNavigateAccount('wishlist');
+            return;
+        }
+
+        localStorage.setItem(
+            'post_login_target',
+            JSON.stringify({ viewMode: 'account', section: 'wishlist' as AccountSection }),
+        );
+        setAuthMode('login');
+        setViewMode('auth');
+        window.history.pushState({}, '', '/login');
+        window.scrollTo(0, 0);
+    };
+
     const handleNavigateAccount = (section: AccountSection = 'details') => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setAccountSection(section);
         setViewMode('account');
         const path = section && section !== 'details' ? `/account/${section}` : '/account';
@@ -177,14 +410,30 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateSellerDashboard = () => {
+    const handleNavigateSellerDashboard = (section: 'products' | 'shipping' = 'products') => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setSellerSubView('dashboard');
+        setSellerDashboardSection(section);
         setViewMode('seller');
-        window.history.pushState({}, '', '/seller/dashboard');
+        const nextPath = section === 'shipping' ? '/seller/shipping-settings' : '/seller/dashboard';
+        window.history.pushState({}, '', nextPath);
         window.scrollTo(0, 0);
     };
 
+    const handleOpenSellerDashboardInNewTab = () => {
+        const popup = window.open('/seller/dashboard', '_blank', 'noopener,noreferrer');
+
+        if (!popup) {
+            toast.info('Please allow pop-ups to open Seller Dashboard in a new tab.', {
+                autoClose: 2800,
+            });
+        }
+    };
+
     const handleNavigateSellerAddProduct = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setSellerSubView('add-product');
         setViewMode('seller');
         window.history.pushState({}, '', '/seller/add-product');
@@ -195,6 +444,8 @@ const AppContent: React.FC = () => {
         logout();
         localStorage.removeItem('ui_auth_mode');
         localStorage.removeItem('account_section');
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setViewMode('home');
         toast.success('Logged out successfully.', {
             autoClose: 2500,
@@ -203,11 +454,15 @@ const AppContent: React.FC = () => {
 
     const handleAccountDeleted = () => {
         logout();
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         setViewMode('home');
         window.scrollTo(0, 0);
     };
 
     const handleNavigateOrdersLogin = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         localStorage.setItem(
             'post_login_target',
             JSON.stringify({ viewMode: 'account', section: 'orders' as AccountSection })
@@ -219,6 +474,8 @@ const AppContent: React.FC = () => {
     };
 
     const handleAuthSuccess = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
         const targetRaw = localStorage.getItem('post_login_target');
 
         if (targetRaw) {
@@ -226,6 +483,9 @@ const AppContent: React.FC = () => {
                 const parsed = JSON.parse(targetRaw) as {
                     viewMode?: ViewMode;
                     section?: AccountSection;
+                    sellerStoreId?: number;
+                    sellerStoreName?: string;
+                    openSellerChat?: boolean;
                 };
 
                 localStorage.removeItem('post_login_target');
@@ -239,6 +499,28 @@ const AppContent: React.FC = () => {
                     const path = section && section !== 'details' ? `/account/${section}` : '/account';
                     window.history.pushState({}, '', path);
                     window.scrollTo(0, 0);
+                    return;
+                }
+
+                if (parsed.viewMode === 'seller-store' && parsed.sellerStoreId) {
+                    setActiveSellerStoreId(parsed.sellerStoreId);
+                    setActiveSellerStoreName(parsed.sellerStoreName ?? '');
+                    setViewMode('seller-store');
+
+                    const params = new URLSearchParams();
+                    if (parsed.sellerStoreName?.trim()) {
+                        params.set('name', parsed.sellerStoreName.trim());
+                    }
+
+                    const query = params.toString();
+                    window.history.pushState({}, '', `/seller-store/${parsed.sellerStoreId}${query ? `?${query}` : ''}`);
+                    window.scrollTo(0, 0);
+
+                    if (parsed.openSellerChat) {
+                        setActiveSellerChatUserId(parsed.sellerStoreId);
+                        setActiveSellerChatName(parsed.sellerStoreName?.trim() || `Shop #${parsed.sellerStoreId}`);
+                        setIsSellerChatOpen(true);
+                    }
                     return;
                 }
             } catch {
@@ -265,6 +547,33 @@ const AppContent: React.FC = () => {
         };
     }, [applyRouteFromLocation]);
 
+    const shouldReturnToOwnSellerStoreFromAuction =
+        auctionOrigin === 'seller-store' &&
+        Boolean(authUser) &&
+        activeSellerStoreId !== null &&
+        authUser?.id === activeSellerStoreId;
+
+    const isSellerContextView =
+        viewMode === 'seller' ||
+        (
+            viewMode === 'seller-store' &&
+            sellerStoreOrigin === 'seller-dashboard' &&
+            Boolean(authUser) &&
+            activeSellerStoreId !== null &&
+            authUser?.id === activeSellerStoreId
+        ) ||
+        (
+            viewMode === 'auction' &&
+            auctionOrigin === 'seller-store' &&
+            Boolean(authUser) &&
+            activeSellerStoreId !== null &&
+            authUser?.id === activeSellerStoreId
+        );
+
+    useEffect(() => {
+        document.title = isSellerContextView ? 'Auctify Seller' : 'Auctify';
+    }, [isSellerContextView]);
+
     return (
         <div className="page">
             <div className="promo-banner">
@@ -281,19 +590,69 @@ const AppContent: React.FC = () => {
 
             <Header
                 onNavigateHome={handleNavigateHome}
+                disableHomeNavigation={isSellerContextView}
+                isSellerMode={isSellerContextView}
                 onNavigateLogin={handleNavigateLogin}
                 onNavigateRegister={handleNavigateRegister}
                 onNavigateAccount={handleNavigateAccount}
+                onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
+                showSellerDashboardButton={canAccessSellerDashboard}
                 onNavigateOrdersLogin={handleNavigateOrdersLogin}
                 onNavigateBag={handleNavigateBag}
                 onLogout={handleLogout}
             />
 
-            {viewMode !== 'seller' && <Navigation />}
+            {!isSellerContextView && (
+                <Navigation
+                    activeCategory={(viewMode === 'home' || viewMode === 'category') ? selectedHomeCategory : null}
+                    onSelectCategory={handleNavigateHomeCategory}
+                />
+            )}
 
-            {viewMode === 'home' && <HomePage onNavigateToRegister={handleNavigateRegister} />}
+            {(viewMode === 'home' || viewMode === 'category') && (
+                <HomePage
+                    selectedCategory={selectedHomeCategory}
+                    isCategoryPage={viewMode === 'category'}
+                    onNavigateHome={handleNavigateHome}
+                    onNavigateCategory={handleNavigateHomeCategory}
+                    onNavigateToRegister={handleNavigateRegister}
+                    onNavigateToWishlist={handleNavigateWishlistFromHome}
+                    onNavigateToAuction={handleNavigateAuction}
+                />
+            )}
 
-            {viewMode === 'bag' && <BagPage onNavigateHome={handleNavigateHome} />}
+            {viewMode === 'auction' && activeAuctionId && (
+                <AuctionDetailPage
+                    auctionId={activeAuctionId}
+                    backBreadcrumbLabel={shouldReturnToOwnSellerStoreFromAuction ? 'Seller Store' : 'Home'}
+                    disableSellerStoreLink={isSellerContextView}
+                    onNavigateHome={() => {
+                        if (shouldReturnToOwnSellerStoreFromAuction) {
+                            handleNavigateSellerStore(activeSellerStoreId, activeSellerStoreName, 'seller-dashboard');
+                            return;
+                        }
+
+                        handleNavigateHome();
+                    }}
+                    onNavigateSellerDashboard={() => handleNavigateSellerDashboard('products')}
+                    onNavigateToRegister={handleNavigateRegister}
+                    onNavigateToWishlist={handleNavigateWishlistFromHome}
+                    onNavigateToSellerStore={handleNavigateSellerStore}
+                />
+            )}
+
+            {viewMode === 'seller-store' && activeSellerStoreId && (
+                <SellerStorePage
+                    sellerId={activeSellerStoreId}
+                    sellerName={activeSellerStoreName}
+                    onNavigateSellerDashboard={() => handleNavigateSellerDashboard('products')}
+                    onNavigateToAuction={handleNavigateAuction}
+                    onMessageSeller={handleOpenSellerChat}
+                    canMessageSeller={!authUser || authUser.id !== activeSellerStoreId}
+                />
+            )}
+
+            {viewMode === 'bag' && <BagPage onNavigateHome={handleNavigateHome} onNavigateToAuction={handleNavigateAuction} />}
 
             {(viewMode === 'auth' || ((viewMode === 'account' || viewMode === 'seller') && !authUser)) && (
                 <AuthPage
@@ -308,24 +667,34 @@ const AppContent: React.FC = () => {
                     activeSection={accountSection}
                     onSectionChange={handleNavigateAccount}
                     onAccountDeleted={handleAccountDeleted}
+                    onNavigateToAuction={handleNavigateAuction}
                 />
             )}
 
             {viewMode === 'seller' && authUser && sellerSubView === 'dashboard' && (
-                <SellerDashboardPage onNavigateAddProduct={handleNavigateSellerAddProduct} />
+                <SellerDashboardPage
+                    onNavigateAddProduct={handleNavigateSellerAddProduct}
+                    onNavigateSellerStore={(shopName) => handleNavigateSellerStore(authUser.id, shopName, 'seller-dashboard')}
+                    activeSection={sellerDashboardSection}
+                    onSectionChange={(section) => handleNavigateSellerDashboard(section)}
+                />
             )}
 
             {viewMode === 'seller' && authUser && sellerSubView === 'add-product' && (
-                <SellerAddProductPage onNavigateDashboard={handleNavigateSellerDashboard} />
+                <SellerAddProductPage onNavigateDashboard={() => handleNavigateSellerDashboard('products')} />
             )}
 
-            {viewMode !== 'seller' && <Footer />}
+            {!isSellerContextView && <Footer />}
 
             {viewMode === 'seller' && (
                 <button
                     className="seller-chat-button"
                     aria-label="Seller chat support"
-                    onClick={() => setIsSellerChatOpen(true)}
+                    onClick={() => {
+                        setActiveSellerChatUserId(null);
+                        setActiveSellerChatName('');
+                        setIsSellerChatOpen(true);
+                    }}
                 >
                     <span className="seller-chat-icon" aria-hidden="true">
                         <svg viewBox="0 0 24 24" role="img" focusable="false">
@@ -339,85 +708,17 @@ const AppContent: React.FC = () => {
                 </button>
             )}
 
-            {viewMode === 'seller' && isSellerChatOpen && (
-                <div
-                    className="seller-chat-dialog-backdrop"
-                    role="presentation"
-                    onClick={() => setIsSellerChatOpen(false)}
-                >
-                    <div
-                        className="seller-chat-dialog"
-                        role="dialog"
-                        aria-modal="true"
-                        aria-label="Seller chat"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <header className="seller-chat-dialog-header">
-                            <h3>Chat</h3>
-                            <button
-                                type="button"
-                                className="seller-chat-close-btn"
-                                onClick={() => setIsSellerChatOpen(false)}
-                                aria-label="Close chat dialog"
-                            >
-                                ×
-                            </button>
-                        </header>
-
-                        <div className="seller-chat-dialog-content">
-                            <aside className="seller-chat-left-panel">
-                                <div className="seller-chat-tools">
-                                    <input
-                                        className="seller-chat-search"
-                                        type="text"
-                                        placeholder="Search name"
-                                    />
-                                    <select className="seller-chat-filter" defaultValue="all">
-                                        <option value="all">All</option>
-                                        <option value="unread">Unread</option>
-                                        <option value="pinned">Pinned</option>
-                                    </select>
-                                </div>
-
-                                <div className="seller-chat-thread-list">
-                                    <button type="button" className="seller-chat-thread active">
-                                        <div className="seller-chat-avatar">M</div>
-                                        <div className="seller-chat-thread-body">
-                                            <p className="seller-chat-thread-name">midoko</p>
-                                            <p className="seller-chat-thread-preview">midoko:mail...</p>
-                                        </div>
-                                    </button>
-
-                                    <button type="button" className="seller-chat-thread">
-                                        <div className="seller-chat-avatar">U</div>
-                                        <div className="seller-chat-thread-body">
-                                            <p className="seller-chat-thread-name">Unkey.Home</p>
-                                            <p className="seller-chat-thread-preview">Salamat sa iyong ...</p>
-                                        </div>
-                                    </button>
-
-                                    <button type="button" className="seller-chat-thread">
-                                        <div className="seller-chat-avatar">C</div>
-                                        <div className="seller-chat-thread-body">
-                                            <p className="seller-chat-thread-name">crazystyleshop</p>
-                                            <p className="seller-chat-thread-preview">Maraming salamat...</p>
-                                        </div>
-                                    </button>
-                                </div>
-                            </aside>
-
-                            <main className="seller-chat-empty-pane">
-                                <div className="seller-chat-empty-illustration" aria-hidden="true">💬</div>
-                                <p className="seller-chat-empty-title">Welcome to Auctify Chat</p>
-                                <p className="seller-chat-empty-subtitle">Start chatting with buyers and sellers now.</p>
-                            </main>
-                        </div>
-                    </div>
-                </div>
+            {authUser && (
+                <SellerChatDialog
+                    isOpen={isSellerChatOpen && viewMode !== 'auth'}
+                    onClose={() => setIsSellerChatOpen(false)}
+                    preferredUserId={viewMode === 'seller-store' ? activeSellerChatUserId : null}
+                    preferredUserName={viewMode === 'seller-store' ? activeSellerChatName : ''}
+                />
             )}
 
-            {viewMode !== 'seller' && (
-                <button className="chat-button" aria-label="Help">
+            {!isSellerContextView && (
+                <button className="chat-button" aria-label="Open messages" onClick={handleOpenUserMessages}>
                     <span>A</span>
                 </button>
             )}

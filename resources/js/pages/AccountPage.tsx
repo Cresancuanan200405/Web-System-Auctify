@@ -20,12 +20,14 @@ interface AccountPageProps {
     activeSection: AccountSection;
     onSectionChange: (section: AccountSection) => void;
     onAccountDeleted: () => void;
+    onNavigateToAuction: (auctionId: number) => void;
 }
 
 export const AccountPage: React.FC<AccountPageProps> = ({
     activeSection,
     onSectionChange,
-    onAccountDeleted
+    onAccountDeleted,
+    onNavigateToAuction,
 }) => {
     const { authUser } = useAuth();
     const isVerified = Boolean(authUser?.is_verified);
@@ -58,7 +60,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             case 'reviews':
                 return <ReviewsSection />;
             case 'wishlist':
-                return <WishlistSection />;
+                return <WishlistSection onNavigateToAuction={onNavigateToAuction} />;
             case 'cashback':
                 return <CashbackSection />;
             case 'seller':
