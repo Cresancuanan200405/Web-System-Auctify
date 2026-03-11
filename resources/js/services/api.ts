@@ -236,6 +236,10 @@ export const auctionService = {
         return apiGet<AuctionProduct[]>('/api/auctions');
     },
 
+    getSellerStoreProducts: async (sellerId: number) => {
+        return apiGet<AuctionProduct[]>(`/api/auctions?include_closed=1&seller_id=${sellerId}`);
+    },
+
     getProductDetails: async (productId: number) => {
         return apiGet<AuctionProductDetail>(`/api/auctions/${productId}`);
     },
@@ -282,5 +286,9 @@ export const directMessageService = {
         });
 
         return apiPostForm<DirectMessage>(`/api/direct-messages/threads/${userId}`, formData);
+    },
+
+    deleteThread: async (userId: number) => {
+        return apiDelete<{ message: string }>(`/api/direct-messages/threads/${userId}`);
     },
 };

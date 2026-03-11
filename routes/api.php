@@ -62,6 +62,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('direct-messages/threads', [DirectMessageController::class, 'threads']);
     Route::get('direct-messages/threads/{user}', [DirectMessageController::class, 'index']);
     Route::post('direct-messages/threads/{user}', [DirectMessageController::class, 'store']);
+    Route::delete('direct-messages/threads/{user}', [DirectMessageController::class, 'destroy']);
 
     Route::get('addresses', [AddressController::class, 'index']);
     Route::post('addresses', [AddressController::class, 'store']);

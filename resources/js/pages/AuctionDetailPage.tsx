@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { useCards } from '../hooks/useCards';
 import { useLocalStorage } from '../hooks/useLocalStorage';
-import { useOrderHistory } from '../hooks/useOrderHistory';
+import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
 import { addressService, auctionService, sellerService } from '../services/api';
 import type { Address, AuctionMessage, AuctionProductDetail, Card, WishlistItem } from '../types';
 import { getAuctionDisplayStatus, parseAuctionTimestamp } from '../utils/auctionStatus';
@@ -699,7 +699,12 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 auction_id: selectedAuction.id,
                 title: selectedAuction.title,
                 category: selectedAuction.category,
+                seller_user_id: selectedAuction.user?.id ?? selectedAuction.user_id,
                 seller_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
+                seller_shop_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
+                buyer_user_id: authUser?.id,
+                buyer_name: authUser?.name,
+                buyer_email: authUser?.email,
                 amount_paid: finalWinner.amount,
                 status: 'processing',
                 address_summary: formatAddress(selectedAddress),
@@ -708,6 +713,28 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 media_type: primaryMedia?.media_type,
                 purchased_at: new Date().toISOString(),
             });
+
+            if ((selectedAuction.user?.id ?? selectedAuction.user_id) > 0) {
+                addSellerOrder(selectedAuction.user?.id ?? selectedAuction.user_id, {
+                    id: `${selectedAuction.id}-${Date.now()}-seller`,
+                    auction_id: selectedAuction.id,
+                    title: selectedAuction.title,
+                    category: selectedAuction.category,
+                    seller_user_id: selectedAuction.user?.id ?? selectedAuction.user_id,
+                    seller_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
+                    seller_shop_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
+                    buyer_user_id: authUser?.id,
+                    buyer_name: authUser?.name,
+                    buyer_email: authUser?.email,
+                    amount_paid: finalWinner.amount,
+                    status: 'processing',
+                    address_summary: formatAddress(selectedAddress),
+                    payment_card_label: `${getCardDisplayName(selectedCard.type)} •••• ${selectedCard.number.slice(-4)}`,
+                    media_url: resolveMediaUrl(primaryMedia?.url),
+                    media_type: primaryMedia?.media_type,
+                    purchased_at: new Date().toISOString(),
+                });
+            }
 
             setIsCheckingOut(false);
             setCheckoutError('');

@@ -236,7 +236,12 @@ export interface OrderHistoryItem {
     auction_id: number;
     title: string;
     category?: string | null;
+    seller_user_id?: number;
     seller_name: string;
+    seller_shop_name?: string;
+    buyer_user_id?: number;
+    buyer_name?: string;
+    buyer_email?: string;
     amount_paid: string;
     status: 'processing' | 'delivered' | 'cancelled';
     address_summary: string;
@@ -270,4 +275,4 @@ export type AccountSection =
     | 'seller'
     | 'delete-account';
 
-export type ViewMode = 'home' | 'category' | 'auth' | 'account' | 'bag' | 'seller' | 'auction' | 'seller-store';
+export type ViewMode = 'home' | 'category' | 'auth' | 'account' | 'bag' | 'seller' | 'seller-profile' | 'auction' | 'seller-store';

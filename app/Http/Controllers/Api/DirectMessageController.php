@@ -137,6 +137,34 @@ class DirectMessageController extends Controller
         return response()->json($this->transformMessage($message), 201);
     }
 
+    public function destroy(Request $request, User $user): JsonResponse
+    {
+        $authUser = $request->user();
+
+        $deleted = DirectMessage::query()
+            ->where(function ($query) use ($authUser, $user) {
+                $query
+                    ->where('sender_id', $authUser->id)
+                    ->where('recipient_id', $user->id);
+            })
+            ->orWhere(function ($query) use ($authUser, $user) {
+                $query
+                    ->where('sender_id', $user->id)
+                    ->where('recipient_id', $authUser->id);
+            })
+            ->get();
+
+        foreach ($deleted as $message) {
+            foreach ($message->attachments as $attachment) {
+                Storage::disk('public')->delete($attachment->file_path);
+            }
+            $message->attachments()->delete();
+            $message->delete();
+        }
+
+        return response()->json(['message' => 'Conversation deleted.']);
+    }
+
     public function attachment(DirectMessageAttachment $attachment)
     {
         if (! Storage::disk('public')->exists($attachment->file_path)) {

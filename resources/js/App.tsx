@@ -13,9 +13,10 @@ import { BagPage } from './pages/BagPage';
 import { HomePage } from './pages/HomePage';
 import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
+import { SellerProfilePage } from './pages/seller/SellerProfilePage';
 import { SellerStorePage } from './pages/SellerStorePage';
 import { HOME_CATEGORY_OPTIONS } from './lib/homeCategories';
-import { sellerService } from './services/api';
+import { directMessageService, sellerService } from './services/api';
 import type { ViewMode, AccountSection } from './types';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -39,7 +40,7 @@ const AppContent: React.FC = () => {
     const { authUser, logout } = useAuth();
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const savedViewMode = localStorage.getItem('ui_view_mode');
-        if (savedViewMode === 'home' || savedViewMode === 'category' || savedViewMode === 'auth' || savedViewMode === 'account' || savedViewMode === 'bag' || savedViewMode === 'auction' || savedViewMode === 'seller-store') {
+        if (savedViewMode === 'home' || savedViewMode === 'category' || savedViewMode === 'auth' || savedViewMode === 'account' || savedViewMode === 'bag' || savedViewMode === 'auction' || savedViewMode === 'seller-store' || savedViewMode === 'seller-profile') {
             return savedViewMode as ViewMode;
         }
 
@@ -64,7 +65,7 @@ const AppContent: React.FC = () => {
     });
 
     const [sellerSubView, setSellerSubView] = useState<'dashboard' | 'add-product'>('dashboard');
-    const [sellerDashboardSection, setSellerDashboardSection] = useState<'products' | 'shipping'>('products');
+    const [sellerDashboardSection, setSellerDashboardSection] = useState<'products' | 'shipping' | 'orders'>('products');
     const [canAccessSellerDashboard, setCanAccessSellerDashboard] = useState(false);
     const [isSellerChatOpen, setIsSellerChatOpen] = useState(false);
     const [activeAuctionId, setActiveAuctionId] = useState<number | null>(null);
@@ -72,9 +73,10 @@ const AppContent: React.FC = () => {
     const [activeSellerStoreName, setActiveSellerStoreName] = useState<string>('');
     const [activeSellerChatName, setActiveSellerChatName] = useState<string>('');
     const [activeSellerChatUserId, setActiveSellerChatUserId] = useState<number | null>(null);
+    const [chatUnreadCount, setChatUnreadCount] = useState(0);
     const [selectedHomeCategory, setSelectedHomeCategory] = useState<string | null>(null);
-    const [auctionOrigin, setAuctionOrigin] = useState<'home' | 'seller-store' | null>(null);
-    const [sellerStoreOrigin, setSellerStoreOrigin] = useState<'seller-dashboard' | null>(null);
+    const [auctionOrigin, setAuctionOrigin] = useState<'home' | 'seller-store' | 'account-orders' | 'account-reviews' | null>(null);
+    const [sellerStoreOrigin, setSellerStoreOrigin] = useState<'home' | 'seller-dashboard' | 'account-orders' | null>(null);
 
     const resolveHomeCategoryFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -130,6 +132,41 @@ const AppContent: React.FC = () => {
     }, [authUser]);
 
     useEffect(() => {
+        const handleAuctifyToast = (event: Event) => {
+            const customEvent = event as CustomEvent<{ type?: string; message?: string; autoClose?: number }>;
+            const detail = customEvent.detail;
+
+            if (!detail?.message) {
+                return;
+            }
+
+            const options = typeof detail.autoClose === 'number' ? { autoClose: detail.autoClose } : undefined;
+
+            if (detail.type === 'error') {
+                toast.error(detail.message, options);
+                return;
+            }
+
+            if (detail.type === 'warning') {
+                toast.warn(detail.message, options);
+                return;
+            }
+
+            if (detail.type === 'info') {
+                toast.info(detail.message, options);
+                return;
+            }
+
+            toast.success(detail.message, options);
+        };
+
+        window.addEventListener('auctify-toast', handleAuctifyToast as EventListener);
+        return () => {
+            window.removeEventListener('auctify-toast', handleAuctifyToast as EventListener);
+        };
+    }, []);
+
+    useEffect(() => {
         let isActive = true;
 
         const fetchSellerAccess = async () => {
@@ -162,6 +199,39 @@ const AppContent: React.FC = () => {
             isActive = false;
         };
     }, [authUser]);
+
+    useEffect(() => {
+        if (!authUser) {
+            setChatUnreadCount(0);
+            return;
+        }
+
+        let isActive = true;
+
+        const fetchUnreadCount = async () => {
+            try {
+                const data = await directMessageService.getThreads();
+                if (!isActive) {
+                    return;
+                }
+
+                const totalUnread = data.threads.reduce((sum, thread) => sum + Math.max(0, Number(thread.unread_count || 0)), 0);
+                setChatUnreadCount(totalUnread);
+            } catch {
+                // Keep UI stable when unread count cannot be fetched.
+            }
+        };
+
+        void fetchUnreadCount();
+        const interval = window.setInterval(() => {
+            void fetchUnreadCount();
+        }, 5000);
+
+        return () => {
+            isActive = false;
+            window.clearInterval(interval);
+        };
+    }, [authUser, isSellerChatOpen]);
 
     const applyRouteFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -247,6 +317,11 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'seller') {
             setSelectedHomeCategory(null);
+            if (segments[1] === 'details') {
+                setViewMode('seller-profile');
+                return;
+            }
+
             setViewMode('seller');
             if (segments[1] === 'add-product') {
                 setSellerSubView('add-product');
@@ -255,7 +330,14 @@ const AppContent: React.FC = () => {
             }
 
             setSellerSubView('dashboard');
-            setSellerDashboardSection(segments[1] === 'shipping-settings' ? 'shipping' : 'products');
+            const sectionFromSegment = segments[1];
+            if (sectionFromSegment === 'shipping-settings') {
+                setSellerDashboardSection('shipping');
+            } else if (sectionFromSegment === 'orders') {
+                setSellerDashboardSection('orders');
+            } else {
+                setSellerDashboardSection('products');
+            }
             return;
         }
 
@@ -294,15 +376,16 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateAuction = (auctionId: number) => {
-        setAuctionOrigin(viewMode === 'seller-store' ? 'seller-store' : 'home');
+    const handleNavigateAuction = (auctionId: number, source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews') => {
+        const nextOrigin = source ?? (viewMode === 'seller-store' ? 'seller-store' : 'home');
+        setAuctionOrigin(nextOrigin);
         setActiveAuctionId(auctionId);
         setViewMode('auction');
         window.history.pushState({}, '', `/auction/${auctionId}`);
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateSellerStore = (sellerId: number, sellerName?: string, source: 'seller-dashboard' | null = null) => {
+    const handleNavigateSellerStore = (sellerId: number, sellerName?: string, source: 'home' | 'seller-dashboard' | 'account-orders' | null = 'home') => {
         setAuctionOrigin(null);
         setSellerStoreOrigin(source);
         setActiveSellerStoreId(sellerId);
@@ -315,6 +398,12 @@ const AppContent: React.FC = () => {
         const query = params.toString();
         window.history.pushState({}, '', `/seller-store/${sellerId}${query ? `?${query}` : ''}`);
         window.scrollTo(0, 0);
+    };
+
+    const openSellerChatForUser = (sellerId: number, sellerName?: string) => {
+        setActiveSellerChatUserId(sellerId);
+        setActiveSellerChatName(sellerName?.trim() || `Shop #${sellerId}`);
+        setIsSellerChatOpen(true);
     };
 
     const handleOpenSellerChat = () => {
@@ -339,9 +428,7 @@ const AppContent: React.FC = () => {
             return;
         }
 
-        setActiveSellerChatUserId(activeSellerStoreId);
-        setActiveSellerChatName(activeSellerStoreName.trim() || `Shop #${activeSellerStoreId}`);
-        setIsSellerChatOpen(true);
+        openSellerChatForUser(activeSellerStoreId, activeSellerStoreName);
     };
 
     const handleOpenUserMessages = () => {
@@ -410,14 +497,22 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateSellerDashboard = (section: 'products' | 'shipping' = 'products') => {
+    const handleNavigateSellerDashboard = (section: 'products' | 'shipping' | 'orders' = 'products') => {
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
         setSellerSubView('dashboard');
         setSellerDashboardSection(section);
         setViewMode('seller');
-        const nextPath = section === 'shipping' ? '/seller/shipping-settings' : '/seller/dashboard';
+        const nextPath = section === 'shipping' ? '/seller/shipping-settings' : section === 'orders' ? '/seller/orders' : '/seller/dashboard';
         window.history.pushState({}, '', nextPath);
+        window.scrollTo(0, 0);
+    };
+
+    const handleNavigateSellerProfile = () => {
+        setAuctionOrigin(null);
+        setSellerStoreOrigin(null);
+        setViewMode('seller-profile');
+        window.history.pushState({}, '', '/seller/details');
         window.scrollTo(0, 0);
     };
 
@@ -499,6 +594,10 @@ const AppContent: React.FC = () => {
                     const path = section && section !== 'details' ? `/account/${section}` : '/account';
                     window.history.pushState({}, '', path);
                     window.scrollTo(0, 0);
+
+                    if (parsed.openSellerChat && parsed.sellerStoreId) {
+                        openSellerChatForUser(parsed.sellerStoreId, parsed.sellerStoreName);
+                    }
                     return;
                 }
 
@@ -547,14 +646,54 @@ const AppContent: React.FC = () => {
         };
     }, [applyRouteFromLocation]);
 
-    const shouldReturnToOwnSellerStoreFromAuction =
+    useEffect(() => {
+        const handleOpenAuctifyChat = (event: Event) => {
+            const customEvent = event as CustomEvent<{ sellerUserId?: number; sellerName?: string }>;
+            const sellerUserId = customEvent.detail?.sellerUserId;
+            const sellerName = customEvent.detail?.sellerName;
+
+            if (!sellerUserId) {
+                return;
+            }
+
+            if (!authUser) {
+                localStorage.setItem(
+                    'post_login_target',
+                    JSON.stringify({
+                        viewMode: 'account',
+                        section: 'orders' as AccountSection,
+                        sellerStoreId: sellerUserId,
+                        sellerStoreName: sellerName,
+                        openSellerChat: true,
+                    }),
+                );
+                setAuthMode('login');
+                setViewMode('auth');
+                window.history.pushState({}, '', '/login');
+                window.scrollTo(0, 0);
+                return;
+            }
+
+            openSellerChatForUser(sellerUserId, sellerName);
+        };
+
+        window.addEventListener('open-auctify-chat', handleOpenAuctifyChat as EventListener);
+
+        return () => {
+            window.removeEventListener('open-auctify-chat', handleOpenAuctifyChat as EventListener);
+        };
+    }, [authUser]);
+
+    const shouldReturnToSellerStoreFromAuction =
         auctionOrigin === 'seller-store' &&
-        Boolean(authUser) &&
-        activeSellerStoreId !== null &&
-        authUser?.id === activeSellerStoreId;
+        activeSellerStoreId !== null;
+
+    const shouldReturnToOrdersFromAuction = auctionOrigin === 'account-orders';
+    const shouldReturnToReviewsFromAuction = auctionOrigin === 'account-reviews';
 
     const isSellerContextView =
         viewMode === 'seller' ||
+        viewMode === 'seller-profile' ||
         (
             viewMode === 'seller-store' &&
             sellerStoreOrigin === 'seller-dashboard' &&
@@ -592,9 +731,11 @@ const AppContent: React.FC = () => {
                 onNavigateHome={handleNavigateHome}
                 disableHomeNavigation={isSellerContextView}
                 isSellerMode={isSellerContextView}
+                onNavigateToAuction={handleNavigateAuction}
                 onNavigateLogin={handleNavigateLogin}
                 onNavigateRegister={handleNavigateRegister}
                 onNavigateAccount={handleNavigateAccount}
+                onNavigateSellerProfile={handleNavigateSellerProfile}
                 onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
                 showSellerDashboardButton={canAccessSellerDashboard}
                 onNavigateOrdersLogin={handleNavigateOrdersLogin}
@@ -624,11 +765,21 @@ const AppContent: React.FC = () => {
             {viewMode === 'auction' && activeAuctionId && (
                 <AuctionDetailPage
                     auctionId={activeAuctionId}
-                    backBreadcrumbLabel={shouldReturnToOwnSellerStoreFromAuction ? 'Seller Store' : 'Home'}
+                    backBreadcrumbLabel={shouldReturnToReviewsFromAuction ? 'My Reviews' : shouldReturnToOrdersFromAuction ? 'Orders & Tracking' : shouldReturnToSellerStoreFromAuction ? 'Seller Store' : 'Home'}
                     disableSellerStoreLink={isSellerContextView}
                     onNavigateHome={() => {
-                        if (shouldReturnToOwnSellerStoreFromAuction) {
-                            handleNavigateSellerStore(activeSellerStoreId, activeSellerStoreName, 'seller-dashboard');
+                        if (shouldReturnToReviewsFromAuction) {
+                            handleNavigateAccount('reviews');
+                            return;
+                        }
+
+                        if (shouldReturnToOrdersFromAuction) {
+                            handleNavigateAccount('orders');
+                            return;
+                        }
+
+                        if (shouldReturnToSellerStoreFromAuction) {
+                            handleNavigateSellerStore(activeSellerStoreId, activeSellerStoreName, sellerStoreOrigin);
                             return;
                         }
 
@@ -646,6 +797,20 @@ const AppContent: React.FC = () => {
                     sellerId={activeSellerStoreId}
                     sellerName={activeSellerStoreName}
                     onNavigateSellerDashboard={() => handleNavigateSellerDashboard('products')}
+                    onNavigateBack={() => {
+                        if (sellerStoreOrigin === 'account-orders') {
+                            handleNavigateAccount('orders');
+                            return;
+                        }
+
+                        if (sellerStoreOrigin === 'seller-dashboard') {
+                            handleNavigateSellerDashboard('products');
+                            return;
+                        }
+
+                        handleNavigateHome();
+                    }}
+                    backBreadcrumbLabel={sellerStoreOrigin === 'account-orders' ? 'Orders & Tracking' : sellerStoreOrigin === 'seller-dashboard' ? 'Seller Dashboard' : 'Home'}
                     onNavigateToAuction={handleNavigateAuction}
                     onMessageSeller={handleOpenSellerChat}
                     canMessageSeller={!authUser || authUser.id !== activeSellerStoreId}
@@ -654,9 +819,9 @@ const AppContent: React.FC = () => {
 
             {viewMode === 'bag' && <BagPage onNavigateHome={handleNavigateHome} onNavigateToAuction={handleNavigateAuction} />}
 
-            {(viewMode === 'auth' || ((viewMode === 'account' || viewMode === 'seller') && !authUser)) && (
+            {(viewMode === 'auth' || ((viewMode === 'account' || viewMode === 'seller' || viewMode === 'seller-profile') && !authUser)) && (
                 <AuthPage
-                    mode={(viewMode === 'account' || viewMode === 'seller') && !authUser ? 'login' : authMode}
+                    mode={(viewMode === 'account' || viewMode === 'seller' || viewMode === 'seller-profile') && !authUser ? 'login' : authMode}
                     onModeChange={setAuthMode}
                     onAuthSuccess={handleAuthSuccess}
                 />
@@ -668,6 +833,7 @@ const AppContent: React.FC = () => {
                     onSectionChange={handleNavigateAccount}
                     onAccountDeleted={handleAccountDeleted}
                     onNavigateToAuction={handleNavigateAuction}
+                    onNavigateSellerStore={handleNavigateSellerStore}
                 />
             )}
 
@@ -682,6 +848,13 @@ const AppContent: React.FC = () => {
 
             {viewMode === 'seller' && authUser && sellerSubView === 'add-product' && (
                 <SellerAddProductPage onNavigateDashboard={() => handleNavigateSellerDashboard('products')} />
+            )}
+
+            {viewMode === 'seller-profile' && authUser && (
+                <SellerProfilePage
+                    onNavigateSellerDashboard={handleNavigateSellerDashboard}
+                    onNavigateSellerStore={(shopName) => handleNavigateSellerStore(authUser.id, shopName, 'seller-dashboard')}
+                />
             )}
 
             {!isSellerContextView && <Footer />}
@@ -712,14 +885,20 @@ const AppContent: React.FC = () => {
                 <SellerChatDialog
                     isOpen={isSellerChatOpen && viewMode !== 'auth'}
                     onClose={() => setIsSellerChatOpen(false)}
-                    preferredUserId={viewMode === 'seller-store' ? activeSellerChatUserId : null}
-                    preferredUserName={viewMode === 'seller-store' ? activeSellerChatName : ''}
+                    preferredUserId={activeSellerChatUserId}
+                    preferredUserName={activeSellerChatName}
+                    onNavigateSellerStore={(sellerId, sellerName) => handleNavigateSellerStore(sellerId, sellerName, isSellerContextView ? 'seller-dashboard' : 'home')}
                 />
             )}
 
             {!isSellerContextView && (
                 <button className="chat-button" aria-label="Open messages" onClick={handleOpenUserMessages}>
                     <span>A</span>
+                    {chatUnreadCount > 0 && (
+                        <span className="chat-button-badge" aria-label={`${chatUnreadCount} unread messages`}>
+                            {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                        </span>
+                    )}
                 </button>
             )}
 

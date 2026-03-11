@@ -258,164 +258,223 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
             </div>
 
             <div className="seller-add-header">
-                <h2>Add New Product</h2>
+                <div>
+                    <h2>Add New Product</h2>
+                    <p className="seller-add-subtitle">Create a polished listing with strong visuals, clear pricing, and the right auction timing.</p>
+                </div>
+                <div className="seller-add-steps" aria-label="Listing steps">
+                    <span className="seller-add-step active">1. Details</span>
+                    <span className="seller-add-step">2. Media</span>
+                    <span className="seller-add-step">3. Publish</span>
+                </div>
             </div>
 
-            <div className="seller-add-card">
-                <div className="seller-add-grid">
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Product Name</label>
-                        <input
-                            type="text"
-                            className="seller-input"
-                            placeholder="Enter product name"
-                            value={productName}
-                            onChange={(event) => setProductName(event.target.value)}
-                        />
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Category</label>
-                        <select
-                            className="seller-input"
-                            value={category}
-                            onChange={(event) => setCategory(event.target.value)}
-                        >
-                            <option value="">Select category</option>
-                            {HOME_CATEGORY_OPTIONS.map((option) => (
-                                <option key={option.value} value={option.value}>
-                                    {option.label}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Starting Price</label>
-                        <input
-                            type="number"
-                            className="seller-input"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            value={startingPrice}
-                            onChange={(event) => setStartingPrice(event.target.value)}
-                        />
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Maximum Increment</label>
-                        <input
-                            type="number"
-                            className="seller-input"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                            value={maxIncrement}
-                            onChange={(event) => setMaxIncrement(event.target.value)}
-                        />
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">When should bidding start?</label>
-                        <select
-                            className="seller-input"
-                            value={startMode}
-                            onChange={(event) => setStartMode(event.target.value as 'now' | 'scheduled')}
-                        >
-                            <option value="now">Start immediately</option>
-                            <option value="scheduled">Start at scheduled date/time</option>
-                        </select>
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Scheduled start date & time</label>
-                        <input
-                            type="datetime-local"
-                            className="seller-input"
-                            value={scheduledStartDateTime}
-                            onChange={(event) => setScheduledStartDateTime(event.target.value)}
-                            disabled={startMode !== 'scheduled'}
-                        />
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">How long should bidding run?</label>
-                        <select
-                            className="seller-input"
-                            value={endTimeMode}
-                            onChange={(event) => setEndTimeMode(event.target.value as 'days' | 'hours' | 'minutes')}
-                        >
-                            <option value="days">Days</option>
-                            <option value="hours">Hours</option>
-                            <option value="minutes">Minutes</option>
-                        </select>
-                    </div>
-                    <div className="seller-input-wrap">
-                        <label className="seller-add-label">Duration value ({endTimeMode})</label>
-                        <input
-                            type="number"
-                            className="seller-input"
-                            min="1"
-                            step="1"
-                            value={endTimeValue}
-                            onChange={(event) => {
-                                const digitsOnly = event.target.value.replace(/[^\d]/g, '');
-                                setEndTimeValue(digitsOnly);
-                            }}
-                        />
-                        <p className="seller-field-help">{durationModeMeaning}</p>
-                        <p className="seller-field-help">{bidSchedulePreview}</p>
-                    </div>
-                    <div className="seller-input-wrap seller-add-grid-full">
-                        <label className="seller-add-label">Product Media (Images or Videos, up to 10)</label>
-                        <input
-                            type="file"
-                            className="seller-input seller-file-input"
-                            accept="image/*,video/*"
-                            multiple
-                            onChange={handleMediaChange}
-                        />
-                        <p className="seller-media-help">{mediaEntries.length}/10 uploaded</p>
-                        {mediaError && <p className="seller-media-error">{mediaError}</p>}
-
-                        {mediaEntries.length > 0 && (
-                            <div className="seller-media-grid">
-                                {mediaEntries.map((entry) => (
-                                    <div key={entry.id} className="seller-media-item">
-                                        <div className="seller-media-preview">
-                                            {entry.type === 'video' ? (
-                                                <video src={entry.previewUrl} controls className="seller-media-thumb" />
-                                            ) : (
-                                                <img src={entry.previewUrl} alt={entry.file.name} className="seller-media-thumb" />
-                                            )}
-                                        </div>
-                                        <p className="seller-media-name" title={entry.file.name}>{entry.file.name}</p>
-                                        <button
-                                            type="button"
-                                            className="seller-ghost-btn seller-media-remove"
-                                            onClick={() => handleRemoveMedia(entry.id)}
-                                        >
-                                            Remove
-                                        </button>
-                                    </div>
-                                ))}
+            <div className="seller-add-layout">
+                <div className="seller-add-main">
+                    <div className="seller-add-card seller-add-section-card">
+                        <div className="seller-add-section-head">
+                            <h3>Product Information</h3>
+                            <p>Start with the essentials buyers scan first.</p>
+                        </div>
+                        <div className="seller-add-grid">
+                            <div className="seller-input-wrap seller-add-grid-full">
+                                <label className="seller-add-label">Product Name</label>
+                                <input
+                                    type="text"
+                                    className="seller-input"
+                                    placeholder="Enter product name"
+                                    value={productName}
+                                    onChange={(event) => setProductName(event.target.value)}
+                                />
                             </div>
-                        )}
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Category</label>
+                                <select
+                                    className="seller-input"
+                                    value={category}
+                                    onChange={(event) => setCategory(event.target.value)}
+                                >
+                                    <option value="">Select category</option>
+                                    {HOME_CATEGORY_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Starting Price</label>
+                                <input
+                                    type="number"
+                                    className="seller-input"
+                                    placeholder="0.00"
+                                    min="0"
+                                    step="0.01"
+                                    value={startingPrice}
+                                    onChange={(event) => setStartingPrice(event.target.value)}
+                                />
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Maximum Increment</label>
+                                <input
+                                    type="number"
+                                    className="seller-input"
+                                    placeholder="0.00"
+                                    min="0"
+                                    step="0.01"
+                                    value={maxIncrement}
+                                    onChange={(event) => setMaxIncrement(event.target.value)}
+                                />
+                            </div>
+                            <div className="seller-input-wrap seller-add-grid-full">
+                                <label className="seller-add-label">Description</label>
+                                <textarea
+                                    className="seller-textarea"
+                                    rows={5}
+                                    placeholder="Describe your item"
+                                    value={description}
+                                    onChange={(event) => setDescription(event.target.value)}
+                                />
+                            </div>
+                        </div>
                     </div>
-                    <div className="seller-input-wrap seller-add-grid-full">
-                        <label className="seller-add-label">Description</label>
-                        <textarea
-                            className="seller-textarea"
-                            rows={5}
-                            placeholder="Describe your item"
-                            value={description}
-                            onChange={(event) => setDescription(event.target.value)}
-                        />
+
+                    <div className="seller-add-card seller-add-section-card">
+                        <div className="seller-add-section-head">
+                            <h3>Auction Setup</h3>
+                            <p>Configure when bidding begins and how long the auction runs.</p>
+                        </div>
+                        <div className="seller-add-grid">
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">When should bidding start?</label>
+                                <select
+                                    className="seller-input"
+                                    value={startMode}
+                                    onChange={(event) => setStartMode(event.target.value as 'now' | 'scheduled')}
+                                >
+                                    <option value="now">Start immediately</option>
+                                    <option value="scheduled">Start at scheduled date/time</option>
+                                </select>
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Scheduled start date & time</label>
+                                <input
+                                    type="datetime-local"
+                                    className="seller-input"
+                                    value={scheduledStartDateTime}
+                                    onChange={(event) => setScheduledStartDateTime(event.target.value)}
+                                    disabled={startMode !== 'scheduled'}
+                                />
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">How long should bidding run?</label>
+                                <select
+                                    className="seller-input"
+                                    value={endTimeMode}
+                                    onChange={(event) => setEndTimeMode(event.target.value as 'days' | 'hours' | 'minutes')}
+                                >
+                                    <option value="days">Days</option>
+                                    <option value="hours">Hours</option>
+                                    <option value="minutes">Minutes</option>
+                                </select>
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Duration value ({endTimeMode})</label>
+                                <input
+                                    type="number"
+                                    className="seller-input"
+                                    min="1"
+                                    step="1"
+                                    value={endTimeValue}
+                                    onChange={(event) => {
+                                        const digitsOnly = event.target.value.replace(/[^\d]/g, '');
+                                        setEndTimeValue(digitsOnly);
+                                    }}
+                                />
+                            </div>
+                        </div>
+                        <div className="seller-add-auction-note">
+                            <p className="seller-field-help">{durationModeMeaning}</p>
+                            <p className="seller-field-help seller-schedule-preview">{bidSchedulePreview}</p>
+                        </div>
+                    </div>
+
+                    <div className="seller-add-card seller-add-section-card">
+                        <div className="seller-add-section-head">
+                            <h3>Media Gallery</h3>
+                            <p>Upload up to 10 images or videos. Strong cover media increases conversions.</p>
+                        </div>
+                        <div className="seller-input-wrap seller-add-grid-full">
+                            <label className="seller-add-label">Product Media (Images or Videos, up to 10)</label>
+                            <input
+                                type="file"
+                                className="seller-input seller-file-input"
+                                accept="image/*,video/*"
+                                multiple
+                                onChange={handleMediaChange}
+                            />
+                            <p className="seller-media-help">{mediaEntries.length}/10 uploaded</p>
+                            {mediaError && <p className="seller-media-error">{mediaError}</p>}
+
+                            {mediaEntries.length > 0 && (
+                                <div className="seller-media-grid">
+                                    {mediaEntries.map((entry) => (
+                                        <div key={entry.id} className="seller-media-item">
+                                            <div className="seller-media-preview">
+                                                {entry.type === 'video' ? (
+                                                    <video src={entry.previewUrl} controls className="seller-media-thumb" />
+                                                ) : (
+                                                    <img src={entry.previewUrl} alt={entry.file.name} className="seller-media-thumb" />
+                                                )}
+                                            </div>
+                                            <p className="seller-media-name" title={entry.file.name}>{entry.file.name}</p>
+                                            <button
+                                                type="button"
+                                                className="seller-ghost-btn seller-media-remove"
+                                                onClick={() => handleRemoveMedia(entry.id)}
+                                            >
+                                                Remove
+                                            </button>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="seller-add-actions">
+                        <button type="button" className="seller-ghost-btn" onClick={() => onNavigateDashboard()}>
+                            Cancel
+                        </button>
+                        <button type="button" className="seller-primary-btn" onClick={handleSaveProduct} disabled={saving}>
+                            {saving ? 'Publishing...' : 'Publish Product'}
+                        </button>
                     </div>
                 </div>
-                <div className="seller-add-actions">
-                    <button type="button" className="seller-ghost-btn" onClick={() => onNavigateDashboard()}>
-                        Cancel
-                    </button>
-                    <button type="button" className="seller-primary-btn" onClick={handleSaveProduct} disabled={saving}>
-                        {saving ? 'Selling...' : 'Sell'}
-                    </button>
-                </div>
+
+                <aside className="seller-add-side">
+                    <div className="seller-add-side-card">
+                        <h4>Listing Preview</h4>
+                        <p className="seller-add-side-title">{productName.trim() || 'Your product title will appear here'}</p>
+                        <div className="seller-add-side-meta">
+                            <p><span>Category</span><strong>{category || 'Not selected'}</strong></p>
+                            <p><span>Start Price</span><strong>{startingPrice ? `P${startingPrice}` : 'P0.00'}</strong></p>
+                            <p><span>Max Increment</span><strong>{maxIncrement ? `P${maxIncrement}` : 'P0.00'}</strong></p>
+                            <p><span>Media</span><strong>{mediaEntries.length}/10</strong></p>
+                        </div>
+                    </div>
+
+                    <div className="seller-add-side-card seller-add-side-note">
+                        <h4>Quality Checklist</h4>
+                        <ul>
+                            <li className={productName.trim() ? 'done' : ''}>Clear product title</li>
+                            <li className={category ? 'done' : ''}>Correct category selected</li>
+                            <li className={description.trim() ? 'done' : ''}>Detailed description</li>
+                            <li className={mediaEntries.length > 0 ? 'done' : ''}>At least one media file</li>
+                            <li className={Number(startingPrice) > 0 ? 'done' : ''}>Valid starting price</li>
+                        </ul>
+                    </div>
+                </aside>
             </div>
         </section>
     );

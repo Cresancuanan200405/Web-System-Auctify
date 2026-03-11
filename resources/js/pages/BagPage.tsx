@@ -4,7 +4,7 @@ import { toast } from 'react-toastify';
 import { addressService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCards } from '../hooks/useCards';
-import { useOrderHistory } from '../hooks/useOrderHistory';
+import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
 import { useWonAuctions } from '../hooks/useWonAuctions';
 import { formatCurrency } from '../utils/helpers';
 import type { Address, BagAuctionItem, Card } from '../types';
@@ -230,7 +230,12 @@ export const BagPage: React.FC<BagPageProps> = ({ onNavigateHome, onNavigateToAu
                 auction_id: checkoutItem.id,
                 title: checkoutItem.title,
                 category: checkoutItem.category,
+                seller_user_id: checkoutItem.user?.id ?? checkoutItem.user_id,
                 seller_name: checkoutItem.user?.seller_registration?.shop_name?.trim() || checkoutItem.user?.name || 'Unknown Seller',
+                seller_shop_name: checkoutItem.user?.seller_registration?.shop_name?.trim() || checkoutItem.user?.name || 'Unknown Seller',
+                buyer_user_id: authUser?.id,
+                buyer_name: authUser?.name,
+                buyer_email: authUser?.email,
                 amount_paid: checkoutItem.winning_bid_amount,
                 status: 'processing',
                 address_summary: formatAddress(selectedAddress),
@@ -239,6 +244,28 @@ export const BagPage: React.FC<BagPageProps> = ({ onNavigateHome, onNavigateToAu
                 media_type: checkoutItem.media?.[0]?.media_type,
                 purchased_at: new Date().toISOString(),
             });
+
+            if ((checkoutItem.user?.id ?? checkoutItem.user_id) > 0) {
+                addSellerOrder(checkoutItem.user?.id ?? checkoutItem.user_id, {
+                    id: `${checkoutItem.id}-${Date.now()}-seller`,
+                    auction_id: checkoutItem.id,
+                    title: checkoutItem.title,
+                    category: checkoutItem.category,
+                    seller_user_id: checkoutItem.user?.id ?? checkoutItem.user_id,
+                    seller_name: checkoutItem.user?.seller_registration?.shop_name?.trim() || checkoutItem.user?.name || 'Unknown Seller',
+                    seller_shop_name: checkoutItem.user?.seller_registration?.shop_name?.trim() || checkoutItem.user?.name || 'Unknown Seller',
+                    buyer_user_id: authUser?.id,
+                    buyer_name: authUser?.name,
+                    buyer_email: authUser?.email,
+                    amount_paid: checkoutItem.winning_bid_amount,
+                    status: 'processing',
+                    address_summary: formatAddress(selectedAddress),
+                    payment_card_label: `${getCardDisplayName(selectedCard.type)} •••• ${selectedCard.number.slice(-4)}`,
+                    media_url: resolveMediaUrl(checkoutItem.media?.[0]?.url),
+                    media_type: checkoutItem.media?.[0]?.media_type,
+                    purchased_at: new Date().toISOString(),
+                });
+            }
 
             setIsCheckingOut(false);
             setCheckoutItem(null);

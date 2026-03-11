@@ -3,14 +3,15 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import { HOME_CATEGORY_OPTIONS } from '../../lib/homeCategories';
 import { sellerService } from '../../services/api';
-import type { AuctionProduct, SellerRegistration } from '../../types';
+import type { AuctionProduct, SellerRegistration, OrderHistoryItem } from '../../types';
 import { getAuctionDisplayStatus, parseAuctionTimestamp } from '../../utils/auctionStatus';
+import { useSellerOrderHistory, updateBuyerOrderStatus } from '../../hooks/useOrderHistory';
 
 interface SellerDashboardPageProps {
     onNavigateAddProduct: () => void;
     onNavigateSellerStore: (shopName?: string) => void;
-    activeSection: 'products' | 'shipping';
-    onSectionChange: (section: 'products' | 'shipping') => void;
+    activeSection: 'products' | 'shipping' | 'orders';
+    onSectionChange: (section: 'products' | 'shipping' | 'orders') => void;
 }
 
 export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
@@ -26,6 +27,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const [savingShippingSettings, setSavingShippingSettings] = useState(false);
     const [products, setProducts] = useState<AuctionProduct[]>([]);
     const [productFilter, setProductFilter] = useState<'all' | 'open' | 'closed' | 'scheduled'>('all');
+    const [productView, setProductView] = useState<'grid' | 'table'>('grid');
     const [loadingProducts, setLoadingProducts] = useState(true);
     const [productsError, setProductsError] = useState('');
     const [selectedProduct, setSelectedProduct] = useState<AuctionProduct | null>(null);
@@ -689,6 +691,411 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
         }));
     };
 
+    const SellerOrdersSection: React.FC = () => {
+        const { orders, updateOrderStatus } = useSellerOrderHistory(authUser?.id);
+        const [markedAsShipped, setMarkedAsShipped] = useState<Set<string>>(new Set());
+        const [orderTab, setOrderTab] = useState<'active' | 'history'>('active');
+        const handleContactBuyer = (buyerUserId?: number | string, buyerName?: string) => {
+            if (!buyerUserId) {
+                window.dispatchEvent(new CustomEvent('auctify-toast', { detail: { type: 'error', message: 'Buyer chat is unavailable for this order.' } }));
+                return;
+            }
+            window.dispatchEvent(new CustomEvent('open-auctify-chat', { detail: { sellerUserId: Number(buyerUserId), sellerName: buyerName } }));
+        };
+
+        const handleMarkAsShipped = (orderId: string) => {
+            const confirmed = window.confirm('Mark this order as shipped? The status will update for the buyer.');
+            if (!confirmed) return;
+
+            const order = orders.find((o) => o.id === orderId);
+            updateOrderStatus(orderId, 'delivered');
+
+            // Sync status to buyer's order history in real-time
+            if (order?.buyer_user_id && order.auction_id) {
+                updateBuyerOrderStatus(order.buyer_user_id, order.auction_id, 'delivered', order.id);
+            }
+
+            setMarkedAsShipped((prev) => new Set([...prev, orderId]));
+            toast.success('Order marked as shipped. Buyer order updated.');
+        };
+
+        const handlePrintLabel = (order: OrderHistoryItem) => {
+            const printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                toast.error('Could not open print dialog. Check popup blockers.');
+                return;
+            }
+
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>Shipping Label - Order #${order.id.substring(0, 8).toUpperCase()}</title>
+                    <style>
+                        body { font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; }
+                        .label-container { max-width: 600px; margin: 0 auto; border: 2px solid #000; padding: 20px; }
+                        .label-header { text-align: center; margin-bottom: 30px; font-weight: bold; font-size: 18px; }
+                        .label-section { margin-bottom: 25px; }
+                        .label-section-title { font-weight: bold; margin-bottom: 8px; }
+                        .label-info { font-size: 14px; }
+                        .divider { border-top: 1px dashed #000; margin: 20px 0; }
+                        @media print { body { margin: 0; padding: 0; } }
+                    </style>
+                </head>
+                <body>
+                    <div class="label-container">
+                        <div class="label-header">📦 SHIPPING LABEL</div>
+                        
+                        <div class="label-section">
+                            <div class="label-section-title">FROM (Return Address):</div>
+                            <div class="label-info">
+                                <strong>${order.seller_name}</strong><br/>
+                                Shop: ${order.seller_shop_name}<br/>
+                                Email: Available in seller dashboard<br/>
+                                Phone: Available in seller dashboard
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="label-section">
+                            <div class="label-section-title">TO (Shipping Address):</div>
+                            <div class="label-info">
+                                <strong>${order.buyer_name}</strong><br/>
+                                ${order.address_summary}<br/>
+                                Email: ${order.buyer_email}
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="label-section">
+                            <div class="label-section-title">ORDER DETAILS:</div>
+                            <div class="label-info">
+                                Order ID: <strong>${order.id.substring(0, 8).toUpperCase()}</strong><br/>
+                                Product: <strong>${order.title}</strong><br/>
+                                Amount: <strong>${formatPeso(order.amount_paid)}</strong><br/>
+                                Ordered: ${formatDate(order.purchased_at)}<br/>
+                                Category: ${order.category}
+                            </div>
+                        </div>
+
+                        <div class="divider"></div>
+
+                        <div class="label-info" style="text-align: center; font-size: 12px; color: #666;">
+                            Print this label and attach to package<br/>
+                            Keep order ID visible and legible
+                        </div>
+                    </div>
+                    <script>
+                        window.onload = () => { window.print(); };
+                    </script>
+                </body>
+                </html>
+            `;
+
+            printWindow.document.write(html);
+            printWindow.document.close();
+        };
+
+
+
+        if (orders.length === 0) {
+            return (
+                <article className="seller-dashboard-card seller-dashboard-card-wide">
+                    <div className="seller-products-head">
+                        <div>
+                            <h3 className="seller-dashboard-card-title">My Orders</h3>
+                            <p className="seller-dashboard-card-text">
+                                Orders will appear here when customers purchase your products.
+                            </p>
+                        </div>
+                    </div>
+                    <div className="seller-orders-empty">
+                        <p className="seller-dashboard-card-text">No orders yet. Continue listing products to start receiving orders.</p>
+                    </div>
+                </article>
+            );
+        }
+
+        const totalOrders = orders.length;
+        const processingCount = orders.filter((o) => o.status === 'processing').length;
+        const deliveredCount = orders.filter((o) => o.status === 'delivered').length;
+        const cancelledCount = orders.filter((o) => o.status === 'cancelled').length;
+
+        const getStatusStep = (status: string): 1 | 2 | 3 => {
+            if (status === 'processing') return 1;
+            if (status === 'delivered') return 3;
+            return 1;
+        };
+
+        const calculateEstimatedDelivery = (purchasedAt: string): string => {
+            const orderDate = new Date(purchasedAt);
+            const estimatedDate = new Date(orderDate.getTime() + 5 * 24 * 60 * 60 * 1000);
+            return new Intl.DateTimeFormat('en-PH', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            }).format(estimatedDate);
+        };
+
+        const activeOrders = orders.filter((o) => o.status === 'processing');
+        const historyOrders = orders.filter((o) => o.status === 'delivered' || o.status === 'cancelled')
+            .slice()
+            .sort((a, b) => new Date(b.purchased_at).getTime() - new Date(a.purchased_at).getTime());
+
+        return (
+            <>
+                <article className="seller-dashboard-card seller-dashboard-card-wide">
+                    <div className="seller-products-head">
+                        <div>
+                            <h3 className="seller-dashboard-card-title">My Orders</h3>
+                            <p className="seller-dashboard-card-text">
+                                Track and manage all orders from your customers.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="seller-orders-summary">
+                        <div className="seller-order-summary-card">
+                            <p className="seller-dashboard-stat-value">{totalOrders}</p>
+                            <p className="seller-dashboard-stat-label">Total Orders</p>
+                        </div>
+                        <div className="seller-order-summary-card">
+                            <p className="seller-dashboard-stat-value">{processingCount}</p>
+                            <p className="seller-dashboard-stat-label">Processing</p>
+                        </div>
+                        <div className="seller-order-summary-card">
+                            <p className="seller-dashboard-stat-value">{deliveredCount}</p>
+                            <p className="seller-dashboard-stat-label">Delivered</p>
+                        </div>
+                        <div className="seller-order-summary-card">
+                            <p className="seller-dashboard-stat-value">{cancelledCount}</p>
+                            <p className="seller-dashboard-stat-label">Cancelled</p>
+                        </div>
+                    </div>
+                </article>
+
+                <article className="seller-dashboard-card seller-dashboard-card-wide">
+                    {/* Tab bar */}
+                    <div className="seller-orders-tabs">
+                        <button
+                            type="button"
+                            className={`seller-orders-tab${orderTab === 'active' ? ' active' : ''}`}
+                            onClick={() => setOrderTab('active')}
+                        >
+                            Active Orders
+                            {activeOrders.length > 0 && <span className="seller-orders-tab-badge">{activeOrders.length}</span>}
+                        </button>
+                        <button
+                            type="button"
+                            className={`seller-orders-tab${orderTab === 'history' ? ' active' : ''}`}
+                            onClick={() => setOrderTab('history')}
+                        >
+                            Order History
+                            {historyOrders.length > 0 && <span className="seller-orders-tab-badge seller-orders-tab-badge-muted">{historyOrders.length}</span>}
+                        </button>
+                    </div>
+
+                    {/* ── Active Orders ── */}
+                    {orderTab === 'active' && (
+                        <div className="seller-orders-list">
+                            {activeOrders.length === 0 && (
+                                <p className="seller-orders-empty-text">No active orders right now.</p>
+                            )}
+                            {activeOrders.map((order) => (
+                            <div key={order.id} className="seller-order-card">
+                                <div className="seller-order-image-section">
+                                    <div className="seller-order-media-wrap">
+                                        {order.media_url ? (
+                                            order.media_type === 'video' ? (
+                                                <video className="seller-order-media" src={resolveMediaUrl(order.media_url)} controls preload="metadata" />
+                                            ) : (
+                                                <img className="seller-order-media" src={resolveMediaUrl(order.media_url)} alt={order.title} />
+                                            )
+                                        ) : (
+                                            <div className="seller-order-media seller-order-media-placeholder">No Media</div>
+                                        )}
+                                    </div>
+                                    <span className={`seller-order-status seller-order-status-${order.status}`}>
+                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                    </span>
+                                </div>
+
+                                <div className="seller-order-main-content">
+                                    <div className="seller-order-header-section">
+                                        <div className="seller-order-id-title">
+                                            <p className="seller-order-id">Order #{order.id.substring(0, 8).toUpperCase()}</p>
+                                            <h4 className="seller-order-title">{order.title}</h4>
+                                        </div>
+                                        <div className="seller-order-amount">
+                                            <p className="seller-order-amount-label">Amount Paid</p>
+                                            <p className="seller-order-amount-value">{formatPeso(order.amount_paid)}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="seller-order-status-timeline">
+                                        <div className="seller-order-timeline-step" data-step="1" data-active={getStatusStep(order.status) >= 1}>
+                                            <div className="seller-order-timeline-dot"></div>
+                                            <span className="seller-order-timeline-label">Paid</span>
+                                        </div>
+                                        <div className="seller-order-timeline-line" data-active={getStatusStep(order.status) >= 2}></div>
+                                        <div className="seller-order-timeline-step" data-step="2" data-active={getStatusStep(order.status) >= 2}>
+                                            <div className="seller-order-timeline-dot"></div>
+                                            <span className="seller-order-timeline-label">Processing</span>
+                                        </div>
+                                        <div className="seller-order-timeline-line" data-active={getStatusStep(order.status) >= 3}></div>
+                                        <div className="seller-order-timeline-step" data-step="3" data-active={getStatusStep(order.status) >= 3}>
+                                            <div className="seller-order-timeline-dot"></div>
+                                            <span className="seller-order-timeline-label">Delivered</span>
+                                        </div>
+                                    </div>
+
+                                    <div className="seller-order-details-grid">
+                                        <div className="seller-order-detail-column">
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Buyer Information</p>
+                                                <p className="seller-order-detail-value">{order.buyer_name || 'Unknown Buyer'}</p>
+                                                <p className="seller-order-detail-value-secondary">{order.buyer_email || 'No email'}</p>
+                                            </div>
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Payment Method</p>
+                                                <p className="seller-order-detail-value">{order.payment_card_label || 'Not specified'}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="seller-order-detail-column">
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Delivery Address</p>
+                                                <p className="seller-order-detail-value">{order.address_summary || 'Not provided'}</p>
+                                            </div>
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Expected Delivery</p>
+                                                <p className="seller-order-detail-value">{calculateEstimatedDelivery(order.purchased_at)}</p>
+                                            </div>
+                                        </div>
+
+                                        <div className="seller-order-detail-column">
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Order Date</p>
+                                                <p className="seller-order-detail-value">{formatDate(order.purchased_at)}</p>
+                                            </div>
+                                            <div className="seller-order-detail-block">
+                                                <p className="seller-order-detail-label">Category</p>
+                                                <p className="seller-order-detail-value">{order.category || 'Uncategorized'}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="seller-order-actions">
+                                        <button 
+                                            type="button" 
+                                            className="seller-order-action-btn"
+                                            onClick={() => handleMarkAsShipped(order.id)}
+                                            disabled={order.status === 'delivered' || markedAsShipped.has(order.id)}
+                                        >
+                                            <span>📦</span> {order.status === 'delivered' ? 'Shipped' : 'Mark as Shipped'}
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className="seller-order-action-btn"
+                                            onClick={() => handlePrintLabel(order)}
+                                        >
+                                            <span>🏷️</span> Print Label
+                                        </button>
+                                        <button 
+                                            type="button" 
+                                            className="seller-order-action-btn"
+                                            onClick={() => handleContactBuyer(order.buyer_user_id, order.buyer_name)}
+                                        >
+                                            <span>💬</span> Contact Buyer
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* ── Order History ── */}
+                    {orderTab === 'history' && (
+                        <div className="seller-order-history">
+                            {historyOrders.length === 0 && (
+                                <p className="seller-orders-empty-text">No completed or cancelled orders yet.</p>
+                            )}
+                            {historyOrders.length > 0 && (
+                                <table className="seller-order-history-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Order</th>
+                                            <th>Buyer</th>
+                                            <th>Amount</th>
+                                            <th>Date</th>
+                                            <th>Status</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {historyOrders.map((order) => (
+                                            <tr key={order.id} className="seller-order-history-row">
+                                                <td className="seller-order-history-product-cell">
+                                                    <div className="seller-order-history-thumb-wrap">
+                                                        {order.media_url ? (
+                                                            <img className="seller-order-history-thumb" src={resolveMediaUrl(order.media_url)} alt={order.title} />
+                                                        ) : (
+                                                            <div className="seller-order-history-thumb seller-order-history-thumb-placeholder">📦</div>
+                                                        )}
+                                                    </div>
+                                                    <div>
+                                                        <p className="seller-order-history-id">#{order.id.substring(0, 8).toUpperCase()}</p>
+                                                        <p className="seller-order-history-title">{order.title}</p>
+                                                    </div>
+                                                </td>
+                                                <td className="seller-order-history-buyer-cell">
+                                                    <p className="seller-order-history-buyer-name">{order.buyer_name || '—'}</p>
+                                                    <p className="seller-order-history-buyer-email">{order.buyer_email || ''}</p>
+                                                </td>
+                                                <td className="seller-order-history-amount-cell">
+                                                    {formatPeso(order.amount_paid)}
+                                                </td>
+                                                <td className="seller-order-history-date-cell">
+                                                    {formatDate(order.purchased_at)}
+                                                </td>
+                                                <td>
+                                                    <span className={`seller-order-status seller-order-status-${order.status}`}>
+                                                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                                                    </span>
+                                                </td>
+                                                <td className="seller-order-history-actions-cell">
+                                                    <button
+                                                        type="button"
+                                                        className="seller-order-action-btn"
+                                                        onClick={() => handlePrintLabel(order)}
+                                                        title="Print Label"
+                                                    >
+                                                        <span>🏷️</span>
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        className="seller-order-action-btn"
+                                                        onClick={() => handleContactBuyer(order.buyer_user_id, order.buyer_name)}
+                                                        title="Contact Buyer"
+                                                    >
+                                                        <span>💬</span>
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            )}
+                        </div>
+                    )}
+                </article>
+            </>
+        );
+    };
+
     return (
         <section className="seller-dashboard-page">
             <aside className="seller-dashboard-sidebar">
@@ -696,7 +1103,13 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                 <div className="seller-dashboard-shop-chip" title={shopName}>{shopName}</div>
                 <div className="seller-dashboard-group">
                     <p className="seller-dashboard-group-title">Order</p>
-                    <button type="button" className="seller-dashboard-link">My Orders</button>
+                    <button
+                        type="button"
+                        className={`seller-dashboard-link ${activeSection === 'orders' ? 'seller-dashboard-link-active' : ''}`}
+                        onClick={() => onSectionChange('orders')}
+                    >
+                        My Orders
+                    </button>
                     <button type="button" className="seller-dashboard-link">Mass Ship</button>
                     <button
                         type="button"
@@ -749,7 +1162,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                     </div>
                 </header>
 
-                <div className="seller-dashboard-layout">
+                <div className={`seller-dashboard-layout${activeSection === 'products' && productView === 'table' ? ' seller-dashboard-layout-table' : ''}`}>
                     <div className="seller-dashboard-content">
                         {activeSection === 'products' && (
                         <article className="seller-dashboard-card seller-dashboard-card-wide">
@@ -819,6 +1232,26 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                         <option value="closed">Closed</option>
                                         <option value="scheduled">Scheduled</option>
                                     </select>
+                                    <div className="seller-products-view-toggle">
+                                        <button
+                                            type="button"
+                                            className={`seller-products-view-btn${productView === 'grid' ? ' active' : ''}`}
+                                            onClick={() => setProductView('grid')}
+                                            title="Grid view"
+                                            aria-label="Grid view"
+                                        >
+                                            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`seller-products-view-btn${productView === 'table' ? ' active' : ''}`}
+                                            onClick={() => setProductView('table')}
+                                            title="Table view"
+                                            aria-label="Table view"
+                                        >
+                                            <svg viewBox="0 0 20 20" fill="currentColor" width="16" height="16"><rect x="2" y="3" width="16" height="2.5" rx="1"/><rect x="2" y="8.75" width="16" height="2.5" rx="1"/><rect x="2" y="14.5" width="16" height="2.5" rx="1"/></svg>
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
 
@@ -852,7 +1285,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                 </div>
                             )}
 
-                            {!loadingProducts && !productsError && filteredProducts.length > 0 && (
+                            {!loadingProducts && !productsError && filteredProducts.length > 0 && productView === 'grid' && (
                                 <div className="seller-products-grid">
                                     {filteredProducts.map((product) => {
                                         const firstMedia = product.media?.[0];
@@ -896,6 +1329,76 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                             </article>
                                         );
                                     })}
+                                </div>
+                            )}
+
+                            {!loadingProducts && !productsError && filteredProducts.length > 0 && productView === 'table' && (
+                                <div className="seller-products-table-wrap">
+                                    <table className="seller-products-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Product</th>
+                                                <th>Category</th>
+                                                <th>Starting Price</th>
+                                                <th>Current Price</th>
+                                                <th>Bids</th>
+                                                <th>Views</th>
+                                                <th>Ends At</th>
+                                                <th>Status</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {filteredProducts.map((product) => {
+                                                const firstMedia = product.media?.[0];
+                                                const displayStatus = getProductDisplayStatus(product);
+                                                return (
+                                                    <tr
+                                                        key={product.id}
+                                                        className={`seller-products-table-row${selectedProduct?.id === product.id ? ' active' : ''}`}
+                                                        onClick={() => openProductDialog(product)}
+                                                    >
+                                                        <td className="seller-products-table-product-cell">
+                                                            <div className="seller-products-table-thumb-wrap">
+                                                                {firstMedia ? (
+                                                                    firstMedia.media_type === 'video' ? (
+                                                                        <video className="seller-products-table-thumb" src={resolveMediaUrl(firstMedia.url)} preload="metadata" />
+                                                                    ) : (
+                                                                        <img className="seller-products-table-thumb" src={resolveMediaUrl(firstMedia.url)} alt={product.title} />
+                                                                    )
+                                                                ) : (
+                                                                    <div className="seller-products-table-thumb seller-products-table-thumb-placeholder">📷</div>
+                                                                )}
+                                                            </div>
+                                                            <div>
+                                                                <p className="seller-products-table-title">{product.title}</p>
+                                                                <p className="seller-products-table-id">ID #{product.id}</p>
+                                                            </div>
+                                                        </td>
+                                                        <td className="seller-products-table-cell">{product.category || '—'}</td>
+                                                        <td className="seller-products-table-cell seller-products-table-price">{formatPeso(product.starting_price)}</td>
+                                                        <td className="seller-products-table-cell seller-products-table-price">{formatPeso(product.current_price)}</td>
+                                                        <td className="seller-products-table-cell">{product.bids_count ?? 0}</td>
+                                                        <td className="seller-products-table-cell">{product.page_views ?? 0}</td>
+                                                        <td className="seller-products-table-cell seller-products-table-date">{formatDate(product.ends_at)}</td>
+                                                        <td className="seller-products-table-cell">
+                                                            <span className={`seller-product-status seller-product-status-${displayStatus}`}>{displayStatus}</span>
+                                                        </td>
+                                                        <td className="seller-products-table-cell">
+                                                            <button
+                                                                type="button"
+                                                                className="seller-products-table-edit-btn"
+                                                                onClick={(e) => { e.stopPropagation(); openProductDialog(product); }}
+                                                                title="View / Edit"
+                                                            >
+                                                                ✏️
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                        </tbody>
+                                    </table>
                                 </div>
                             )}
                         </article>
@@ -996,6 +1499,10 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                     </button>
                                 </div>
                             </article>
+                        )}
+
+                        {activeSection === 'orders' && (
+                        <SellerOrdersSection />
                         )}
 
                         {activeSection === 'products' && (

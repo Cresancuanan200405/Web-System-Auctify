@@ -9,6 +9,7 @@ interface SellerChatDialogProps {
     onClose: () => void;
     preferredUserId?: number | null;
     preferredUserName?: string;
+    onNavigateSellerStore: (sellerId: number, sellerName?: string) => void;
 }
 
 const buildFallbackParticipant = (userId: number | null | undefined, userName?: string): DirectMessageParticipant | null => {
@@ -29,6 +30,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     onClose,
     preferredUserId,
     preferredUserName,
+    onNavigateSellerStore,
 }) => {
     const quickEmojis = ['😀', '😂', '😍', '🔥', '👏', '🎉', '👍', '🙏', '❤️', '😮'];
     const { authUser } = useAuth();
@@ -43,6 +45,18 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     const [sending, setSending] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [threadFilter, setThreadFilter] = useState<'all' | 'unread'>('all');
+    const [openKebabUserId, setOpenKebabUserId] = useState<number | null>(null);
+    const [kebabMenuPos, setKebabMenuPos] = useState<{ top: number; right: number } | null>(null);
+    const [pinnedUserIds, setPinnedUserIds] = useState<Set<number>>(() => {
+        try {
+            const stored = localStorage.getItem('chat_pinned_threads');
+            return stored ? new Set<number>(JSON.parse(stored) as number[]) : new Set<number>();
+        } catch {
+            return new Set<number>();
+        }
+    });
+    const [hiddenUserIds, setHiddenUserIds] = useState<Set<number>>(new Set());
+    const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -57,14 +71,23 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     const filteredThreads = useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
 
-        return threads.filter((thread) => {
-            const displayName = thread.user?.name?.toLowerCase() ?? '';
-            const shopName = thread.user?.seller_registration?.shop_name?.toLowerCase() ?? '';
-            const matchesSearch = normalizedSearch.length === 0 || displayName.includes(normalizedSearch) || shopName.includes(normalizedSearch);
-            const matchesFilter = threadFilter === 'all' || thread.unread_count > 0;
-            return matchesSearch && matchesFilter;
-        });
-    }, [searchTerm, threadFilter, threads]);
+        return threads
+            .filter((thread) => {
+                if (thread.user?.id !== undefined && hiddenUserIds.has(thread.user.id)) return false;
+                const displayName = thread.user?.name?.toLowerCase() ?? '';
+                const shopName = thread.user?.seller_registration?.shop_name?.toLowerCase() ?? '';
+                const matchesSearch = normalizedSearch.length === 0 || displayName.includes(normalizedSearch) || shopName.includes(normalizedSearch);
+                const matchesFilter = threadFilter === 'all' || thread.unread_count > 0;
+                return matchesSearch && matchesFilter;
+            })
+            .sort((a, b) => {
+                const aPin = a.user?.id !== undefined && pinnedUserIds.has(a.user.id);
+                const bPin = b.user?.id !== undefined && pinnedUserIds.has(b.user.id);
+                if (aPin && !bPin) return -1;
+                if (!aPin && bPin) return 1;
+                return 0;
+            });
+    }, [searchTerm, threadFilter, threads, hiddenUserIds, pinnedUserIds]);
 
     useEffect(() => {
         if (!isOpen) {
@@ -248,6 +271,19 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         return user.seller_registration?.shop_name?.trim() || user.name || `User #${user.id}`;
     };
 
+    const canOpenSellerStore = (user?: DirectMessageParticipant | null) => {
+        return Boolean(user?.id && user?.seller_registration?.shop_name?.trim());
+    };
+
+    const handleOpenSellerStore = (user?: DirectMessageParticipant | null) => {
+        if (!canOpenSellerStore(user) || !user?.id) {
+            return;
+        }
+
+        onNavigateSellerStore(user.id, user.seller_registration?.shop_name?.trim() || user.name);
+        onClose();
+    };
+
     const handleSelectThread = (thread: DirectMessageThread) => {
         if (!thread.user) {
             return;
@@ -255,6 +291,38 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
 
         setSelectedUserId(thread.user.id);
         setSelectedUser(thread.user);
+    };
+
+    const handlePinThread = (userId: number) => {
+        setPinnedUserIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(userId)) {
+                next.delete(userId);
+            } else {
+                next.add(userId);
+            }
+            try { localStorage.setItem('chat_pinned_threads', JSON.stringify([...next])); } catch { /* ignore */ }
+            return next;
+        });
+        setOpenKebabUserId(null);
+    };
+
+    const handleDeleteThread = async (userId: number) => {
+        setOpenKebabUserId(null);
+        setKebabMenuPos(null);
+        setDeletingUserId(userId);
+        try {
+            await directMessageService.deleteThread(userId);
+        } catch {
+            // best-effort; hide locally regardless
+        } finally {
+            setDeletingUserId(null);
+        }
+        setThreads((prev) => prev.filter((t) => t.user?.id !== userId));
+        if (selectedUserId === userId) {
+            setSelectedUserId(null);
+            setSelectedUser(null);
+        }
     };
 
     const handleSendMessage = async () => {
@@ -358,6 +426,16 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         }
     };
 
+    useEffect(() => {
+        if (!openKebabUserId) return;
+        const handleClickOutside = () => {
+            setOpenKebabUserId(null);
+            setKebabMenuPos(null);
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, [openKebabUserId]);
+
     if (!isOpen || !authUser) {
         return null;
     }
@@ -365,6 +443,34 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     return (
         <div className="seller-chat-dialog-backdrop" role="presentation" onClick={onClose}>
             <div className="seller-chat-dialog" role="dialog" aria-modal="true" aria-label="Seller chat" onClick={(event) => event.stopPropagation()}>
+
+                {/* Fixed-position kebab menu — rendered outside scroll container */}
+                {openKebabUserId !== null && kebabMenuPos !== null && (() => {
+                    const userId = openKebabUserId;
+                    const isPinned = pinnedUserIds.has(userId);
+                    return (
+                        <div
+                            className="seller-chat-thread-menu"
+                            style={{ position: 'fixed', top: kebabMenuPos.top, right: kebabMenuPos.right, zIndex: 9999 }}
+                            onMouseDown={(e) => e.stopPropagation()}
+                        >
+                            <button
+                                type="button"
+                                className="seller-chat-thread-menu-item"
+                                onClick={() => handlePinThread(userId)}
+                            >
+                                📌 {isPinned ? 'Unpin' : 'Pin'}
+                            </button>
+                            <button
+                                type="button"
+                                className="seller-chat-thread-menu-item seller-chat-thread-menu-item-danger"
+                                onClick={() => { void handleDeleteThread(userId); }}
+                            >
+                                🗑️ Delete conversation
+                            </button>
+                        </div>
+                    );
+                })()}
                 <header className="seller-chat-dialog-header">
                     <h3>{selectedUser ? `Message ${getParticipantLabel(selectedUser)}` : 'Chat'}</h3>
                     <button type="button" className="seller-chat-close-btn" onClick={onClose} aria-label="Close chat dialog">
@@ -393,29 +499,71 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                             {!threadsLoading && filteredThreads.length === 0 && <p className="seller-chat-thread-empty">No conversations yet.</p>}
 
                             {filteredThreads.map((thread) => (
-                                <button
+                                <div
                                     key={thread.user?.id ?? thread.latest_message_at}
-                                    type="button"
-                                    className={`seller-chat-thread ${selectedUserId === thread.user?.id ? 'active' : ''}`}
-                                    onClick={() => handleSelectThread(thread)}
+                                    className={`seller-chat-thread-wrap${thread.user?.id !== undefined && pinnedUserIds.has(thread.user.id) ? ' is-pinned' : ''}`}
                                 >
-                                    <div className="seller-chat-avatar" aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" role="img" focusable="false">
-                                            <path
-                                                fill="currentColor"
-                                                d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
-                                            />
-                                        </svg>
-                                    </div>
-                                    <div className="seller-chat-thread-body">
-                                        <div className="seller-chat-thread-topline">
-                                            <p className="seller-chat-thread-name">{getParticipantLabel(thread.user)}</p>
-                                            {thread.unread_count > 0 && <span className="seller-chat-thread-badge">{thread.unread_count}</span>}
+                                    <button
+                                        type="button"
+                                        className={`seller-chat-thread ${selectedUserId === thread.user?.id ? 'active' : ''}`}
+                                        onClick={() => handleSelectThread(thread)}
+                                    >
+                                        <div className="seller-chat-avatar" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" role="img" focusable="false">
+                                                <path
+                                                    fill="currentColor"
+                                                    d="M12 12a4 4 0 1 0-4-4 4 4 0 0 0 4 4Zm0 2c-4.42 0-8 2.24-8 5v1h16v-1c0-2.76-3.58-5-8-5Z"
+                                                />
+                                            </svg>
                                         </div>
-                                        <p className="seller-chat-thread-preview">{thread.latest_message}</p>
-                                        <p className="seller-chat-thread-time">{formatDate(thread.latest_message_at)}</p>
+                                        <div className="seller-chat-thread-body">
+                                            <div className="seller-chat-thread-topline">
+                                                <p className="seller-chat-thread-name">
+                                                    {thread.user?.id !== undefined && pinnedUserIds.has(thread.user.id) && (
+                                                        <span className="seller-chat-pin-icon" aria-label="Pinned">📌</span>
+                                                    )}
+                                                    {getParticipantLabel(thread.user)}
+                                                </p>
+                                                {thread.unread_count > 0 && <span className="seller-chat-thread-badge">{thread.unread_count}</span>}
+                                            </div>
+                                            <p className="seller-chat-thread-preview">{thread.latest_message}</p>
+                                            <p className="seller-chat-thread-time">{formatDate(thread.latest_message_at)}</p>
+                                        </div>
+                                    </button>
+                                    <div
+                                        className="seller-chat-thread-kebab-wrap"
+                                        onMouseDown={(e) => e.stopPropagation()}
+                                    >
+                                        <button
+                                            type="button"
+                                            className="seller-chat-thread-kebab-btn"
+                                            aria-label="More options"
+                                            disabled={deletingUserId === thread.user?.id}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const isOpen = openKebabUserId === (thread.user?.id ?? null);
+                                                if (isOpen) {
+                                                    setOpenKebabUserId(null);
+                                                    setKebabMenuPos(null);
+                                                } else {
+                                                    const rect = e.currentTarget.getBoundingClientRect();
+                                                    const menuHeight = 88;
+                                                    const spaceBelow = window.innerHeight - rect.bottom;
+                                                    const top = spaceBelow >= menuHeight
+                                                        ? rect.bottom + 4
+                                                        : rect.top - menuHeight - 4;
+                                                    setKebabMenuPos({
+                                                        top,
+                                                        right: window.innerWidth - rect.right,
+                                                    });
+                                                    setOpenKebabUserId(thread.user?.id ?? null);
+                                                }
+                                            }}
+                                        >
+                                            {deletingUserId === thread.user?.id ? '…' : '⋮'}
+                                        </button>
                                     </div>
-                                </button>
+                                </div>
                             ))}
                         </div>
                     </aside>
@@ -424,7 +572,17 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                         <main className="seller-chat-main-pane">
                             <div className="seller-chat-conversation-header">
                                 <div>
-                                    <p className="seller-chat-conversation-name">{getParticipantLabel(selectedUser)}</p>
+                                    {canOpenSellerStore(selectedUser) ? (
+                                        <button
+                                            type="button"
+                                            className="seller-chat-conversation-name seller-chat-conversation-name-link"
+                                            onClick={() => handleOpenSellerStore(selectedUser)}
+                                        >
+                                            {getParticipantLabel(selectedUser)}
+                                        </button>
+                                    ) : (
+                                        <p className="seller-chat-conversation-name">{getParticipantLabel(selectedUser)}</p>
+                                    )}
                                     <p className="seller-chat-conversation-subtitle">{selectedUser?.name || preferredUserName || 'Direct messages'}</p>
                                 </div>
                             </div>

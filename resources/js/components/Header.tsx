@@ -1,18 +1,24 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { auctionService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useOrderHistory } from '../hooks/useOrderHistory';
 import { useWonAuctions } from '../hooks/useWonAuctions';
 import { useCards } from '../hooks/useCards';
-import type { AccountSection } from '../types';
+import type { AccountSection, AuctionProduct } from '../types';
 import { formatCurrency } from '../utils/helpers';
+
+const RECENT_SEARCHES_KEY = 'header_recent_searches';
+const MAX_RECENT_SEARCHES = 6;
 
 interface HeaderProps {
     onNavigateHome: () => void;
     disableHomeNavigation?: boolean;
     isSellerMode?: boolean;
+    onNavigateToAuction: (auctionId: number) => void;
     onNavigateLogin: () => void;
     onNavigateRegister: () => void;
     onNavigateAccount: (section?: AccountSection) => void;
+    onNavigateSellerProfile: () => void;
     onNavigateSellerDashboard: () => void;
     showSellerDashboardButton: boolean;
     onNavigateOrdersLogin: () => void;
@@ -24,9 +30,11 @@ export const Header: React.FC<HeaderProps> = ({
     onNavigateHome,
     disableHomeNavigation = false,
     isSellerMode = false,
+    onNavigateToAuction,
     onNavigateLogin,
     onNavigateRegister,
     onNavigateAccount,
+    onNavigateSellerProfile,
     onNavigateSellerDashboard,
     showSellerDashboardButton,
     onNavigateOrdersLogin,
@@ -39,24 +47,235 @@ export const Header: React.FC<HeaderProps> = ({
     const { orders } = useOrderHistory();
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');
+    const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+    const [searchProducts, setSearchProducts] = useState<AuctionProduct[]>([]);
+    const [isSearchLoading, setIsSearchLoading] = useState(false);
+    const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+    const [recentSearches, setRecentSearches] = useState<string[]>(() => {
+        try {
+            const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
+            return raw ? (JSON.parse(raw) as string[]) : [];
+        } catch {
+            return [];
+        }
+    });
+    const searchContainerRef = useRef<HTMLFormElement | null>(null);
     const brandLabel = isSellerMode ? 'AUCTIFY Seller' : 'AUCTIFY';
+    const shouldShowSellerDetails = isSellerMode;
 
     const mainCard = savedCards.find(card => card.id === mainCardId);
     const activeBagItems = wonAuctions.filter((item) => !orders.some((order) => order.auction_id === item.id));
     const activeBagCount = activeBagItems.length;
 
+    useEffect(() => {
+        if (!isSearchModalOpen || isSellerMode || searchProducts.length > 0 || isSearchLoading) {
+            return;
+        }
+
+        let isActive = true;
+
+        const loadProducts = async () => {
+            setIsSearchLoading(true);
+            try {
+                const products = await auctionService.getAllProducts();
+                if (!isActive) {
+                    return;
+                }
+
+                setSearchProducts(products);
+            } catch {
+                if (isActive) {
+                    setSearchProducts([]);
+                }
+            } finally {
+                if (isActive) {
+                    setIsSearchLoading(false);
+                }
+            }
+        };
+
+        void loadProducts();
+
+        return () => {
+            isActive = false;
+        };
+    }, [isSearchModalOpen, isSellerMode, searchProducts.length, isSearchLoading]);
+
+    useEffect(() => {
+        if (!isSearchModalOpen) {
+            return;
+        }
+
+        const handlePointerDown = (event: MouseEvent) => {
+            if (searchContainerRef.current && !searchContainerRef.current.contains(event.target as Node)) {
+                setIsSearchModalOpen(false);
+            }
+        };
+
+        const handleEscape = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') {
+                setIsSearchModalOpen(false);
+            }
+        };
+
+        window.addEventListener('mousedown', handlePointerDown);
+        window.addEventListener('keydown', handleEscape);
+
+        return () => {
+            window.removeEventListener('mousedown', handlePointerDown);
+            window.removeEventListener('keydown', handleEscape);
+        };
+    }, [isSearchModalOpen]);
+
+    useEffect(() => {
+        setActiveSearchIndex(0);
+    }, [searchQuery, isSearchModalOpen]);
+
+    const persistRecentSearch = (value: string) => {
+        const normalized = value.trim();
+        if (!normalized) {
+            return;
+        }
+
+        setRecentSearches((prev) => {
+            const next = [normalized, ...prev.filter((item) => item.toLowerCase() !== normalized.toLowerCase())].slice(0, MAX_RECENT_SEARCHES);
+            window.localStorage.setItem(RECENT_SEARCHES_KEY, JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const filteredSearchProducts = useMemo(() => {
+        const normalized = searchQuery.trim().toLowerCase();
+        if (!normalized) {
+            return [];
+        }
+
+        return searchProducts
+            .filter((product) => {
+                const category = product.category?.toLowerCase() ?? '';
+                const description = product.description?.toLowerCase() ?? '';
+                return product.title.toLowerCase().includes(normalized)
+                    || category.includes(normalized)
+                    || description.includes(normalized);
+            })
+            .slice(0, 8);
+    }, [searchProducts, searchQuery]);
+
+    const suggestedCategories = useMemo(() => {
+        const normalized = searchQuery.trim().toLowerCase();
+        const categories = Array.from(new Set(
+            searchProducts
+                .map((product) => product.category?.trim())
+                .filter((category): category is string => Boolean(category)),
+        ));
+
+        return categories
+            .filter((category) => normalized.length === 0 || category.toLowerCase().includes(normalized))
+            .sort((left, right) => left.localeCompare(right))
+            .slice(0, 6);
+    }, [searchProducts, searchQuery]);
+
+    const renderHighlightedText = (value: string, query: string) => {
+        const normalizedQuery = query.trim();
+        if (!normalizedQuery) {
+            return value;
+        }
+
+        const lowerValue = value.toLowerCase();
+        const lowerQuery = normalizedQuery.toLowerCase();
+        const matchIndex = lowerValue.indexOf(lowerQuery);
+
+        if (matchIndex === -1) {
+            return value;
+        }
+
+        const before = value.slice(0, matchIndex);
+        const match = value.slice(matchIndex, matchIndex + normalizedQuery.length);
+        const after = value.slice(matchIndex + normalizedQuery.length);
+
+        return (
+            <>
+                {before}
+                <mark className="header-search-highlight">{match}</mark>
+                {after}
+            </>
+        );
+    };
+
+    const openSearchResult = (productId: number, nextQuery?: string) => {
+        if (nextQuery?.trim()) {
+            persistRecentSearch(nextQuery);
+        }
+
+        setIsSearchModalOpen(false);
+        onNavigateToAuction(productId);
+    };
+
+    const handleSearchInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (!filteredSearchProducts.length) {
+            return;
+        }
+
+        if (event.key === 'ArrowDown') {
+            event.preventDefault();
+            setActiveSearchIndex((prev) => (prev + 1) % filteredSearchProducts.length);
+            return;
+        }
+
+        if (event.key === 'ArrowUp') {
+            event.preventDefault();
+            setActiveSearchIndex((prev) => (prev - 1 + filteredSearchProducts.length) % filteredSearchProducts.length);
+            return;
+        }
+
+        if (event.key === 'Enter' && searchQuery.trim() && filteredSearchProducts[activeSearchIndex]) {
+            event.preventDefault();
+            openSearchResult(filteredSearchProducts[activeSearchIndex].id, searchQuery);
+        }
+    };
+
     const handleSearch = (e: React.FormEvent) => {
         e.preventDefault();
-        if (searchQuery.trim()) {
-            // TODO: Implement search navigation
-            console.log('Search for:', searchQuery);
+        const normalized = searchQuery.trim();
+        if (!normalized) {
+            setIsSearchModalOpen(true);
+            return;
         }
+
+        persistRecentSearch(normalized);
+        setIsSearchModalOpen(true);
+
+        if (filteredSearchProducts.length > 0) {
+            openSearchResult(filteredSearchProducts[activeSearchIndex]?.id ?? filteredSearchProducts[0].id, normalized);
+        }
+    };
+
+    const clearRecentSearches = () => {
+        setRecentSearches([]);
+        window.localStorage.removeItem(RECENT_SEARCHES_KEY);
     };
 
     const getCardLogo = (type: string) => {
         const extension = type === 'mastercard' ? 'jpg' : 'png';
         const logoName = type === 'mastercard' ? 'landbank' : type;
         return `/icons/${logoName}.${extension}`;
+    };
+
+    const resolveMediaUrl = (url?: string) => {
+        if (!url) {
+            return '';
+        }
+
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+        if (!apiBase) {
+            return url;
+        }
+
+        return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
     };
 
     return (
@@ -67,12 +286,14 @@ export const Header: React.FC<HeaderProps> = ({
                 <button type="button" onClick={onNavigateHome} className="brand brand-button">{brandLabel}</button>
             )}
             {!isSellerMode && (
-                <form className="search-bar" onSubmit={handleSearch}>
+                <form className="search-bar" onSubmit={handleSearch} ref={searchContainerRef}>
                     <input 
                         type="text" 
                         placeholder="Search for auctions, items, categories..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
+                        onFocus={() => setIsSearchModalOpen(true)}
+                        onKeyDown={handleSearchInputKeyDown}
                     />
                     <button type="submit" className="search-btn" aria-label="Search">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -80,6 +301,104 @@ export const Header: React.FC<HeaderProps> = ({
                             <path d="m21 21-4.35-4.35"/>
                         </svg>
                     </button>
+
+                    {isSearchModalOpen && (
+                        <div className="header-search-panel">
+                            <div className="header-search-panel-grid">
+                                <div className="header-search-panel-section">
+                                    <div className="header-search-panel-section-head">
+                                        <h4>Recent searches</h4>
+                                        {recentSearches.length > 0 && (
+                                            <button type="button" className="header-search-clear-btn" onClick={clearRecentSearches}>Clear</button>
+                                        )}
+                                    </div>
+                                    <div className="header-search-recent-list">
+                                        {recentSearches.length === 0 && (
+                                            <p className="header-search-empty">No recent searches yet.</p>
+                                        )}
+                                        {recentSearches.map((item) => (
+                                            <button
+                                                key={item}
+                                                type="button"
+                                                className="header-search-recent-chip"
+                                                onClick={() => setSearchQuery(item)}
+                                            >
+                                                {item}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="header-search-panel-section">
+                                    <div className="header-search-panel-section-head">
+                                        <h4>Categories</h4>
+                                    </div>
+                                    <div className="header-search-category-list">
+                                        {suggestedCategories.length === 0 && (
+                                            <p className="header-search-empty">No category suggestions yet.</p>
+                                        )}
+                                        {suggestedCategories.map((category) => (
+                                            <button
+                                                key={category}
+                                                type="button"
+                                                className="header-search-category-chip"
+                                                onClick={() => setSearchQuery(category)}
+                                            >
+                                                {renderHighlightedText(category, searchQuery)}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                <div className="header-search-panel-section">
+                                    <div className="header-search-panel-section-head">
+                                        <h4>Results</h4>
+                                        {searchQuery.trim() && <span className="header-search-result-count">{filteredSearchProducts.length} found</span>}
+                                    </div>
+
+                                    {isSearchLoading && <p className="header-search-empty">Loading products...</p>}
+                                    {!isSearchLoading && !searchQuery.trim() && <p className="header-search-empty">Start typing to search auctions and items.</p>}
+                                    {!isSearchLoading && searchQuery.trim() && filteredSearchProducts.length === 0 && (
+                                        <p className="header-search-empty">No matching products found.</p>
+                                    )}
+
+                                    {!isSearchLoading && filteredSearchProducts.length > 0 && (
+                                        <div className="header-search-results">
+                                            {filteredSearchProducts.map((product) => {
+                                                const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image') ?? product.media?.[0];
+                                                return (
+                                                    <button
+                                                        key={product.id}
+                                                        type="button"
+                                                        className={`header-search-result-card${filteredSearchProducts[activeSearchIndex]?.id === product.id ? ' active' : ''}`}
+                                                        onClick={() => openSearchResult(product.id, searchQuery)}
+                                                        onMouseEnter={() => setActiveSearchIndex(filteredSearchProducts.findIndex((item) => item.id === product.id))}
+                                                    >
+                                                        <div className="header-search-result-thumb-wrap">
+                                                            {thumbnail ? (
+                                                                <img
+                                                                    className="header-search-result-thumb"
+                                                                    src={resolveMediaUrl(thumbnail.url)}
+                                                                    alt={product.title}
+                                                                />
+                                                            ) : (
+                                                                <div className="header-search-result-thumb header-search-result-thumb-empty">No image</div>
+                                                            )}
+                                                        </div>
+                                                        <div className="header-search-result-copy">
+                                                            <p className="header-search-result-title">{renderHighlightedText(product.title, searchQuery)}</p>
+                                                            <p className="header-search-result-meta">{renderHighlightedText(product.category || 'Uncategorized', searchQuery)}</p>
+                                                        </div>
+                                                        <span className="header-search-result-price">{formatCurrency(Number(product.current_price || product.starting_price || 0))}</span>
+                                                    </button>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
                 </form>
             )}
             <div className="actions">
@@ -107,12 +426,12 @@ export const Header: React.FC<HeaderProps> = ({
                     <div className="dropdown-menu">
                         {authUser ? (
                             <>
-                                <div onClick={() => onNavigateAccount('details')} className="dropdown-item clickable">
+                                <div onClick={() => shouldShowSellerDetails ? onNavigateSellerProfile() : onNavigateAccount('details')} className="dropdown-item clickable">
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                         <circle cx="12" cy="8" r="4" />
                                         <path d="M4 20c0-3 2.5-5 8-5s8 2 8 5" />
                                     </svg>
-                                    <span>Details</span>
+                                    <span>{shouldShowSellerDetails ? 'Seller Details' : 'Details'}</span>
                                 </div>
                                 {!isSellerMode && (
                                     <div
@@ -304,13 +623,33 @@ export const Header: React.FC<HeaderProps> = ({
                                     <div className="bag-menu-items">
                                         {activeBagItems.slice(0, 3).map((item) => {
                                             const sellerName = item.user?.seller_registration?.shop_name?.trim() || item.user?.name || 'Unknown Seller';
+                                            const thumbnailMedia = (item.media ?? []).find((media) => media.media_type === 'image') ?? item.media?.[0];
 
                                             return (
-                                                <div key={item.id} className="bag-menu-item">
-                                                    <p className="bag-menu-item-title">{item.title}</p>
-                                                    <p className="bag-menu-item-meta">Seller: {sellerName}</p>
-                                                    <p className="bag-menu-item-meta">Winning bid: {formatCurrency(Number(item.winning_bid_amount ?? 0))}</p>
-                                                </div>
+                                                <button
+                                                    key={item.id}
+                                                    type="button"
+                                                    className="bag-menu-item bag-menu-item-button"
+                                                    onClick={() => onNavigateToAuction(item.id)}
+                                                >
+                                                    <div className="bag-menu-item-media-wrap">
+                                                        {thumbnailMedia ? (
+                                                            <img
+                                                                className="bag-menu-item-media"
+                                                                src={resolveMediaUrl(thumbnailMedia.url)}
+                                                                alt={item.title}
+                                                            />
+                                                        ) : (
+                                                            <div className="bag-menu-item-media-empty">No image</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="bag-menu-item-content">
+                                                        <p className="bag-menu-item-kicker">Won auction</p>
+                                                        <p className="bag-menu-item-title">{item.title}</p>
+                                                        <p className="bag-menu-item-meta">Seller: {sellerName}</p>
+                                                        <p className="bag-menu-item-price">Winning bid: {formatCurrency(Number(item.winning_bid_amount ?? 0))}</p>
+                                                    </div>
+                                                </button>
                                             );
                                         })}
                                     </div>

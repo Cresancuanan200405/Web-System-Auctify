@@ -20,7 +20,8 @@ interface AccountPageProps {
     activeSection: AccountSection;
     onSectionChange: (section: AccountSection) => void;
     onAccountDeleted: () => void;
-    onNavigateToAuction: (auctionId: number) => void;
+    onNavigateToAuction: (auctionId: number, source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews') => void;
+    onNavigateSellerStore: (sellerId: number, sellerName?: string, source?: 'home' | 'seller-dashboard' | 'account-orders' | null) => void;
 }
 
 export const AccountPage: React.FC<AccountPageProps> = ({
@@ -28,6 +29,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     onSectionChange,
     onAccountDeleted,
     onNavigateToAuction,
+    onNavigateSellerStore,
 }) => {
     const { authUser } = useAuth();
     const isVerified = Boolean(authUser?.is_verified);
@@ -56,9 +58,9 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             case 'zvip':
                 return <ZVIPSection />;
             case 'orders':
-                return <OrdersSection />;
+                return <OrdersSection onNavigateToAuction={onNavigateToAuction} onNavigateSellerStore={onNavigateSellerStore} />;
             case 'reviews':
-                return <ReviewsSection />;
+                return <ReviewsSection onNavigateToAuction={onNavigateToAuction} />;
             case 'wishlist':
                 return <WishlistSection onNavigateToAuction={onNavigateToAuction} />;
             case 'cashback':

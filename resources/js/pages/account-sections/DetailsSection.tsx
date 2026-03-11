@@ -4,6 +4,7 @@ import { toast } from 'react-toastify';
 import * as apiClient from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
 import { addressService, authService } from '../../services/api';
+import { getCities, getProvinces, getBarangays } from '../../services/psgc';
 import type { AccountSection, Address, User } from '../../types';
 
 interface DetailsSectionProps {
@@ -57,6 +58,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
     const [editConfirmPassword, setEditConfirmPassword] = useState('');
     const [accountEditError, setAccountEditError] = useState('');
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
+    const [provinceNames, setProvinceNames] = useState<Record<string, string>>({});
+    const [cityNames, setCityNames] = useState<Record<string, string>>({});
+    const [barangayNames, setBarangayNames] = useState<Record<string, string>>({});
     const [birthday, setBirthday] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | ''>('');
 
@@ -98,6 +102,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         if (!authUser) {
             const timeoutId = window.setTimeout(() => {
                 setSavedAddresses([]);
+                setProvinceNames({});
+                setCityNames({});
+                setBarangayNames({});
             }, 0);
 
             return () => {
@@ -126,6 +133,85 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
             isMounted = false;
         };
     }, [authUser]);
+
+    useEffect(() => {
+        let isActive = true;
+
+        const buildLocationMaps = async () => {
+            const provinceCodes = Array.from(new Set(savedAddresses.map((address) => address.province).filter(Boolean)));
+            const cityCodes = Array.from(new Set(savedAddresses.map((address) => address.city).filter(Boolean)));
+            const barangayCodes = Array.from(new Set(savedAddresses.map((address) => address.barangay).filter(Boolean)));
+            const nextProvinceNames: Record<string, string> = {};
+            const nextCityNames: Record<string, string> = {};
+            const nextBarangayNames: Record<string, string> = {};
+
+            for (const address of savedAddresses) {
+                if (!address.region) {
+                    continue;
+                }
+
+                try {
+                    const provinceList = await getProvinces(address.region);
+                    provinceList.forEach((province) => {
+                        if (provinceCodes.includes(province.code)) {
+                            nextProvinceNames[province.code] = province.name;
+                        }
+                    });
+                } catch {
+                    // Keep rendering stable when PSGC lookups fail.
+                }
+            }
+
+            for (const provinceCode of provinceCodes) {
+                try {
+                    const cityList = await getCities(provinceCode);
+                    cityList.forEach((city) => {
+                        if (cityCodes.includes(city.code)) {
+                            nextCityNames[city.code] = city.name;
+                        }
+                    });
+                } catch {
+                    // Keep rendering stable when PSGC lookups fail.
+                }
+            }
+
+            for (const cityCode of cityCodes) {
+                try {
+                    const barangayList = await getBarangays(cityCode);
+                    barangayList.forEach((barangay) => {
+                        if (barangayCodes.includes(barangay.code)) {
+                            nextBarangayNames[barangay.code] = barangay.name;
+                        }
+                    });
+                } catch {
+                    // Keep rendering stable when PSGC lookups fail.
+                }
+            }
+
+            if (!isActive) {
+                return;
+            }
+
+            setProvinceNames(nextProvinceNames);
+            setCityNames(nextCityNames);
+            setBarangayNames(nextBarangayNames);
+        };
+
+        if (savedAddresses.length === 0) {
+            setProvinceNames({});
+            setCityNames({});
+            setBarangayNames({});
+            return () => {
+                isActive = false;
+            };
+        }
+
+        void buildLocationMaps();
+
+        return () => {
+            isActive = false;
+        };
+    }, [savedAddresses]);
 
     const openAccountEdit = () => {
         if (!authUser) return;
@@ -334,6 +420,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                     <div className="account-card-body">
                         {savedAddresses.slice(0, 2).map((address) => {
                             const houseNo = address.building_name || '';
+                            const barangay = barangayNames[address.barangay] || address.barangay;
+                            const city = cityNames[address.city] || address.city;
+                            const province = provinceNames[address.province] || address.province;
                             return (
                                 <div key={address.id} className="account-field-group">
                                     <div className="account-field-label">
@@ -341,7 +430,7 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                                     </div>
                                     <div className="account-field-value">
                                         {address.street_address}
-                                        {houseNo && `, ${houseNo}`}, {address.barangay}, {address.city}
+                                        {houseNo && `, ${houseNo}`}, {barangay}, {city}, {province}
                                     </div>
                                 </div>
                             );

@@ -30,16 +30,24 @@ class AuctionController extends Controller
         // Keep status time-derived at read time; avoid persisting accidental closures.
     }
 
-    public function index()
+    public function index(Request $request)
     {
         $this->syncAuctionStatuses();
 
-        $auctions = Auction::query()
+        $query = Auction::query()
             ->with(['media', 'user.sellerRegistration'])
             ->withCount('bids')
-            ->where('ends_at', '>=', now()->subMinutes(30))
-            ->latest()
-            ->get();
+            ->latest();
+
+        if (! $request->boolean('include_closed')) {
+            $query->where('ends_at', '>=', now()->subMinutes(30));
+        }
+
+        if ($request->filled('seller_id')) {
+            $query->where('user_id', (int) $request->query('seller_id'));
+        }
+
+        $auctions = $query->get();
 
         return response()->json(
             $auctions
