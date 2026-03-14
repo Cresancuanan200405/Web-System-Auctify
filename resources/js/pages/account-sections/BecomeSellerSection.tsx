@@ -299,9 +299,7 @@ export const BecomeSellerSection: React.FC = () => {
         const popup = window.open('/seller/add-product', '_blank', 'noopener,noreferrer');
 
         if (!popup) {
-            window.history.pushState({}, '', '/seller/add-product');
-            window.dispatchEvent(new PopStateEvent('popstate'));
-            window.scrollTo(0, 0);
+            toast.info('Please allow pop-ups to open Add Product in a new tab.');
         }
     };
 

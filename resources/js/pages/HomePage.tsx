@@ -2,7 +2,9 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
+import { getDefaultHomePageConfig, normalizeHomePageConfig } from '../lib/homePageConfig';
 import { auctionService } from '../services/api';
+import { adminApi } from '../services/adminApi';
 import type { AuctionProduct, WishlistItem } from '../types';
 import {
     getAuctionDashboardDisappearanceTime,
@@ -77,41 +79,6 @@ const DashboardDisappearanceCountdown: React.FC<{ targetTime: number; onExpire: 
     return <p className="home-product-expiry-note">Disappears in {label}</p>;
 };
 
-const CAROUSEL_SLIDES = [
-    {
-        subtitle: 'WEEKEND SPECIAL',
-        title: 'Exceptional Finds',
-        price: 'Up to 60% Off',
-        brands: ['Rolex', 'Ferrari', 'Picasso'],
-        disclaimer: 'T&Cs apply. Ends February 18, 12 noon.\nLive Auction Starts at 2PM',
-        image: '/carousel/1.jpg'
-    },
-    {
-        subtitle: 'FLASH SALE',
-        title: 'Limited Edition',
-        price: 'Up to 70% Off',
-        brands: ['Omega', 'Tesla', 'Van Gogh'],
-        disclaimer: 'Limited time offer. While stocks last.\nExclusive members only',
-        image: '/carousel/2.jpg'
-    },
-    {
-        subtitle: 'LUXURY COLLECTION',
-        title: 'Premium Selection',
-        price: 'Up to 50% Off',
-        brands: ['Hermes', 'Mercedes', 'Monet'],
-        disclaimer: 'Curated by experts. Quality guaranteed.\nAuthenticity certified',
-        image: '/carousel/3.jpg'
-    },
-    {
-        subtitle: 'COLLECTORS CHOICE',
-        title: 'Rare Treasures',
-        price: 'Up to 80% Off',
-        brands: ['Patek Philippe', 'Ferrari', 'Picasso'],
-        disclaimer: 'Authenticated pieces. Certificate included.\nInvestment grade items',
-        image: '/carousel/4.jpg'
-    }
-];
-
 export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategoryPage = false, onNavigateHome, onNavigateCategory, onNavigateToRegister, onNavigateToWishlist, onNavigateToAuction }) => {
     const { authUser } = useAuth();
     const carouselRef = useRef<HTMLDivElement>(null);
@@ -122,9 +89,39 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
     const [productsLoading, setProductsLoading] = useState(true);
     const [wishlistPulseId, setWishlistPulseId] = useState<number | null>(null);
     const [expiredProductIds, setExpiredProductIds] = useState<number[]>([]);
+    const [homePageConfig, setHomePageConfig] = useState(getDefaultHomePageConfig());
+
+    const carouselSlides = homePageConfig.slides;
+    const promoCircles = homePageConfig.circles;
+    const videoAds = homePageConfig.videoAds;
 
     const wishlistKey = `wishlist_items_${authUser?.id ?? 'guest'}`;
     const [wishlistItems, setWishlistItems] = useLocalStorage<WishlistItem[]>(wishlistKey, []);
+
+    useEffect(() => {
+        let isActive = true;
+
+        const fetchHomeConfig = async () => {
+            try {
+                const response = await adminApi.getPublicHomepageConfig();
+                if (!isActive) {
+                    return;
+                }
+
+                setHomePageConfig(normalizeHomePageConfig(response.config));
+            } catch {
+                if (isActive) {
+                    setHomePageConfig(getDefaultHomePageConfig());
+                }
+            }
+        };
+
+        void fetchHomeConfig();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
 
     const scrollCarouselLeft = () => {
         if (carouselRef.current) {
@@ -144,11 +141,19 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
         }
 
         const interval = setInterval(() => {
-            setCurrentSlide((prev) => (prev + 1) % CAROUSEL_SLIDES.length);
+            setCurrentSlide((prev) => (prev + 1) % carouselSlides.length);
         }, 5000); // Auto-rotate every 5 seconds
 
         return () => clearInterval(interval);
-    }, [isCategoryPage]);
+    }, [carouselSlides.length, isCategoryPage]);
+
+    useEffect(() => {
+        if (currentSlide < carouselSlides.length) {
+            return;
+        }
+
+        setCurrentSlide(0);
+    }, [carouselSlides.length, currentSlide]);
 
     useEffect(() => {
         let isActive = true;
@@ -207,7 +212,7 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
         return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
     };
 
-    const currentSlideData = CAROUSEL_SLIDES[currentSlide];
+    const currentSlideData = carouselSlides[currentSlide] ?? carouselSlides[0];
 
     const isInWishlist = (productId: number) => wishlistItems.some((item) => item.id === productId);
 
@@ -433,96 +438,14 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
                             </svg>
                         </button>
                         <div className="brand-carousel" ref={carouselRef}>
-                            <div className="brand-circle">
-                                <div className="circle yellow">
-                                    <span className="circle-text">FLASH<br/>SALE</span>
+                            {promoCircles.map((circle) => (
+                                <div key={circle.id} className="brand-circle">
+                                    <div className={`circle ${circle.tone === 'yellow' ? 'yellow' : 'black'}`}>
+                                        <span className="circle-text">{circle.label}</span>
+                                    </div>
+                                    <p className="circle-label">{circle.discount}</p>
                                 </div>
-                                <p className="circle-label">Up to 70% Off!</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">ROLEX<br/>OMEGA</span>
-                                </div>
-                                <p className="circle-label">Up to 15% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">CLASSIC<br/>CARS</span>
-                                </div>
-                                <p className="circle-label">Up to 85% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">HERMES<br/>GUCCI</span>
-                                </div>
-                                <p className="circle-label">Up to 25% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">FINE<br/>ART</span>
-                                </div>
-                                <p className="circle-label">Up to 50% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">VINTAGE<br/>WATCHES</span>
-                                </div>
-                                <p className="circle-label">Up to 30% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">RARE<br/>COINS</span>
-                                </div>
-                                <p className="circle-label">Up to 40% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">JEWELRY</span>
-                                </div>
-                                <p className="circle-label">Up to 45% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">GAMING<br/>CONSOLES</span>
-                                </div>
-                                <p className="circle-label">Up to 35% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">FASHION<br/>BRANDS</span>
-                                </div>
-                                <p className="circle-label">Up to 55% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">VEHICLES<br/>MEMORABILIA</span>
-                                </div>
-                                <p className="circle-label">Up to 60% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">RARE<br/>BOOKS</span>
-                                </div>
-                                <p className="circle-label">Up to 45% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">WINE &<br/>SPIRITS</span>
-                                </div>
-                                <p className="circle-label">Up to 30% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">MUSICAL<br/>INSTRUMENTS</span>
-                                </div>
-                                <p className="circle-label">Up to 50% Off</p>
-                            </div>
-                            <div className="brand-circle">
-                                <div className="circle black">
-                                    <span className="circle-text">PHOTOGRAPHY<br/>GEAR</span>
-                                </div>
-                                <p className="circle-label">Up to 40% Off</p>
-                            </div>
+                            ))}
                         </div>
                         <button className="carousel-btn carousel-btn-next" onClick={scrollCarouselRight} aria-label="Next">
                             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -531,22 +454,22 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
                         </button>
                     </div>
 
-                    <div className="hero-banner" style={{backgroundImage: `url('${currentSlideData.image}')`}}>
+                    <div className="hero-banner" style={{backgroundImage: `url('${currentSlideData?.image || ''}')`}}>
                         <div className="hero-banner-overlay"></div>
                         <div className="hero-content">
-                            <h2 className="hero-subtitle">{currentSlideData.subtitle}</h2>
-                            <h1 className="hero-title">{currentSlideData.title}</h1>
-                            <h1 className="hero-price">{currentSlideData.price}</h1>
+                            <h2 className="hero-subtitle">{currentSlideData?.subtitle || 'FEATURED SALE'}</h2>
+                            <h1 className="hero-title">{currentSlideData?.title || 'Featured Collection'}</h1>
+                            <h1 className="hero-price">{currentSlideData?.price || 'Up to 0% Off'}</h1>
                             <div className="hero-brands">
-                                {currentSlideData.brands.map((brand, idx) => (
+                                {(currentSlideData?.brands || []).map((brand, idx) => (
                                     <span key={idx}>{brand}</span>
                                 ))}
                             </div>
                             <button className="hero-btn" onClick={onNavigateToRegister}>BID NOW →</button>
-                            <p className="hero-disclaimer">{currentSlideData.disclaimer}</p>
+                            <p className="hero-disclaimer">{currentSlideData?.disclaimer || 'Limited offer.'}</p>
                         </div>
                         <div className="hero-carousel-nav">
-                            {CAROUSEL_SLIDES.map((_, idx) => (
+                            {carouselSlides.map((_, idx) => (
                                 <button
                                     key={idx}
                                     className={`carousel-dot ${currentSlide === idx ? 'active' : ''}`}
@@ -558,9 +481,20 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
                     </div>
 
                     <section className="video-ad-section" aria-label="Video Advertisement Placeholder">
-                        <div className="video-ad-placeholder">
-                            <div className="video-ad-label">VIDEO ADS PLACEHOLDER</div>
-                            <div className="video-ad-size">1920 × 600 recommended</div>
+                        <div className="video-ad-grid">
+                            {videoAds.map((video) => (
+                                <article
+                                    key={video.id}
+                                    className="video-ad-placeholder"
+                                    style={video.image.trim() ? { backgroundImage: `url('${video.image}')` } : undefined}
+                                >
+                                    <div className="video-ad-overlay" />
+                                    <div className="video-ad-copy">
+                                        <div className="video-ad-label">{video.title}</div>
+                                        <div className="video-ad-size">{video.subtitle}</div>
+                                    </div>
+                                </article>
+                            ))}
                         </div>
                     </section>
                 </>

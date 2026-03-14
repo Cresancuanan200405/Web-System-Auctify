@@ -20,6 +20,22 @@ class SellerRegistrationController extends Controller
 
     public function store(Request $request): JsonResponse
     {
+        $existing = SellerRegistration::query()
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($existing && $existing->status === 'revoked') {
+            $message = $existing->revoked_reason
+                ? 'Seller privileges are revoked. Reason: ' . $existing->revoked_reason
+                : 'Seller privileges are revoked by admin.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'seller_revoked',
+                'reason' => $existing->revoked_reason,
+            ], 403);
+        }
+
         $validated = $request->validate([
             'shop_name' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',
@@ -68,6 +84,22 @@ class SellerRegistrationController extends Controller
 
     public function updateShippingSettings(Request $request): JsonResponse
     {
+        $existing = SellerRegistration::query()
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if ($existing && $existing->status === 'revoked') {
+            $message = $existing->revoked_reason
+                ? 'Seller privileges are revoked. Reason: ' . $existing->revoked_reason
+                : 'Seller privileges are revoked by admin.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'seller_revoked',
+                'reason' => $existing->revoked_reason,
+            ], 403);
+        }
+
         $validated = $request->validate([
             'shop_name' => 'nullable|string|max:255',
             'contact_email' => 'nullable|email|max:255',

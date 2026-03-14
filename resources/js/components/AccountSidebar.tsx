@@ -5,14 +5,20 @@ interface AccountSidebarProps {
     activeSection: AccountSection;
     onSectionChange: (section: AccountSection) => void;
     isVerified: boolean;
+    isVerificationAllowed?: boolean;
+    revokedNotice?: string | null;
     onBecomeSellerClick: () => void;
+    onVerificationClick: () => void;
 }
 
 export const AccountSidebar: React.FC<AccountSidebarProps> = ({
     activeSection,
     onSectionChange,
     isVerified,
+    isVerificationAllowed = true,
+    revokedNotice = null,
     onBecomeSellerClick,
+    onVerificationClick,
 }) => {
     const menuItems: { section: AccountSection; label: string }[] = [
         { section: 'details', label: 'Account information' },
@@ -44,19 +50,28 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
                 <button
                     className={`account-sidebar-item account-sidebar-item-secondary ${
                         activeSection === 'verification' ? 'active' : ''
-                    }`}
-                    onClick={() => onSectionChange('verification')}
+                    } ${!isVerificationAllowed ? 'disabled' : ''}`}
+                    onClick={onVerificationClick}
                 >
-                    Account Verification
+                    <span>Account Verification</span>
+                    {!isVerificationAllowed && (
+                        <span className="account-sidebar-item-note">{revokedNotice || 'Unavailable: seller access revoked'}</span>
+                    )}
                 </button>
                 <button
                     className={`account-sidebar-item account-sidebar-item-secondary become-seller-item ${
                         activeSection === 'seller' ? 'active' : ''
-                    } ${!isVerified ? 'disabled' : ''}`}
+                    } ${(!isVerified || !isVerificationAllowed) ? 'disabled' : ''}`}
                     type="button"
                     onClick={onBecomeSellerClick}
                 >
-                    Become a Seller
+                    <span>Become a Seller</span>
+                    {!isVerificationAllowed && (
+                        <span className="account-sidebar-item-note">{revokedNotice || 'Unavailable: seller access revoked'}</span>
+                    )}
+                    {isVerificationAllowed && !isVerified && (
+                        <span className="account-sidebar-item-note">Complete account verification first</span>
+                    )}
                 </button>
             </div>
 

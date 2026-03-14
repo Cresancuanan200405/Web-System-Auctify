@@ -1,12 +1,16 @@
 <?php
 
 use App\Http\Controllers\Api\AddressController;
+use App\Http\Controllers\Api\Admin\AdminAuthController;
+use App\Http\Controllers\Api\Admin\HomepageConfigController as AdminHomepageConfigController;
+use App\Http\Controllers\Api\Admin\UserMonitorController;
 use App\Http\Controllers\Api\AccountVerificationController;
 use App\Http\Controllers\Api\AuctionController;
 use App\Http\Controllers\Api\AuctionMessageController;
 use App\Http\Controllers\Api\DirectMessageController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BidController;
+use App\Http\Controllers\Api\HomepageConfigController;
 use App\Http\Controllers\Api\SellerRegistrationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
@@ -37,6 +41,24 @@ Route::prefix('auth')->group(function () {
 
 Route::get('media/{path}', [AuctionController::class, 'media'])->where('path', '.*');
 Route::get('direct-message-attachments/{attachment}', [DirectMessageController::class, 'attachment']);
+Route::get('homepage-config', [HomepageConfigController::class, 'show']);
+
+Route::prefix('admin')->group(function () {
+    Route::post('login', [AdminAuthController::class, 'login']);
+
+    Route::middleware(['auth:sanctum', 'admin'])->group(function () {
+        Route::post('logout', [AdminAuthController::class, 'logout']);
+        Route::get('homepage-config', [AdminHomepageConfigController::class, 'show']);
+        Route::put('homepage-config', [AdminHomepageConfigController::class, 'update']);
+        Route::get('users', [UserMonitorController::class, 'index']);
+        Route::get('users/{user}', [UserMonitorController::class, 'show']);
+        Route::post('users/{user}/suspend', [UserMonitorController::class, 'suspend']);
+        Route::post('users/{user}/unsuspend', [UserMonitorController::class, 'unsuspend']);
+        Route::post('users/{user}/revoke-seller', [UserMonitorController::class, 'revokeSeller']);
+        Route::post('users/{user}/unrevoke-seller', [UserMonitorController::class, 'unrevokeSeller']);
+        Route::post('users/{user}/delete', [UserMonitorController::class, 'destroy']);
+    });
+});
 
 Route::get('auctions', [AuctionController::class, 'index']);
 Route::get('auctions/{auction}', [AuctionController::class, 'show']);

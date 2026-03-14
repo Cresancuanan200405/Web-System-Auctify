@@ -5,6 +5,8 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auction\StoreAuctionRequest;
 use App\Models\Auction;
+use App\Models\SellerRegistration;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Arr;
@@ -13,6 +15,41 @@ use Illuminate\Support\Carbon;
 
 class AuctionController extends Controller
 {
+    private function ensureSellerCanManageAuctions(Request $request): ?JsonResponse
+    {
+        $registration = SellerRegistration::query()
+            ->where('user_id', $request->user()->id)
+            ->first();
+
+        if (! $registration) {
+            return response()->json([
+                'message' => 'You must complete seller registration before managing listings.',
+                'account_status' => 'seller_not_registered',
+            ], 403);
+        }
+
+        if ($registration->status === 'revoked') {
+            $message = $registration->revoked_reason
+                ? 'Seller privileges are revoked. Reason: ' . $registration->revoked_reason
+                : 'Seller privileges are revoked by admin.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'seller_revoked',
+                'reason' => $registration->revoked_reason,
+            ], 403);
+        }
+
+        if (! in_array((string) $registration->status, ['submitted', 'approved'], true)) {
+            return response()->json([
+                'message' => 'Your seller profile is not active yet.',
+                'account_status' => 'seller_pending',
+            ], 403);
+        }
+
+        return null;
+    }
+
     private function transformAuction(Auction $auction): array
     {
         $payload = $auction->toArray();
@@ -68,6 +105,11 @@ class AuctionController extends Controller
 
     public function mine(Request $request)
     {
+        $blocked = $this->ensureSellerCanManageAuctions($request);
+        if ($blocked) {
+            return $blocked;
+        }
+
         $this->syncAuctionStatuses();
 
         $auctions = Auction::query()
@@ -164,6 +206,11 @@ class AuctionController extends Controller
 
     public function store(StoreAuctionRequest $request)
     {
+        $blocked = $this->ensureSellerCanManageAuctions($request);
+        if ($blocked) {
+            return $blocked;
+        }
+
         $this->syncAuctionStatuses();
 
         $validated = $request->validated();
@@ -218,6 +265,11 @@ class AuctionController extends Controller
 
     public function update(StoreAuctionRequest $request, Auction $auction)
     {
+        $blocked = $this->ensureSellerCanManageAuctions($request);
+        if ($blocked) {
+            return $blocked;
+        }
+
         $this->syncAuctionStatuses();
 
         if ((int) $auction->getAttribute('user_id') !== (int) $request->user()->id) {
@@ -278,6 +330,11 @@ class AuctionController extends Controller
 
     public function destroy(Request $request, Auction $auction)
     {
+        $blocked = $this->ensureSellerCanManageAuctions($request);
+        if ($blocked) {
+            return $blocked;
+        }
+
         if ((int) $auction->getAttribute('user_id') !== (int) $request->user()->id) {
             return response()->json([
                 'message' => 'You are not allowed to delete this auction.',

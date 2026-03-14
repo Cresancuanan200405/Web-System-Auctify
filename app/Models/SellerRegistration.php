@@ -37,11 +37,14 @@ class SellerRegistration extends Model
         'submit_sworn_declaration',
         'agree_business_terms',
         'status',
+        'revoked_reason',
+        'revoked_at',
         'submitted_at',
     ];
 
     protected $casts = [
         'agree_business_terms' => 'boolean',
+        'revoked_at' => 'datetime',
         'submitted_at' => 'datetime',
     ];
 

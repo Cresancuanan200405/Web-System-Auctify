@@ -24,8 +24,24 @@ type AuthResponse = {
 
 type AuthErrors = {
     message?: string;
+    account_status?: string;
+    reason?: string | null;
+    suspended_until?: string | null;
     errors?: Record<string, string[]>;
 };
+
+type AccountStatusDialogState = {
+    title: string;
+    message: string;
+    suspendedUntil?: string | null;
+};
+
+type GoogleStatusNotice = {
+    title: string;
+    message: string;
+};
+
+const GOOGLE_STATUS_STORAGE_KEY = 'google_auth_status_notice';
 
 type PreferredContent =
     | 'electronics'
@@ -72,18 +88,159 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
     const [message, setMessage] = useState('');
     const [error, setError] = useState('');
     const [googleHint, setGoogleHint] = useState('');
+    const [googleStatusNotice, setGoogleStatusNotice] = useState<GoogleStatusNotice | null>(() => {
+        try {
+            const raw = sessionStorage.getItem(GOOGLE_STATUS_STORAGE_KEY);
+            if (!raw) {
+                return null;
+            }
+
+            const parsed = JSON.parse(raw) as GoogleStatusNotice;
+            return parsed?.title && parsed?.message ? parsed : null;
+        } catch {
+            return null;
+        }
+    });
     const [loading, setLoading] = useState(false);
+    const [accountStatusDialog, setAccountStatusDialog] = useState<AccountStatusDialogState | null>(null);
+    const [nowTimestamp, setNowTimestamp] = useState(() => Date.now());
+
+    const formatRemainingDuration = (targetIso: string, nowMs: number) => {
+        const targetMs = new Date(targetIso).getTime();
+        if (Number.isNaN(targetMs) || targetMs <= nowMs) {
+            return null;
+        }
+
+        let totalSeconds = Math.floor((targetMs - nowMs) / 1000);
+        const days = Math.floor(totalSeconds / 86400);
+        totalSeconds -= days * 86400;
+        const hours = Math.floor(totalSeconds / 3600);
+        totalSeconds -= hours * 3600;
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds - minutes * 60;
+
+        const parts: string[] = [];
+        if (days > 0) {
+            parts.push(`${days} day${days === 1 ? '' : 's'}`);
+        }
+        if (hours > 0 || days > 0) {
+            parts.push(`${hours} hour${hours === 1 ? '' : 's'}`);
+        }
+        if (minutes > 0 || hours > 0 || days > 0) {
+            parts.push(`${minutes} minute${minutes === 1 ? '' : 's'}`);
+        }
+        parts.push(`${seconds} second${seconds === 1 ? '' : 's'}`);
+
+        return parts.join(', ');
+    };
+
+    const suspendedCountdown = useMemo(() => {
+        if (!accountStatusDialog?.suspendedUntil || accountStatusDialog.title !== 'Account Suspended') {
+            return null;
+        }
+
+        return formatRemainingDuration(accountStatusDialog.suspendedUntil, nowTimestamp);
+    }, [accountStatusDialog, nowTimestamp]);
+
+    useEffect(() => {
+        if (!accountStatusDialog?.suspendedUntil || accountStatusDialog.title !== 'Account Suspended') {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            setNowTimestamp(Date.now());
+        }, 1000);
+
+        return () => {
+            window.clearInterval(interval);
+        };
+    }, [accountStatusDialog]);
+
+    const openAccountStatusDialog = (status: string, reason?: string | null, suspendedUntil?: string | null) => {
+        const cleanedReason = (reason ?? '').trim();
+        const untilLabel = suspendedUntil
+            ? new Date(suspendedUntil).toLocaleString()
+            : null;
+
+        if (status === 'suspended') {
+            setAccountStatusDialog({
+                title: 'Account Suspended',
+                message: cleanedReason
+                    ? `Your account is currently suspended. Reason: ${cleanedReason}${untilLabel ? ` Suspension ends: ${untilLabel}.` : ''}`
+                    : `Your account is currently suspended. Please contact support.${untilLabel ? ` Suspension ends: ${untilLabel}.` : ''}`,
+                suspendedUntil,
+            });
+            return;
+        }
+
+        if (status === 'deleted') {
+            setAccountStatusDialog({
+                title: 'Account Deleted',
+                message: cleanedReason
+                    ? `This account was deleted by admin. Reason: ${cleanedReason}`
+                    : 'This account was deleted by admin and cannot sign in.',
+                suspendedUntil: null,
+            });
+            return;
+        }
+
+        if (status === 'seller_revoked') {
+            setAccountStatusDialog({
+                title: 'Seller Access Revoked',
+                message: cleanedReason
+                    ? `Seller privileges were revoked. Reason: ${cleanedReason}`
+                    : 'Seller privileges were revoked by admin.',
+                suspendedUntil: null,
+            });
+        }
+    };
+
+    const persistGoogleStatusNotice = (notice: GoogleStatusNotice | null) => {
+        setGoogleStatusNotice(notice);
+
+        if (!notice) {
+            sessionStorage.removeItem(GOOGLE_STATUS_STORAGE_KEY);
+            return;
+        }
+
+        sessionStorage.setItem(GOOGLE_STATUS_STORAGE_KEY, JSON.stringify(notice));
+    };
 
     useEffect(() => {
         const params = new URLSearchParams(window.location.search);
         const googleToken = params.get('google_token');
         const googleUser = params.get('google_user');
         const googleError = params.get('google_error');
+        const googleReason = params.get('google_reason');
+        const googleUntil = params.get('google_until');
         const googleCreated = params.get('google_created') === '1';
 
         if (googleError) {
-            setError('Google sign-in failed. Please try again.');
-            setGoogleHint('⚠ Google sign-in failed. Please try again.');
+            if (googleError === 'account_suspended') {
+                openAccountStatusDialog('suspended', googleReason, googleUntil);
+                setError('This account is suspended and cannot sign in.');
+                setGoogleHint('Account suspended. Please contact support.');
+                persistGoogleStatusNotice({
+                    title: 'Google Sign-In Blocked',
+                    message: googleReason
+                        ? `This Google account is linked to a suspended Auctify account. Reason: ${googleReason}`
+                        : 'This Google account is linked to a suspended Auctify account.',
+                });
+            } else if (googleError === 'account_deleted') {
+                openAccountStatusDialog('deleted', googleReason);
+                setError('This account was deleted and cannot sign in.');
+                setGoogleHint('Account deleted by admin.');
+                persistGoogleStatusNotice({
+                    title: 'Google Sign-In Blocked',
+                    message: googleReason
+                        ? `This Google account is linked to an Auctify account deleted by admin. Reason: ${googleReason}`
+                        : 'This Google account is linked to an Auctify account deleted by admin.',
+                });
+            } else {
+                setError('Google sign-in failed. Please try again.');
+                setGoogleHint('Google sign-in failed. Please try again.');
+                persistGoogleStatusNotice(null);
+            }
 
             window.history.replaceState({}, '', window.location.pathname);
             return;
@@ -110,6 +267,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
 
             login(googleToken, parsedUser);
             setGoogleHint('');
+            persistGoogleStatusNotice(null);
             sessionStorage.setItem(
                 'post_auth_success_toast',
                 JSON.stringify({
@@ -122,7 +280,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             onAuthSuccess();
         } catch {
             setError('Google sign-in failed. Please try again.');
-            setGoogleHint('⚠ Google sign-in failed. Please try again.');
+            setGoogleHint('Google sign-in failed. Please try again.');
         } finally {
             window.history.replaceState({}, '', window.location.pathname);
         }
@@ -140,6 +298,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
         setMessage('');
         setError('');
         setGoogleHint('');
+        setAccountStatusDialog(null);
     }, [mode]);
 
     const submitLabel = useMemo(() => (isRegister ? 'Create Account' : 'Login'), [isRegister]);
@@ -194,6 +353,14 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             }
         } catch (err) {
             const parsed = err as AuthErrors;
+            const status = typeof parsed.account_status === 'string' ? parsed.account_status : '';
+            const reason = typeof parsed.reason === 'string' ? parsed.reason : null;
+            const suspendedUntil = typeof parsed.suspended_until === 'string' ? parsed.suspended_until : null;
+
+            if (status) {
+                openAccountStatusDialog(status, reason, suspendedUntil);
+            }
+
             const details = parsed.errors
                 ? Object.values(parsed.errors)
                       .flat()
@@ -205,7 +372,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
             if (isRegister && details.toLowerCase().includes('email')) {
                 const signupWarning =
                     'An account already exists with this email. Please log in instead or continue with Google if your account is linked.';
-                setGoogleHint(`⚠ ${signupWarning}`);
+                setGoogleHint(signupWarning);
                 toast.warn(signupWarning, { autoClose: 4000 });
             }
 
@@ -218,6 +385,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
     };
 
     return (
+        <>
         <section className="auth-card" id="auth">
             <div className="tabs">
                 <div
@@ -262,6 +430,20 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                 <p className="auth-google-hint auth-google-hint-warning">
                     {googleHint}
                 </p>
+            )}
+
+            {googleStatusNotice && (
+                <div className="auth-google-status-card" role="status" aria-live="polite">
+                    <div className="auth-google-status-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" role="img" focusable="false">
+                            <path fill="currentColor" d="M12 2.75A9.25 9.25 0 1 0 21.25 12 9.26 9.26 0 0 0 12 2.75Zm0 13.5a1.25 1.25 0 1 1 1.25-1.25A1.25 1.25 0 0 1 12 16.25Zm1.02-4.83-.31.22a1.36 1.36 0 0 0-.58 1.11v.25h-1.5v-.25a2.83 2.83 0 0 1 1.19-2.33l.31-.22a1.53 1.53 0 0 0 .66-1.24 1.5 1.5 0 1 0-3 0H8.3a3 3 0 1 1 6 0 2.99 2.99 0 0 1-1.28 2.46Z" />
+                        </svg>
+                    </div>
+                    <div className="auth-google-status-copy">
+                        <p className="auth-google-status-title">{googleStatusNotice.title}</p>
+                        <p className="auth-google-status-text">{googleStatusNotice.message}</p>
+                    </div>
+                </div>
             )}
 
             <form onSubmit={handleSubmit}>
@@ -399,5 +581,33 @@ export const AuthPage: React.FC<AuthPageProps> = ({ mode, onModeChange, onAuthSu
                 SKIP
             </button>
         </section>
+
+        {accountStatusDialog && (
+            <div className="delete-modal-overlay" role="presentation" onClick={() => setAccountStatusDialog(null)}>
+                <div className="delete-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                    <div className="delete-modal-header">
+                        <h3 className="delete-modal-title">{accountStatusDialog.title}</h3>
+                    </div>
+                    <div className="delete-modal-body">
+                        <p className="delete-modal-text">{accountStatusDialog.message}</p>
+                        {suspendedCountdown && (
+                            <p className="delete-modal-text">
+                                Time remaining: <strong>{suspendedCountdown}</strong>
+                            </p>
+                        )}
+                        <div className="delete-modal-actions">
+                            <button
+                                type="button"
+                                className="delete-modal-confirm"
+                                onClick={() => setAccountStatusDialog(null)}
+                            >
+                                Okay
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        )}
+        </>
     );
 };

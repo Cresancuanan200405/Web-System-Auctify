@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\AccountVerification;
+use App\Models\SellerRegistration;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 
@@ -25,6 +26,10 @@ class AccountVerificationController extends Controller
 
     public function sendOtp(Request $request)
     {
+        if ($blocked = $this->ensureVerificationAllowed($request)) {
+            return $blocked;
+        }
+
         $validated = $request->validate([
             'full_name' => ['required', 'string', 'max:255'],
             'date_of_birth' => ['required', 'date', 'before:today'],
@@ -61,6 +66,10 @@ class AccountVerificationController extends Controller
 
     public function confirmOtp(Request $request)
     {
+        if ($blocked = $this->ensureVerificationAllowed($request)) {
+            return $blocked;
+        }
+
         $validated = $request->validate([
             'phone' => ['required', 'string', 'max:30'],
             'otp' => ['required', 'digits:6'],
@@ -101,6 +110,10 @@ class AccountVerificationController extends Controller
 
     public function uploadDocuments(Request $request)
     {
+        if ($blocked = $this->ensureVerificationAllowed($request)) {
+            return $blocked;
+        }
+
         $validated = $request->validate([
             'government_id' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
             'selfie' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
@@ -149,6 +162,10 @@ class AccountVerificationController extends Controller
 
     public function finalize(Request $request)
     {
+        if ($blocked = $this->ensureVerificationAllowed($request)) {
+            return $blocked;
+        }
+
         $validated = $request->validate([
             'verification_terms_accepted' => ['accepted'],
         ]);
@@ -203,6 +220,10 @@ class AccountVerificationController extends Controller
 
     public function revoke(Request $request)
     {
+        if ($blocked = $this->ensureVerificationAllowed($request)) {
+            return $blocked;
+        }
+
         $user = $request->user();
 
         if (! $user->is_verified) {
@@ -277,5 +298,25 @@ class AccountVerificationController extends Controller
             'submitted_at' => $verification->submitted_at,
             'reviewed_at' => $verification->reviewed_at,
         ];
+    }
+
+    private function ensureVerificationAllowed(Request $request)
+    {
+        $user = $request->user();
+        $registration = SellerRegistration::query()->where('user_id', $user->id)->first();
+
+        if (! $registration || $registration->status !== 'revoked') {
+            return null;
+        }
+
+        $message = $registration->revoked_reason
+            ? 'Verification is unavailable because seller access was revoked. Reason: ' . $registration->revoked_reason
+            : 'Verification is unavailable because seller access was revoked by admin.';
+
+        return response()->json([
+            'message' => $message,
+            'account_status' => 'seller_revoked',
+            'reason' => $registration->revoked_reason,
+        ], 403);
     }
 }

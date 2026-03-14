@@ -17,6 +17,7 @@ interface HeaderProps {
     onNavigateToAuction: (auctionId: number) => void;
     onNavigateLogin: () => void;
     onNavigateRegister: () => void;
+    onNavigateAdminLogin: () => void;
     onNavigateAccount: (section?: AccountSection) => void;
     onNavigateSellerProfile: () => void;
     onNavigateSellerDashboard: () => void;
@@ -33,6 +34,7 @@ export const Header: React.FC<HeaderProps> = ({
     onNavigateToAuction,
     onNavigateLogin,
     onNavigateRegister,
+    onNavigateAdminLogin,
     onNavigateAccount,
     onNavigateSellerProfile,
     onNavigateSellerDashboard,
@@ -553,6 +555,14 @@ export const Header: React.FC<HeaderProps> = ({
                                         <line x1="22" y1="11" x2="16" y2="11" />
                                     </svg>
                                     Register
+                                </div>
+                                <div onClick={onNavigateAdminLogin} className="dropdown-item clickable">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                        <rect x="3" y="11" width="18" height="10" rx="2" />
+                                        <path d="M7 11V8a5 5 0 0 1 10 0v3" />
+                                        <path d="M12 15v2" />
+                                    </svg>
+                                    <span>Admin Login</span>
                                 </div>
                                 <div className="dropdown-item clickable" onClick={onNavigateOrdersLogin}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">

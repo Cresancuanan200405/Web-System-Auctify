@@ -6,7 +6,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Laravel\Socialite\Facades\Socialite;
@@ -48,8 +50,22 @@ class AuthController extends Controller
             return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
         }
 
+        $googleEmail = strtolower(trim((string) $googleUser->getEmail()));
+        if ($googleEmail === '') {
+            return redirect()->away($frontendUrl . '/login?google_error=auth_failed');
+        }
+
+        $deletedAccount = $this->findDeletedAccountRecord($googleEmail);
+        if ($deletedAccount) {
+            $reasonQuery = $deletedAccount['reason'] !== ''
+                ? '&google_reason=' . urlencode($deletedAccount['reason'])
+                : '';
+
+            return redirect()->away($frontendUrl . '/login?google_error=account_deleted' . $reasonQuery);
+        }
+
         $user = User::where('google_id', $googleUser->getId())
-            ->orWhere('email', $googleUser->getEmail())
+            ->orWhere('email', $googleEmail)
             ->first();
         $isNewGoogleAccount = false;
 
@@ -57,13 +73,14 @@ class AuthController extends Controller
             $isNewGoogleAccount = true;
             $user = User::create([
                 'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: 'Google User',
-                'email' => $googleUser->getEmail(),
+                'email' => $googleEmail,
                 'google_id' => $googleUser->getId(),
                 'avatar' => $googleUser->getAvatar(),
                 'password' => Hash::make(Str::random(64)),
             ]);
 
-            $user->email_verified_at = now();
+            $user->email_verified_at = Carbon::now();
+            $user->last_login_at = Carbon::now();
             $user->save();
         } else {
             if (! $user->google_id) {
@@ -75,10 +92,34 @@ class AuthController extends Controller
             }
 
             if (! $user->email_verified_at) {
-                $user->email_verified_at = now();
+                $user->email_verified_at = Carbon::now();
             }
 
+            $user->last_login_at = Carbon::now();
+
             $user->save();
+        }
+
+        if ($user->is_suspended) {
+            if ($user->suspended_until && now()->greaterThanOrEqualTo($user->suspended_until)) {
+                $user->forceFill([
+                    'is_suspended' => false,
+                    'suspended_reason' => null,
+                    'suspended_at' => null,
+                    'suspended_until' => null,
+                ])->save();
+            }
+        }
+
+        if ($user->is_suspended) {
+            $reasonQuery = $user->suspended_reason
+                ? '&google_reason=' . urlencode((string) $user->suspended_reason)
+                : '';
+            $untilQuery = $user->suspended_until
+                ? '&google_until=' . urlencode((string) optional($user->suspended_until)?->toIso8601String())
+                : '';
+
+            return redirect()->away($frontendUrl . '/login?google_error=account_suspended' . $reasonQuery . $untilQuery);
         }
 
         $token = $user->createToken('auth')->plainTextToken;
@@ -126,7 +167,25 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
-        $user = User::create($request->validated());
+        $validated = $request->validated();
+        $deletedAccount = $this->findDeletedAccountRecord((string) ($validated['email'] ?? ''));
+
+        if ($deletedAccount) {
+            $message = $deletedAccount['reason'] !== ''
+                ? 'This account was deleted by admin. Reason: ' . $deletedAccount['reason']
+                : 'This account was deleted by admin and cannot be restored automatically.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'deleted',
+                'reason' => $deletedAccount['reason'] !== '' ? $deletedAccount['reason'] : null,
+            ], 403);
+        }
+
+        $user = User::create($validated);
+        $user->forceFill([
+            'last_login_at' => Carbon::now(),
+        ])->save();
         $token = $user->createToken('auth')->plainTextToken;
 
         return response()->json([
@@ -138,8 +197,23 @@ class AuthController extends Controller
     public function login(LoginRequest $request)
     {
         $credentials = $request->validated();
+        $email = strtolower(trim((string) ($credentials['email'] ?? '')));
 
-        $user = User::where('email', $credentials['email'])->first();
+        $deletedAccount = $this->findDeletedAccountRecord($email);
+
+        $user = User::where('email', $email)->first();
+
+        if (! $user && $deletedAccount) {
+            $message = $deletedAccount['reason'] !== ''
+                ? 'This account was deleted by admin. Reason: ' . $deletedAccount['reason']
+                : 'This account was deleted by admin and can no longer sign in.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'deleted',
+                'reason' => $deletedAccount['reason'] !== '' ? $deletedAccount['reason'] : null,
+            ], 403);
+        }
 
         if ($user && ! empty($user->google_id)) {
             return response()->json([
@@ -152,6 +226,34 @@ class AuthController extends Controller
                 'message' => 'The provided credentials are incorrect.',
             ], 422);
         }
+
+        if ($user->is_suspended) {
+            if ($user->suspended_until && now()->greaterThanOrEqualTo($user->suspended_until)) {
+                $user->forceFill([
+                    'is_suspended' => false,
+                    'suspended_reason' => null,
+                    'suspended_at' => null,
+                    'suspended_until' => null,
+                ])->save();
+            }
+        }
+
+        if ($user->is_suspended) {
+            $message = $user->suspended_reason
+                ? 'This account is suspended. Reason: ' . $user->suspended_reason
+                : 'This account is suspended. Please contact support.';
+
+            return response()->json([
+                'message' => $message,
+                'account_status' => 'suspended',
+                'reason' => $user->suspended_reason,
+                'suspended_until' => optional($user->suspended_until)?->toIso8601String(),
+            ], 403);
+        }
+
+        $user->forceFill([
+            'last_login_at' => Carbon::now(),
+        ])->save();
 
         $token = $user->createToken('auth')->plainTextToken;
 
@@ -250,5 +352,35 @@ class AuthController extends Controller
         return response()->json([
             'message' => 'Account deleted successfully.',
         ]);
+    }
+
+    private function findDeletedAccountRecord(string $email): ?array
+    {
+        $normalizedEmail = strtolower(trim($email));
+        if ($normalizedEmail === '') {
+            return null;
+        }
+
+        $actions = DB::table('admin_user_actions')
+            ->where('action', 'delete-account')
+            ->whereNotNull('details')
+            ->latest('id')
+            ->get(['reason', 'details']);
+
+        foreach ($actions as $action) {
+            $details = json_decode((string) $action->details, true);
+            if (! is_array($details)) {
+                continue;
+            }
+
+            $actionEmail = strtolower(trim((string) ($details['email'] ?? '')));
+            if ($actionEmail === $normalizedEmail) {
+                return [
+                    'reason' => trim((string) ($action->reason ?? '')),
+                ];
+            }
+        }
+
+        return null;
     }
 }

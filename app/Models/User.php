@@ -24,12 +24,18 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
+        'is_suspended',
+        'suspended_reason',
+        'suspended_at',
+        'suspended_until',
         'birthday',
         'google_id',
         'avatar',
         'is_verified',
         'verified_at',
         'verification_revoked_at',
+        'last_login_at',
     ];
 
     /**
@@ -52,10 +58,15 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'is_admin' => 'boolean',
+            'is_suspended' => 'boolean',
+            'suspended_at' => 'datetime',
+            'suspended_until' => 'datetime',
             'birthday' => 'date',
             'is_verified' => 'boolean',
             'verified_at' => 'datetime',
             'verification_revoked_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 

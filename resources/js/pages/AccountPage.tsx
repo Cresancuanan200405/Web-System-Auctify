@@ -3,6 +3,7 @@ import { AccountVerificationSection } from '@/pages/account-sections/AccountVeri
 import { DeleteAccountSection } from '@/pages/account-sections/DeleteAccountSection';
 import { AccountSidebar } from '../components/AccountSidebar';
 import { useAuth } from '../contexts/AuthContext';
+import { sellerService } from '../services/api';
 import type { AccountSection } from '../types';
 import { AddressesSection } from './account-sections/AddressesSection';
 import { BecomeSellerSection } from './account-sections/BecomeSellerSection';
@@ -34,8 +35,79 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     const { authUser } = useAuth();
     const isVerified = Boolean(authUser?.is_verified);
     const [showSellerGateModal, setShowSellerGateModal] = useState(false);
+    const [showRestrictionModal, setShowRestrictionModal] = useState(false);
+    const [restrictionTitle, setRestrictionTitle] = useState('');
+    const [restrictionMessage, setRestrictionMessage] = useState('');
+    const [isSellerRevoked, setIsSellerRevoked] = useState(false);
+    const [sellerRevokedReason, setSellerRevokedReason] = useState<string | null>(null);
+
+    React.useEffect(() => {
+        let isActive = true;
+
+        const loadSellerState = async () => {
+            try {
+                const response = await sellerService.getRegistration();
+                if (!isActive) {
+                    return;
+                }
+
+                const status = (response.registration?.status ?? '').toLowerCase();
+                const revoked = status === 'revoked';
+                setIsSellerRevoked(revoked);
+                setSellerRevokedReason(response.registration?.revoked_reason ?? null);
+            } catch {
+                if (isActive) {
+                    setIsSellerRevoked(false);
+                    setSellerRevokedReason(null);
+                }
+            }
+        };
+
+        void loadSellerState();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    React.useEffect(() => {
+        if (!isSellerRevoked) {
+            return;
+        }
+
+        if (activeSection === 'verification' || activeSection === 'seller') {
+            onSectionChange('details');
+        }
+    }, [activeSection, isSellerRevoked, onSectionChange]);
+
+    const showRevokedRestrictionDialog = (target: 'verification' | 'seller') => {
+        const reason = sellerRevokedReason?.trim();
+        const suffix = reason ? ` Reason: ${reason}` : '';
+        const title = target === 'verification' ? 'Verification Unavailable' : 'Seller Access Revoked';
+        const message = target === 'verification'
+            ? `Your seller account has been revoked by admin. Verification cannot be opened at this time.${suffix}`
+            : `Your seller account has been revoked by admin, so Become a Seller is unavailable.${suffix}`;
+
+        setRestrictionTitle(title);
+        setRestrictionMessage(message);
+        setShowRestrictionModal(true);
+    };
+
+    const handleVerificationClick = () => {
+        if (isSellerRevoked) {
+            showRevokedRestrictionDialog('verification');
+            return;
+        }
+
+        onSectionChange('verification');
+    };
 
     const handleBecomeSellerClick = () => {
+        if (isSellerRevoked) {
+            showRevokedRestrictionDialog('seller');
+            return;
+        }
+
         if (isVerified) {
             onSectionChange('seller');
         } else {
@@ -82,7 +154,10 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 activeSection={activeSection}
                 onSectionChange={onSectionChange}
                 isVerified={isVerified}
+                isVerificationAllowed={!isSellerRevoked}
+                revokedNotice={isSellerRevoked ? (sellerRevokedReason?.trim() || 'Seller access revoked by admin') : null}
                 onBecomeSellerClick={handleBecomeSellerClick}
+                onVerificationClick={handleVerificationClick}
             />
             <div className="account-main">
                 {renderSection()}
@@ -121,6 +196,34 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                                     }}
                                 >
                                     Go to Account Verification
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showRestrictionModal && (
+                <div
+                    className="delete-modal-overlay"
+                    onClick={() => setShowRestrictionModal(false)}
+                >
+                    <div
+                        className="delete-modal"
+                        onClick={(event) => event.stopPropagation()}
+                    >
+                        <div className="delete-modal-header">
+                            <h2 className="delete-modal-title">{restrictionTitle}</h2>
+                        </div>
+                        <div className="delete-modal-body">
+                            <p className="delete-modal-text">{restrictionMessage}</p>
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-modal-confirm"
+                                    onClick={() => setShowRestrictionModal(false)}
+                                >
+                                    Okay
                                 </button>
                             </div>
                         </div>

@@ -15,6 +15,16 @@ class DatabaseSeeder extends Seeder
     {
         // User::factory(10)->create();
 
+        User::query()->updateOrCreate(
+            ['email' => 'admin@auctify.com'],
+            [
+                'name' => 'Auctify Administrator',
+                'password' => 'AuctifyAdmin123!',
+                'is_admin' => true,
+                'email_verified_at' => now(),
+            ]
+        );
+
         User::factory()->create([
             'name' => 'Test User',
             'email' => 'test@example.com',

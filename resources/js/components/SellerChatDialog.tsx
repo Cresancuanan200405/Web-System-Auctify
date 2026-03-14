@@ -62,6 +62,8 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordedChunksRef = useRef<Blob[]>([]);
     const recordingStreamRef = useRef<MediaStream | null>(null);
+    const hasLoadedThreadsRef = useRef(false);
+    const threadsRequestInFlightRef = useRef(false);
 
     const selectedThread = useMemo(
         () => threads.find((thread) => thread.user?.id === selectedUserId) ?? null,
@@ -99,6 +101,8 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         setDraft('');
         setSelectedFiles([]);
         setIsEmojiPickerOpen(false);
+        hasLoadedThreadsRef.current = false;
+        threadsRequestInFlightRef.current = false;
     }, [isOpen, preferredUserId, preferredUserName]);
 
     useEffect(() => {
@@ -115,8 +119,14 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
 
         let isActive = true;
 
-        const loadThreads = async () => {
-            if (isActive) {
+        const loadThreads = async (isSilent = false) => {
+            if (threadsRequestInFlightRef.current) {
+                return;
+            }
+
+            threadsRequestInFlightRef.current = true;
+
+            if (isActive && !isSilent && !hasLoadedThreadsRef.current) {
                 setThreadsLoading(true);
             }
 
@@ -127,6 +137,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                 }
 
                 setThreads(data.threads);
+                hasLoadedThreadsRef.current = true;
 
                 if (preferredUserId) {
                     const preferredThread = data.threads.find((thread) => thread.user?.id === preferredUserId);
@@ -149,7 +160,9 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                     toast.error(message);
                 }
             } finally {
-                if (isActive) {
+                threadsRequestInFlightRef.current = false;
+
+                if (isActive && !isSilent) {
                     setThreadsLoading(false);
                 }
             }
@@ -158,7 +171,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         void loadThreads();
 
         const interval = window.setInterval(() => {
-            void loadThreads();
+            void loadThreads(true);
         }, 5000);
 
         return () => {
@@ -170,6 +183,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     useEffect(() => {
         if (!isOpen || !authUser || !selectedUserId) {
             setMessages([]);
+            setMessagesLoading(false);
             return;
         }
 
@@ -191,6 +205,33 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                 setThreads((prev) => prev.map((thread) => (
                     thread.user?.id === selectedUserId ? { ...thread, unread_count: 0 } : thread
                 )));
+
+                if (data.user?.id) {
+                    const latest = data.messages[data.messages.length - 1];
+                    const latestPreview = latest?.message?.trim()
+                        ? latest.message.trim()
+                        : latest?.attachments?.length === 1
+                            ? 'Sent an attachment'
+                            : latest?.attachments && latest.attachments.length > 1
+                                ? `Sent ${latest.attachments.length} attachments`
+                                : 'New message';
+
+                    setThreads((prev) => {
+                        if (prev.some((thread) => thread.user?.id === data.user?.id)) {
+                            return prev;
+                        }
+
+                        return [
+                            {
+                                user: data.user,
+                                latest_message: latestPreview,
+                                latest_message_at: latest?.created_at ?? null,
+                                unread_count: 0,
+                            },
+                            ...prev,
+                        ];
+                    });
+                }
             } catch (error) {
                 if (isActive && !isSilent) {
                     const message =
@@ -218,8 +259,9 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         return () => {
             isActive = false;
             window.clearInterval(interval);
+            setMessagesLoading(false);
         };
-    }, [authUser, isOpen, preferredUserName, selectedUserId]);
+    }, [authUser, isOpen, selectedUserId]);
 
     const formatDate = (value?: string | null) => {
         if (!value) {

@@ -102,6 +102,8 @@ export interface SellerRegistration {
     submit_sworn_declaration?: 'yes' | 'no' | null;
     agree_business_terms: boolean;
     status?: string | null;
+    revoked_reason?: string | null;
+    revoked_at?: string | null;
     submitted_at?: string | null;
     created_at?: string;
     updated_at?: string;
@@ -275,4 +277,15 @@ export type AccountSection =
     | 'seller'
     | 'delete-account';
 
-export type ViewMode = 'home' | 'category' | 'auth' | 'account' | 'bag' | 'seller' | 'seller-profile' | 'auction' | 'seller-store';
+export type ViewMode =
+    | 'home'
+    | 'category'
+    | 'auth'
+    | 'account'
+    | 'bag'
+    | 'seller'
+    | 'seller-profile'
+    | 'auction'
+    | 'seller-store'
+    | 'admin-login'
+    | 'admin-dashboard';

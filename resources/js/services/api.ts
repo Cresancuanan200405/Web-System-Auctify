@@ -80,6 +80,10 @@ export const authService = {
 
     logout: async () => {
         return apiPost('/api/auth/logout', {});
+    },
+
+    me: async () => {
+        return apiGet<{ user: User }>('/api/auth/me');
     }
 };
 
