@@ -3,12 +3,15 @@ import { adminApi } from '../services/adminApi';
 export const ADMIN_SESSION_KEY = 'auctify_admin_session';
 
 export interface AdminSession {
-    token: string;
     userId: number;
     email: string;
     name: string;
     loggedInAt: string;
 }
+
+export type AdminLoginOutcome =
+    | { status: 'authenticated'; session: AdminSession }
+    | { status: 'mfa_required'; challengeToken: string; message: string };
 
 export interface MonitoredUser {
     id: number;
@@ -26,9 +29,6 @@ export interface MonitoredUser {
     createdAt?: string | null;
 }
 
-const DEFAULT_ADMIN_EMAIL = 'admin@auctify.com';
-const DEFAULT_ADMIN_PASSWORD = 'AuctifyAdmin123!';
-
 const readJson = <T>(key: string): T | null => {
     try {
         const raw = window.localStorage.getItem(key);
@@ -38,35 +38,81 @@ const readJson = <T>(key: string): T | null => {
     }
 };
 
-export const ensureAdminAccount = () => ({
-    email: DEFAULT_ADMIN_EMAIL,
-    password: DEFAULT_ADMIN_PASSWORD,
-});
+export const ensureAdminAccount = () => {
+    return null;
+};
 
-export const getAdminHintCredentials = () => {
+export const saveAdminSession = (session: AdminSession) => {
+    window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+};
+
+export const updateAdminSession = (sessionPatch: Pick<AdminSession, 'userId' | 'email' | 'name'>) => {
+    const currentSession = getAdminSession();
+
+    if (!currentSession) {
+        return null;
+    }
+
+    const updatedSession: AdminSession = {
+        userId: sessionPatch.userId,
+        email: sessionPatch.email,
+        name: sessionPatch.name,
+        loggedInAt: new Date().toISOString(),
+    };
+
+    saveAdminSession(updatedSession);
+    return updatedSession;
+};
+
+export const clearAdminSession = () => {
+    window.localStorage.removeItem(ADMIN_SESSION_KEY);
+};
+
+export const loginAdmin = async (email: string, password: string): Promise<AdminLoginOutcome> => {
+    const response = await adminApi.login(email, password);
+
+    if (response.mfa_required && response.challenge_token) {
+        return {
+            status: 'mfa_required',
+            challengeToken: response.challenge_token,
+            message: response.message || 'MFA code required to complete sign in.',
+        };
+    }
+
+    if (!response.user) {
+        throw new Error('Admin session could not be established.');
+    }
+
+    const session: AdminSession = {
+        userId: response.user.id,
+        email: response.user.email,
+        name: response.user.name,
+        loggedInAt: new Date().toISOString(),
+    };
+
+    saveAdminSession(session);
     return {
-        email: DEFAULT_ADMIN_EMAIL,
-        password: DEFAULT_ADMIN_PASSWORD,
+        status: 'authenticated',
+        session,
     };
 };
 
-export const loginAdmin = async (email: string, password: string): Promise<AdminSession | null> => {
-    try {
-        const response = await adminApi.login(email, password);
+export const verifyAdminMfa = async (challengeToken: string, code?: string, recoveryCode?: string): Promise<AdminSession> => {
+    const response = await adminApi.verifyMfa(challengeToken, code, recoveryCode);
 
-        const session: AdminSession = {
-            token: response.token,
-            userId: response.user.id,
-            email: response.user.email,
-            name: response.user.name,
-            loggedInAt: new Date().toISOString(),
-        };
-
-        window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-        return session;
-    } catch {
-        return null;
+    if (!response.user) {
+        throw new Error('MFA verification failed.');
     }
+
+    const session: AdminSession = {
+        userId: response.user.id,
+        email: response.user.email,
+        name: response.user.name,
+        loggedInAt: new Date().toISOString(),
+    };
+
+    saveAdminSession(session);
+    return session;
 };
 
 export const getAdminSession = () => {
@@ -76,8 +122,8 @@ export const getAdminSession = () => {
         return null;
     }
 
-    if (typeof session.token !== 'string' || session.token.trim().length === 0) {
-        window.localStorage.removeItem(ADMIN_SESSION_KEY);
+    if (!Number.isInteger(session.userId) || typeof session.email !== 'string' || typeof session.name !== 'string') {
+        clearAdminSession();
         return null;
     }
 
@@ -85,18 +131,37 @@ export const getAdminSession = () => {
 };
 
 export const getAdminAuthToken = () => {
-    return getAdminSession()?.token ?? null;
+    return getAdminSession() ? 'cookie-session' : null;
+};
+
+export const syncAdminSession = async () => {
+    try {
+        const response = await adminApi.getSession();
+
+        if (!response.user) {
+            clearAdminSession();
+            return null;
+        }
+
+        const session: AdminSession = {
+            userId: response.user.id,
+            email: response.user.email,
+            name: response.user.name,
+            loggedInAt: new Date().toISOString(),
+        };
+
+        saveAdminSession(session);
+        return session;
+    } catch {
+        clearAdminSession();
+        return null;
+    }
 };
 
 export const logoutAdmin = () => {
-    const token = getAdminAuthToken();
-    window.localStorage.removeItem(ADMIN_SESSION_KEY);
+    clearAdminSession();
 
-    if (!token) {
-        return;
-    }
-
-    void adminApi.logout(token).catch(() => {
+    void adminApi.logout().catch(() => {
         // Ignore cleanup failures; local session is already cleared.
     });
 };

@@ -25,6 +25,6 @@ class AuctionMedia extends Model
 
     public function getUrlAttribute(): string
     {
-        return url('api/media/' . ltrim($this->file_path, '/'));
+        return '/api/media/' . ltrim($this->file_path, '/');
     }
 }

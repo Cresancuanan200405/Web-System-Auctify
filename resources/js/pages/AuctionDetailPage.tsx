@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useCards } from '../hooks/useCards';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
-import { addressService, auctionService, sellerService } from '../services/api';
+import { addressService, auctionService } from '../services/api';
 import type { Address, AuctionMessage, AuctionProductDetail, Card, WishlistItem } from '../types';
 import { getAuctionDisplayStatus, parseAuctionTimestamp } from '../utils/auctionStatus';
 
@@ -59,7 +59,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     const [checkoutError, setCheckoutError] = useState('');
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [isOwnerActionMenuOpen, setIsOwnerActionMenuOpen] = useState(false);
-    const [deletingOwnedProduct, setDeletingOwnedProduct] = useState(false);
 
     const wishlistKey = `wishlist_items_${authUser?.id ?? 'guest'}`;
     const [wishlistItems, setWishlistItems] = useLocalStorage<WishlistItem[]>(wishlistKey, []);
@@ -455,6 +454,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
             id: auction.id,
             title: auction.title,
             category: auction.category,
+            subcategory: auction.subcategory,
             price: auction.current_price || auction.starting_price,
             mediaUrl: resolveMediaUrl(firstMedia?.url),
             mediaType: firstMedia?.media_type,
@@ -699,6 +699,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 auction_id: selectedAuction.id,
                 title: selectedAuction.title,
                 category: selectedAuction.category,
+                subcategory: selectedAuction.subcategory,
                 seller_user_id: selectedAuction.user?.id ?? selectedAuction.user_id,
                 seller_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
                 seller_shop_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
@@ -720,6 +721,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                     auction_id: selectedAuction.id,
                     title: selectedAuction.title,
                     category: selectedAuction.category,
+                    subcategory: selectedAuction.subcategory,
                     seller_user_id: selectedAuction.user?.id ?? selectedAuction.user_id,
                     seller_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
                     seller_shop_name: selectedAuction.user?.seller_registration?.shop_name?.trim() || selectedAuction.user?.name || 'Unknown Seller',
@@ -770,36 +772,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     };
 
     const liveStatusLabel = isClosed ? 'Closed' : isScheduled ? 'Scheduled' : 'Live';
-
-    const handleDeleteOwnedAuction = async () => {
-        if (!selectedAuction) {
-            return;
-        }
-
-        const confirmed = window.confirm(`Delete \"${selectedAuction.title}\"? This action cannot be undone.`);
-        if (!confirmed) {
-            return;
-        }
-
-        setDeletingOwnedProduct(true);
-        try {
-            await sellerService.deleteProduct(selectedAuction.id);
-            toast.success('Product deleted successfully.');
-            onNavigateHome();
-        } catch (error) {
-            const message =
-                typeof error === 'object' &&
-                error !== null &&
-                'message' in error &&
-                typeof (error as { message?: unknown }).message === 'string'
-                    ? (error as { message: string }).message
-                    : 'Failed to delete this product.';
-            toast.error(message);
-        } finally {
-            setDeletingOwnedProduct(false);
-            setIsOwnerActionMenuOpen(false);
-        }
-    };
 
     return (
         <main className="content auction-page-content">
@@ -879,16 +851,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                                         }}
                                                     >
                                                         Edit in Dashboard
-                                                    </button>
-                                                    <button
-                                                        type="button"
-                                                        className="seller-kebab-item seller-kebab-item-danger"
-                                                        onClick={() => {
-                                                            void handleDeleteOwnedAuction();
-                                                        }}
-                                                        disabled={deletingOwnedProduct}
-                                                    >
-                                                        {deletingOwnedProduct ? 'Deleting...' : 'Delete'}
                                                     </button>
                                                 </div>
                                             )}

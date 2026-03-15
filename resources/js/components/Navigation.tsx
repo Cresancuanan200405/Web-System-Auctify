@@ -1,19 +1,41 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { getCategoryValue, getSubcategoryValue } from '../lib/homeCategories';
+import { auctionService } from '../services/api';
+import type { AuctionProduct } from '../types';
 
 interface NavigationProps {
     activeCategory?: string | null;
     onSelectCategory?: (category: string) => void;
+    onSelectSubcategory?: (category: string, subcategory: string) => void;
+    onNavigateAuction?: (auctionId: number) => void;
 }
 
-export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, onSelectCategory }) => {
+export const Navigation: React.FC<NavigationProps> = ({
+    activeCategory = null,
+    onSelectCategory,
+    onSelectSubcategory,
+    onNavigateAuction,
+}) => {
     const [menuTopOffset, setMenuTopOffset] = useState(190);
     const activeNavWrapperRef = useRef<HTMLDivElement | null>(null);
     const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
     const [isMegamenuHovering, setIsMegamenuHovering] = useState(false);
+    const [products, setProducts] = useState<AuctionProduct[]>([]);
+    const [activePreviewCategory, setActivePreviewCategory] = useState<string | null>(null);
+    const [activePreviewSubcategory, setActivePreviewSubcategory] = useState<string | null>(null);
 
     const handleSelectCategory = (event: React.MouseEvent<HTMLButtonElement>, category: string) => {
         event.preventDefault();
         onSelectCategory?.(category);
+    };
+
+    const toCategoryLabel = (value: string) => {
+        return value
+            .trim()
+            .toLowerCase()
+            .split(/\s+/)
+            .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+            .join(' ');
     };
 
     const updateMenuTopOffset = (wrapper: HTMLDivElement | null) => {
@@ -29,6 +51,15 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
         activeNavWrapperRef.current = event.currentTarget;
         setHoveredMenu('active');
         updateMenuTopOffset(event.currentTarget);
+
+        const firstLink = event.currentTarget.querySelector('.megamenu-sidebar .megamenu-link') as HTMLAnchorElement | null;
+        const categoryButton = event.currentTarget.querySelector('.nav-item-button') as HTMLButtonElement | null;
+        const categoryText = categoryButton?.textContent?.trim();
+
+        if (categoryText) {
+            setActivePreviewCategory(toCategoryLabel(categoryText));
+            setActivePreviewSubcategory(firstLink?.textContent?.trim() || null);
+        }
     };
 
     const handleMenuMouseLeave = () => {
@@ -36,6 +67,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
         setHoveredMenu(null);
         setMenuTopOffset(190);
         setIsMegamenuHovering(false);
+        setActivePreviewCategory(null);
+        setActivePreviewSubcategory(null);
     };
 
     const handleMegamenuEnter = () => {
@@ -44,6 +77,139 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
 
     const handleMegamenuLeave = () => {
         setIsMegamenuHovering(false);
+    };
+
+    const resolveMediaUrl = (url?: string) => {
+        if (!url) {
+            return '';
+        }
+
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+        if (!apiBase) {
+            return url;
+        }
+
+        return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
+    };
+
+    useEffect(() => {
+        let isActive = true;
+
+        const loadProducts = async () => {
+            try {
+                const data = await auctionService.getAllProducts();
+                if (!isActive) {
+                    return;
+                }
+                setProducts(data);
+            } catch {
+                if (isActive) {
+                    setProducts([]);
+                }
+            }
+        };
+
+        void loadProducts();
+
+        return () => {
+            isActive = false;
+        };
+    }, []);
+
+    const previewProducts = useMemo(() => {
+        if (!activePreviewCategory || !activePreviewSubcategory) {
+            return [];
+        }
+
+        const categoryValue = getCategoryValue(activePreviewCategory);
+        const subcategoryValue = getSubcategoryValue(categoryValue, activePreviewSubcategory);
+
+        return products
+            .filter((product) => (product.category ?? '').trim().toLowerCase() === categoryValue)
+            .filter((product) => (product.subcategory ?? '').trim().toLowerCase() === subcategoryValue)
+            .slice(0, 6);
+    }, [activePreviewCategory, activePreviewSubcategory, products]);
+
+    const livePreviewItems = previewProducts.length > 0
+        ? previewProducts.map((product) => {
+            const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image') ?? product.media?.[0];
+            return (
+                <button
+                    key={product.id}
+                    type="button"
+                    className="brand-box brand-box-product"
+                    onClick={() => onNavigateAuction?.(product.id)}
+                >
+                    {thumbnail?.url ? (
+                        <img
+                            className="brand-box-product-image"
+                            src={resolveMediaUrl(thumbnail.url)}
+                            alt={product.title}
+                        />
+                    ) : (
+                        <div className="brand-box-product-image brand-box-product-image-empty">No Image</div>
+                    )}
+                    <span className="brand-box-product-title">{product.title}</span>
+                </button>
+            );
+        })
+        : null;
+
+    const handleMegamenuLinkClick = (event: React.MouseEvent<HTMLElement>) => {
+        const target = event.target as HTMLElement;
+        const link = target.closest('a.megamenu-link, a.megamenu-shop-all') as HTMLAnchorElement | null;
+
+        if (!link) {
+            return;
+        }
+
+        event.preventDefault();
+
+        const wrapper = link.closest('.nav-item-wrapper');
+        const categoryButton = wrapper?.querySelector('.nav-item-button');
+        const categoryLabelRaw = categoryButton?.textContent?.trim();
+
+        if (!categoryLabelRaw) {
+            return;
+        }
+
+        const categoryLabel = toCategoryLabel(categoryLabelRaw);
+
+        if (link.classList.contains('megamenu-shop-all')) {
+            onSelectCategory?.(categoryLabel);
+            return;
+        }
+
+        const subcategoryLabel = link.textContent?.trim();
+        if (!subcategoryLabel) {
+            return;
+        }
+
+        onSelectSubcategory?.(categoryLabel, subcategoryLabel);
+    };
+
+    const handleMegamenuLinkHover = (event: React.MouseEvent<HTMLElement>) => {
+        const target = event.target as HTMLElement;
+        const link = target.closest('a.megamenu-link') as HTMLAnchorElement | null;
+
+        if (!link) {
+            return;
+        }
+
+        const wrapper = link.closest('.nav-item-wrapper');
+        const categoryButton = wrapper?.querySelector('.nav-item-button');
+        const categoryLabelRaw = categoryButton?.textContent?.trim();
+
+        if (!categoryLabelRaw) {
+            return;
+        }
+
+        setActivePreviewCategory(toCategoryLabel(categoryLabelRaw));
+        setActivePreviewSubcategory(link.textContent?.trim() || null);
     };
 
     useEffect(() => {
@@ -67,6 +233,8 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
         <nav
             className={`main-nav ${isMegamenuHovering ? 'megamenu-hovering' : ''}`}
             style={{ '--menu-top-offset': `${menuTopOffset}px` } as React.CSSProperties}
+            onClick={handleMegamenuLinkClick}
+            onMouseOver={handleMegamenuLinkHover}
         >
             {/* Electronics */}
             <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
@@ -100,14 +268,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Popular Sellers</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Sellers'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Apple</div>
-                            <div className="brand-box">Samsung</div>
-                            <div className="brand-box">Sony</div>
-                            <div className="brand-box">LG</div>
-                            <div className="brand-box">Dell</div>
-                            <div className="brand-box">HP</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Apple</div>
+                                    <div className="brand-box">Samsung</div>
+                                    <div className="brand-box">Sony</div>
+                                    <div className="brand-box">LG</div>
+                                    <div className="brand-box">Dell</div>
+                                    <div className="brand-box">HP</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -144,14 +316,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Categories</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Categories'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Graded Items</div>
-                            <div className="brand-box">Vintage</div>
-                            <div className="brand-box">Modern</div>
-                            <div className="brand-box">Rare</div>
-                            <div className="brand-box">Limited</div>
-                            <div className="brand-box">Unique</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Graded Items</div>
+                                    <div className="brand-box">Vintage</div>
+                                    <div className="brand-box">Modern</div>
+                                    <div className="brand-box">Rare</div>
+                                    <div className="brand-box">Limited</div>
+                                    <div className="brand-box">Unique</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -188,14 +364,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Art Styles</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Art Styles'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Abstract</div>
-                            <div className="brand-box">Modern</div>
-                            <div className="brand-box">Classical</div>
-                            <div className="brand-box">Contemporary</div>
-                            <div className="brand-box">Surreal</div>
-                            <div className="brand-box">Impressionist</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Abstract</div>
+                                    <div className="brand-box">Modern</div>
+                                    <div className="brand-box">Classical</div>
+                                    <div className="brand-box">Contemporary</div>
+                                    <div className="brand-box">Surreal</div>
+                                    <div className="brand-box">Impressionist</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -210,7 +390,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                 >
                     LUXURY
                 </button>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Luxury</div>
                         <a href="#designer-bags" className="megamenu-link">Designer Bags</a>
@@ -232,14 +412,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Luxury Brands</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Luxury Brands'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Hermès</div>
-                            <div className="brand-box">Gucci</div>
-                            <div className="brand-box">Louis Vuitton</div>
-                            <div className="brand-box">Chanel</div>
-                            <div className="brand-box">Cartier</div>
-                            <div className="brand-box">Rolex</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Hermès</div>
+                                    <div className="brand-box">Gucci</div>
+                                    <div className="brand-box">Louis Vuitton</div>
+                                    <div className="brand-box">Chanel</div>
+                                    <div className="brand-box">Cartier</div>
+                                    <div className="brand-box">Rolex</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -254,7 +438,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                 >
                     ANTIQUES
                 </button>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Antiques</div>
                         <a href="#furniture" className="megamenu-link">Antique Furniture</a>
@@ -276,14 +460,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Periods</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Periods'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Victorian</div>
-                            <div className="brand-box">Art Deco</div>
-                            <div className="brand-box">Georgian</div>
-                            <div className="brand-box">Edwardian</div>
-                            <div className="brand-box">Mid-Century</div>
-                            <div className="brand-box">Baroque</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Victorian</div>
+                                    <div className="brand-box">Art Deco</div>
+                                    <div className="brand-box">Georgian</div>
+                                    <div className="brand-box">Edwardian</div>
+                                    <div className="brand-box">Mid-Century</div>
+                                    <div className="brand-box">Baroque</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -298,7 +486,7 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                 >
                     VEHICLES
                 </button>
-                <div className="nav-megamenu">
+                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Vehicles</div>
                         <a href="#classic-cars" className="megamenu-link">Classic Cars</a>
@@ -320,14 +508,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Popular Brands</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Brands'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Ferrari</div>
-                            <div className="brand-box">Bugatti</div>
-                            <div className="brand-box">Mercedes</div>
-                            <div className="brand-box">Porsche</div>
-                            <div className="brand-box">Harley</div>
-                            <div className="brand-box">BMW</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Ferrari</div>
+                                    <div className="brand-box">Bugatti</div>
+                                    <div className="brand-box">Mercedes</div>
+                                    <div className="brand-box">Porsche</div>
+                                    <div className="brand-box">Harley</div>
+                                    <div className="brand-box">BMW</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -364,14 +556,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Fashion Brands</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Fashion Brands'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Versace</div>
-                            <div className="brand-box">Prada</div>
-                            <div className="brand-box">Dior</div>
-                            <div className="brand-box">Balenciaga</div>
-                            <div className="brand-box">Givenchy</div>
-                            <div className="brand-box">Fendi</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Versace</div>
+                                    <div className="brand-box">Prada</div>
+                                    <div className="brand-box">Dior</div>
+                                    <div className="brand-box">Balenciaga</div>
+                                    <div className="brand-box">Givenchy</div>
+                                    <div className="brand-box">Fendi</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -408,14 +604,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Popular Locations</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Locations'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Manila</div>
-                            <div className="brand-box">Makati</div>
-                            <div className="brand-box">BGC</div>
-                            <div className="brand-box">Tagaytay</div>
-                            <div className="brand-box">Cebu</div>
-                            <div className="brand-box">Davao</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Manila</div>
+                                    <div className="brand-box">Makati</div>
+                                    <div className="brand-box">BGC</div>
+                                    <div className="brand-box">Tagaytay</div>
+                                    <div className="brand-box">Cebu</div>
+                                    <div className="brand-box">Davao</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -452,14 +652,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Categories</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Categories'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Vintage</div>
-                            <div className="brand-box">Steampunk</div>
-                            <div className="brand-box">Gothic</div>
-                            <div className="brand-box">Retro</div>
-                            <div className="brand-box">Curiosities</div>
-                            <div className="brand-box">Unique</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Vintage</div>
+                                    <div className="brand-box">Steampunk</div>
+                                    <div className="brand-box">Gothic</div>
+                                    <div className="brand-box">Retro</div>
+                                    <div className="brand-box">Curiosities</div>
+                                    <div className="brand-box">Unique</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -496,14 +700,18 @@ export const Navigation: React.FC<NavigationProps> = ({ activeCategory = null, o
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>Popular Items</h3>
+                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Items'}</h3>
                         <div className="brand-grid">
-                            <div className="brand-box">Calculators</div>
-                            <div className="brand-box">Notebooks</div>
-                            <div className="brand-box">Backpacks</div>
-                            <div className="brand-box">Tablets</div>
-                            <div className="brand-box">Lab Kits</div>
-                            <div className="brand-box">Art Supplies</div>
+                            {livePreviewItems ?? (
+                                <>
+                                    <div className="brand-box">Calculators</div>
+                                    <div className="brand-box">Notebooks</div>
+                                    <div className="brand-box">Backpacks</div>
+                                    <div className="brand-box">Tablets</div>
+                                    <div className="brand-box">Lab Kits</div>
+                                    <div className="brand-box">Art Supplies</div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>

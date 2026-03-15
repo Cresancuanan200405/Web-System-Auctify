@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
-import { directMessageService } from '../services/api';
+import { bidNotificationService, directMessageService, type BidNotificationItem } from '../services/api';
 import type { DirectMessage, DirectMessageAttachment, DirectMessageParticipant, DirectMessageThread } from '../types';
 
 interface SellerChatDialogProps {
@@ -10,6 +10,7 @@ interface SellerChatDialogProps {
     preferredUserId?: number | null;
     preferredUserName?: string;
     onNavigateSellerStore: (sellerId: number, sellerName?: string) => void;
+    onNavigateAuction: (auctionId: number) => void;
 }
 
 const buildFallbackParticipant = (userId: number | null | undefined, userName?: string): DirectMessageParticipant | null => {
@@ -21,7 +22,7 @@ const buildFallbackParticipant = (userId: number | null | undefined, userName?: 
         id: userId,
         name: userName?.trim() || `User #${userId}`,
         email: '',
-        seller_registration: userName?.trim() ? { shop_name: userName.trim() } : null,
+        seller_registration: null,
     };
 };
 
@@ -31,6 +32,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     preferredUserId,
     preferredUserName,
     onNavigateSellerStore,
+    onNavigateAuction,
 }) => {
     const quickEmojis = ['😀', '😂', '😍', '🔥', '👏', '🎉', '👍', '🙏', '❤️', '😮'];
     const { authUser } = useAuth();
@@ -45,6 +47,10 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     const [sending, setSending] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
     const [threadFilter, setThreadFilter] = useState<'all' | 'unread'>('all');
+    const [activePane, setActivePane] = useState<'messages' | 'bids'>('messages');
+    const [bidNotifications, setBidNotifications] = useState<BidNotificationItem[]>([]);
+    const [bidNotificationsLoading, setBidNotificationsLoading] = useState(false);
+    const [selectedBidNotificationKey, setSelectedBidNotificationKey] = useState<string | null>(null);
     const [openKebabUserId, setOpenKebabUserId] = useState<number | null>(null);
     const [kebabMenuPos, setKebabMenuPos] = useState<{ top: number; right: number } | null>(null);
     const [pinnedUserIds, setPinnedUserIds] = useState<Set<number>>(() => {
@@ -64,6 +70,15 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
     const recordingStreamRef = useRef<MediaStream | null>(null);
     const hasLoadedThreadsRef = useRef(false);
     const threadsRequestInFlightRef = useRef(false);
+    const seenBidNotificationStorageKey = authUser ? `seen_bid_notifications_${authUser.id}` : 'seen_bid_notifications_guest';
+    const [seenBidNotificationKeys, setSeenBidNotificationKeys] = useState<Set<string>>(() => {
+        try {
+            const stored = localStorage.getItem(seenBidNotificationStorageKey);
+            return stored ? new Set<string>(JSON.parse(stored) as string[]) : new Set<string>();
+        } catch {
+            return new Set<string>();
+        }
+    });
 
     const selectedThread = useMemo(
         () => threads.find((thread) => thread.user?.id === selectedUserId) ?? null,
@@ -91,6 +106,26 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             });
     }, [searchTerm, threadFilter, threads, hiddenUserIds, pinnedUserIds]);
 
+    const unseenBidNotificationsCount = useMemo(() => {
+        return bidNotifications.filter((item) => !seenBidNotificationKeys.has(item.key)).length;
+    }, [bidNotifications, seenBidNotificationKeys]);
+
+    const selectedBidNotification = useMemo(() => {
+        if (!selectedBidNotificationKey) {
+            return null;
+        }
+
+        return bidNotifications.find((item) => item.key === selectedBidNotificationKey) ?? null;
+    }, [bidNotifications, selectedBidNotificationKey]);
+
+    const sortedBidNotifications = useMemo(() => {
+        return [...bidNotifications].sort((left, right) => {
+            const leftTime = left.created_at ? new Date(left.created_at).getTime() : 0;
+            const rightTime = right.created_at ? new Date(right.created_at).getTime() : 0;
+            return rightTime - leftTime;
+        });
+    }, [bidNotifications]);
+
     useEffect(() => {
         if (!isOpen) {
             return;
@@ -101,9 +136,98 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         setDraft('');
         setSelectedFiles([]);
         setIsEmojiPickerOpen(false);
+        setSearchTerm('');
+        setThreadFilter('all');
+        setActivePane('messages');
         hasLoadedThreadsRef.current = false;
         threadsRequestInFlightRef.current = false;
     }, [isOpen, preferredUserId, preferredUserName]);
+
+    useEffect(() => {
+        try {
+            const stored = localStorage.getItem(seenBidNotificationStorageKey);
+            setSeenBidNotificationKeys(stored ? new Set<string>(JSON.parse(stored) as string[]) : new Set<string>());
+        } catch {
+            setSeenBidNotificationKeys(new Set<string>());
+        }
+    }, [seenBidNotificationStorageKey]);
+
+    const markBidNotificationsAsSeen = (keys: string[]) => {
+        if (keys.length === 0) {
+            return;
+        }
+
+        setSeenBidNotificationKeys((prev) => {
+            const next = new Set(prev);
+            keys.forEach((key) => next.add(key));
+            try {
+                localStorage.setItem(seenBidNotificationStorageKey, JSON.stringify([...next]));
+            } catch {
+                // Ignore storage errors.
+            }
+            window.dispatchEvent(new CustomEvent('bid-notifications-seen-updated'));
+            return next;
+        });
+    };
+
+    useEffect(() => {
+        if (!isOpen || !authUser) {
+            return;
+        }
+
+        let isActive = true;
+
+        const loadBidNotifications = async (isSilent = false) => {
+            if (!isSilent && isActive) {
+                setBidNotificationsLoading(true);
+            }
+
+            try {
+                const response = await bidNotificationService.getMyNotifications();
+                if (!isActive) {
+                    return;
+                }
+
+                setBidNotifications(response.items ?? []);
+
+                if (!selectedBidNotificationKey && response.items?.[0]?.key) {
+                    setSelectedBidNotificationKey(response.items[0].key);
+                    return;
+                }
+
+                if (selectedBidNotificationKey && !(response.items ?? []).some((item) => item.key === selectedBidNotificationKey)) {
+                    setSelectedBidNotificationKey(response.items?.[0]?.key ?? null);
+                }
+            } catch {
+                if (!isSilent && isActive) {
+                    toast.error('Unable to load bid alerts right now.');
+                }
+            } finally {
+                if (!isSilent && isActive) {
+                    setBidNotificationsLoading(false);
+                }
+            }
+        };
+
+        void loadBidNotifications();
+
+        const interval = window.setInterval(() => {
+            void loadBidNotifications(true);
+        }, 15000);
+
+        return () => {
+            isActive = false;
+            window.clearInterval(interval);
+        };
+    }, [authUser, isOpen, selectedBidNotificationKey]);
+
+    useEffect(() => {
+        if (activePane !== 'bids') {
+            return;
+        }
+
+        markBidNotificationsAsSeen(bidNotifications.map((item) => item.key));
+    }, [activePane, bidNotifications]);
 
     useEffect(() => {
         return () => {
@@ -121,6 +245,9 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
 
         const loadThreads = async (isSilent = false) => {
             if (threadsRequestInFlightRef.current) {
+                if (!isSilent) {
+                    setThreadsLoading(false);
+                }
                 return;
             }
 
@@ -162,7 +289,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             } finally {
                 threadsRequestInFlightRef.current = false;
 
-                if (isActive && !isSilent) {
+                if (!isSilent) {
                     setThreadsLoading(false);
                 }
             }
@@ -178,7 +305,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             isActive = false;
             window.clearInterval(interval);
         };
-    }, [authUser, isOpen, preferredUserId, selectedUserId]);
+    }, [authUser, isOpen, preferredUserId]);
 
     useEffect(() => {
         if (!isOpen || !authUser || !selectedUserId) {
@@ -520,8 +647,34 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                     </button>
                 </header>
 
-                <div className="seller-chat-dialog-content">
+                <div className={`seller-chat-dialog-content ${activePane === 'bids' ? 'seller-chat-dialog-content-bids' : ''}`}>
                     <aside className="seller-chat-left-panel">
+                        <div className="seller-chat-pane-tabs" role="tablist" aria-label="Chat panes">
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activePane === 'messages'}
+                                className={`seller-chat-pane-tab ${activePane === 'messages' ? 'active' : ''}`}
+                                onClick={() => setActivePane('messages')}
+                            >
+                                Messages
+                            </button>
+                            <button
+                                type="button"
+                                role="tab"
+                                aria-selected={activePane === 'bids'}
+                                className={`seller-chat-pane-tab ${activePane === 'bids' ? 'active' : ''}`}
+                                onClick={() => setActivePane('bids')}
+                            >
+                                Bid Alerts
+                                {unseenBidNotificationsCount > 0 && (
+                                    <span className="seller-chat-pane-tab-badge">{unseenBidNotificationsCount > 99 ? '99+' : unseenBidNotificationsCount}</span>
+                                )}
+                            </button>
+                        </div>
+
+                        {activePane === 'messages' && (
+                            <>
                         <div className="seller-chat-tools">
                             <input
                                 className="seller-chat-search"
@@ -608,9 +761,55 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                                 </div>
                             ))}
                         </div>
+                            </>
+                        )}
+
+                        {activePane === 'bids' && (
+                            <>
+                            <div className="seller-chat-bid-list-head">
+                                <p className="seller-chat-bid-list-title">Your Alerts ({sortedBidNotifications.length})</p>
+                                <button
+                                    type="button"
+                                    className="seller-chat-mark-seen-btn"
+                                    disabled={unseenBidNotificationsCount === 0}
+                                    onClick={() => {
+                                        markBidNotificationsAsSeen(sortedBidNotifications.map((item) => item.key));
+                                    }}
+                                >
+                                    Mark all as seen
+                                </button>
+                            </div>
+                            <div className="seller-chat-thread-list seller-chat-bid-list">
+                                {bidNotificationsLoading && sortedBidNotifications.length === 0 && <p className="seller-chat-thread-empty">Loading bid alerts...</p>}
+                                {!bidNotificationsLoading && sortedBidNotifications.length === 0 && <p className="seller-chat-thread-empty">No bid alerts yet.</p>}
+
+                                {sortedBidNotifications.map((item) => (
+                                    <button
+                                        key={item.key}
+                                        type="button"
+                                        className={`seller-chat-bid-item ${selectedBidNotificationKey === item.key ? 'active' : ''}`}
+                                        onClick={() => {
+                                            setSelectedBidNotificationKey(item.key);
+                                            markBidNotificationsAsSeen([item.key]);
+                                        }}
+                                    >
+                                        <div className="seller-chat-bid-item-topline">
+                                            <p className="seller-chat-bid-item-title">{item.auction_title}</p>
+                                            {!seenBidNotificationKeys.has(item.key) && <span className="seller-chat-thread-badge">New</span>}
+                                        </div>
+                                        <p className="seller-chat-bid-item-message">{item.message}</p>
+                                        <div className="seller-chat-bid-item-footer">
+                                            <p className="seller-chat-thread-time">{formatDate(item.created_at)}</p>
+                                            <span className="seller-chat-bid-item-cta">Open</span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                            </>
+                        )}
                     </aside>
 
-                    {selectedUserId ? (
+                    {activePane === 'messages' && selectedUserId ? (
                         <main className="seller-chat-main-pane">
                             <div className="seller-chat-conversation-header">
                                 <div>
@@ -757,11 +956,50 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                                 </div>
                             </div>
                         </main>
+                    ) : activePane === 'bids' && selectedBidNotification ? (
+                        <main className="seller-chat-main-pane seller-chat-bid-pane">
+                            <div className="seller-chat-conversation-header">
+                                <div>
+                                    <p className="seller-chat-conversation-name">Bid Alert</p>
+                                    <p className="seller-chat-conversation-subtitle">Real-time updates for your bidded products</p>
+                                </div>
+                            </div>
+                            <div className="seller-chat-bid-detail">
+                                <div className="seller-chat-bid-detail-scroll">
+                                    <h4>{selectedBidNotification.auction_title}</h4>
+                                    <p>{selectedBidNotification.message}</p>
+                                    <p className="seller-chat-thread-time">{formatDate(selectedBidNotification.created_at)}</p>
+                                    {selectedBidNotification.media_url ? (
+                                        <img
+                                            className="seller-chat-bid-detail-image"
+                                            src={selectedBidNotification.media_url}
+                                            alt={selectedBidNotification.auction_title}
+                                        />
+                                    ) : null}
+                                </div>
+                                <div className="seller-chat-bid-detail-actions">
+                                    <button
+                                        type="button"
+                                        className="seller-chat-view-auction-btn"
+                                        onClick={() => {
+                                            onNavigateAuction(selectedBidNotification.auction_id);
+                                            onClose();
+                                        }}
+                                    >
+                                        View Auction
+                                    </button>
+                                </div>
+                            </div>
+                        </main>
                     ) : (
                         <main className="seller-chat-empty-pane">
                             <div className="seller-chat-empty-illustration" aria-hidden="true">💬</div>
                             <p className="seller-chat-empty-title">Welcome to Auctify Chat</p>
-                            <p className="seller-chat-empty-subtitle">Choose a conversation or message a seller to get started.</p>
+                            <p className="seller-chat-empty-subtitle">
+                                {activePane === 'bids'
+                                    ? 'No bid alerts yet. Updates will appear when auction activity changes.'
+                                    : 'Choose a conversation or message a seller to get started.'}
+                            </p>
                         </main>
                     )}
                 </div>

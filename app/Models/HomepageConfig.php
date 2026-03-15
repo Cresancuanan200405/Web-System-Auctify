@@ -12,6 +12,7 @@ class HomepageConfig extends Model
     protected $fillable = [
         'circles',
         'slides',
+        'mini_slides',
         'video_ads',
     ];
 
@@ -20,6 +21,7 @@ class HomepageConfig extends Model
         return [
             'circles' => 'array',
             'slides' => 'array',
+            'mini_slides' => 'array',
             'video_ads' => 'array',
         ];
     }

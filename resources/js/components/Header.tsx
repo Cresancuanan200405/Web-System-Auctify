@@ -21,11 +21,27 @@ interface HeaderProps {
     onNavigateAccount: (section?: AccountSection) => void;
     onNavigateSellerProfile: () => void;
     onNavigateSellerDashboard: () => void;
+    onNavigateSellerStore: (sellerId: number, sellerName?: string) => void;
     showSellerDashboardButton: boolean;
     onNavigateOrdersLogin: () => void;
     onNavigateBag: () => void;
+    enableHomeSearchSuggestions?: boolean;
+    maxHomeSearchResults?: number;
     onLogout: () => void;
 }
+
+type HeaderSearchResultItem =
+    | { kind: 'product'; id: string; product: AuctionProduct; score: number }
+    | {
+        kind: 'seller';
+        id: string;
+        sellerId: number;
+        sellerName: string;
+        shopName: string;
+        productCount: number;
+        thumbnailUrl?: string;
+        score: number;
+    };
 
 export const Header: React.FC<HeaderProps> = ({
     onNavigateHome,
@@ -38,9 +54,12 @@ export const Header: React.FC<HeaderProps> = ({
     onNavigateAccount,
     onNavigateSellerProfile,
     onNavigateSellerDashboard,
+    onNavigateSellerStore,
     showSellerDashboardButton,
     onNavigateOrdersLogin,
     onNavigateBag,
+    enableHomeSearchSuggestions = true,
+    maxHomeSearchResults = 8,
     onLogout
 }) => {
     const { authUser } = useAuth();
@@ -64,13 +83,14 @@ export const Header: React.FC<HeaderProps> = ({
     const searchContainerRef = useRef<HTMLFormElement | null>(null);
     const brandLabel = isSellerMode ? 'AUCTIFY Seller' : 'AUCTIFY';
     const shouldShowSellerDetails = isSellerMode;
+    const searchResultLimit = Math.min(20, Math.max(3, Number(maxHomeSearchResults || 8)));
 
     const mainCard = savedCards.find(card => card.id === mainCardId);
     const activeBagItems = wonAuctions.filter((item) => !orders.some((order) => order.auction_id === item.id));
     const activeBagCount = activeBagItems.length;
 
     useEffect(() => {
-        if (!isSearchModalOpen || isSellerMode || searchProducts.length > 0 || isSearchLoading) {
+        if (!isSearchModalOpen || isSellerMode || searchProducts.length > 0) {
             return;
         }
 
@@ -101,7 +121,7 @@ export const Header: React.FC<HeaderProps> = ({
         return () => {
             isActive = false;
         };
-    }, [isSearchModalOpen, isSellerMode, searchProducts.length, isSearchLoading]);
+    }, [isSearchModalOpen, isSellerMode, searchProducts.length]);
 
     useEffect(() => {
         if (!isSearchModalOpen) {
@@ -155,27 +175,121 @@ export const Header: React.FC<HeaderProps> = ({
         return searchProducts
             .filter((product) => {
                 const category = product.category?.toLowerCase() ?? '';
+                const subcategory = product.subcategory?.toLowerCase() ?? '';
                 const description = product.description?.toLowerCase() ?? '';
                 return product.title.toLowerCase().includes(normalized)
                     || category.includes(normalized)
+                    || subcategory.includes(normalized)
                     || description.includes(normalized);
             })
-            .slice(0, 8);
+            ;
     }, [searchProducts, searchQuery]);
 
-    const suggestedCategories = useMemo(() => {
+    const filteredSellerResults = useMemo(() => {
         const normalized = searchQuery.trim().toLowerCase();
-        const categories = Array.from(new Set(
-            searchProducts
-                .map((product) => product.category?.trim())
-                .filter((category): category is string => Boolean(category)),
-        ));
+        if (!normalized) {
+            return [] as HeaderSearchResultItem[];
+        }
 
-        return categories
-            .filter((category) => normalized.length === 0 || category.toLowerCase().includes(normalized))
-            .sort((left, right) => left.localeCompare(right))
-            .slice(0, 6);
+        const sellerMap = new Map<number, {
+            sellerId: number;
+            sellerName: string;
+            shopName: string;
+            productCount: number;
+            thumbnailUrl?: string;
+        }>();
+
+        searchProducts.forEach((product) => {
+            const sellerId = Number(product.user?.id ?? product.user_id);
+            if (!Number.isFinite(sellerId) || sellerId <= 0) {
+                return;
+            }
+
+            const sellerName = product.user?.name?.trim() || `Seller #${sellerId}`;
+            const shopName = product.user?.seller_registration?.shop_name?.trim() || sellerName;
+
+            const sellerSearchBlob = `${sellerName} ${shopName}`.toLowerCase();
+            if (!sellerSearchBlob.includes(normalized)) {
+                return;
+            }
+
+            const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image') ?? product.media?.[0];
+
+            const existing = sellerMap.get(sellerId);
+            if (!existing) {
+                sellerMap.set(sellerId, {
+                    sellerId,
+                    sellerName,
+                    shopName,
+                    productCount: 1,
+                    thumbnailUrl: thumbnail?.url,
+                });
+                return;
+            }
+
+            existing.productCount += 1;
+            if (!existing.thumbnailUrl && thumbnail?.url) {
+                existing.thumbnailUrl = thumbnail.url;
+            }
+        });
+
+        return Array.from(sellerMap.values())
+            .map((entry) => {
+                const sellerBlob = `${entry.sellerName} ${entry.shopName}`.toLowerCase();
+                let score = 1;
+                if (entry.shopName.toLowerCase().startsWith(normalized)) {
+                    score += 3;
+                }
+                if (entry.sellerName.toLowerCase().startsWith(normalized)) {
+                    score += 2;
+                }
+                if (sellerBlob.includes(normalized)) {
+                    score += 1;
+                }
+
+                return {
+                    kind: 'seller' as const,
+                    id: `seller-${entry.sellerId}`,
+                    ...entry,
+                    score,
+                };
+            });
     }, [searchProducts, searchQuery]);
+
+    const searchResults = useMemo(() => {
+        const normalized = searchQuery.trim().toLowerCase();
+        if (!normalized) {
+            return [] as HeaderSearchResultItem[];
+        }
+
+        const productResults = filteredSearchProducts.map((product) => {
+            const haystack = `${product.title} ${product.category ?? ''} ${product.subcategory ?? ''} ${product.description ?? ''}`.toLowerCase();
+            let score = 1;
+            if (product.title.toLowerCase().startsWith(normalized)) {
+                score += 3;
+            }
+            if ((product.category ?? '').toLowerCase().startsWith(normalized)) {
+                score += 2;
+            }
+            if ((product.subcategory ?? '').toLowerCase().startsWith(normalized)) {
+                score += 2;
+            }
+            if (haystack.includes(normalized)) {
+                score += 1;
+            }
+
+            return {
+                kind: 'product' as const,
+                id: `product-${product.id}`,
+                product,
+                score,
+            };
+        });
+
+        return [...productResults, ...filteredSellerResults]
+            .sort((left, right) => right.score - left.score)
+            .slice(0, searchResultLimit);
+    }, [filteredSearchProducts, filteredSellerResults, searchQuery, searchResultLimit]);
 
     const renderHighlightedText = (value: string, query: string) => {
         const normalizedQuery = query.trim();
@@ -204,35 +318,41 @@ export const Header: React.FC<HeaderProps> = ({
         );
     };
 
-    const openSearchResult = (productId: number, nextQuery?: string) => {
+    const openSearchResult = (result: HeaderSearchResultItem, nextQuery?: string) => {
         if (nextQuery?.trim()) {
             persistRecentSearch(nextQuery);
         }
 
         setIsSearchModalOpen(false);
-        onNavigateToAuction(productId);
+
+        if (result.kind === 'product') {
+            onNavigateToAuction(result.product.id);
+            return;
+        }
+
+        onNavigateSellerStore(result.sellerId, result.shopName || result.sellerName);
     };
 
     const handleSearchInputKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (!filteredSearchProducts.length) {
+        if (!searchResults.length) {
             return;
         }
 
         if (event.key === 'ArrowDown') {
             event.preventDefault();
-            setActiveSearchIndex((prev) => (prev + 1) % filteredSearchProducts.length);
+            setActiveSearchIndex((prev) => (prev + 1) % searchResults.length);
             return;
         }
 
         if (event.key === 'ArrowUp') {
             event.preventDefault();
-            setActiveSearchIndex((prev) => (prev - 1 + filteredSearchProducts.length) % filteredSearchProducts.length);
+            setActiveSearchIndex((prev) => (prev - 1 + searchResults.length) % searchResults.length);
             return;
         }
 
-        if (event.key === 'Enter' && searchQuery.trim() && filteredSearchProducts[activeSearchIndex]) {
+        if (event.key === 'Enter' && searchQuery.trim() && searchResults[activeSearchIndex]) {
             event.preventDefault();
-            openSearchResult(filteredSearchProducts[activeSearchIndex].id, searchQuery);
+            openSearchResult(searchResults[activeSearchIndex], searchQuery);
         }
     };
 
@@ -240,15 +360,17 @@ export const Header: React.FC<HeaderProps> = ({
         e.preventDefault();
         const normalized = searchQuery.trim();
         if (!normalized) {
-            setIsSearchModalOpen(true);
+            if (enableHomeSearchSuggestions) {
+                setIsSearchModalOpen(true);
+            }
             return;
         }
 
         persistRecentSearch(normalized);
-        setIsSearchModalOpen(true);
+        setIsSearchModalOpen(enableHomeSearchSuggestions);
 
-        if (filteredSearchProducts.length > 0) {
-            openSearchResult(filteredSearchProducts[activeSearchIndex]?.id ?? filteredSearchProducts[0].id, normalized);
+        if (searchResults.length > 0) {
+            openSearchResult(searchResults[activeSearchIndex] ?? searchResults[0], normalized);
         }
     };
 
@@ -294,7 +416,11 @@ export const Header: React.FC<HeaderProps> = ({
                         placeholder="Search for auctions, items, categories..." 
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        onFocus={() => setIsSearchModalOpen(true)}
+                        onFocus={() => {
+                            if (enableHomeSearchSuggestions) {
+                                setIsSearchModalOpen(true);
+                            }
+                        }}
                         onKeyDown={handleSearchInputKeyDown}
                     />
                     <button type="submit" className="search-btn" aria-label="Search">
@@ -304,77 +430,53 @@ export const Header: React.FC<HeaderProps> = ({
                         </svg>
                     </button>
 
-                    {isSearchModalOpen && (
+                    {enableHomeSearchSuggestions && isSearchModalOpen && (
                         <div className="header-search-panel">
-                            <div className="header-search-panel-grid">
-                                <div className="header-search-panel-section">
-                                    <div className="header-search-panel-section-head">
-                                        <h4>Recent searches</h4>
-                                        {recentSearches.length > 0 && (
-                                            <button type="button" className="header-search-clear-btn" onClick={clearRecentSearches}>Clear</button>
-                                        )}
-                                    </div>
-                                    <div className="header-search-recent-list">
-                                        {recentSearches.length === 0 && (
-                                            <p className="header-search-empty">No recent searches yet.</p>
-                                        )}
-                                        {recentSearches.map((item) => (
-                                            <button
-                                                key={item}
-                                                type="button"
-                                                className="header-search-recent-chip"
-                                                onClick={() => setSearchQuery(item)}
-                                            >
-                                                {item}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="header-search-panel-head">
+                                <h4>Recent searches</h4>
+                                {recentSearches.length > 0 && (
+                                    <button type="button" className="header-search-clear-btn" onClick={clearRecentSearches}>Clear</button>
+                                )}
+                            </div>
 
-                                <div className="header-search-panel-section">
-                                    <div className="header-search-panel-section-head">
-                                        <h4>Categories</h4>
-                                    </div>
-                                    <div className="header-search-category-list">
-                                        {suggestedCategories.length === 0 && (
-                                            <p className="header-search-empty">No category suggestions yet.</p>
-                                        )}
-                                        {suggestedCategories.map((category) => (
-                                            <button
-                                                key={category}
-                                                type="button"
-                                                className="header-search-category-chip"
-                                                onClick={() => setSearchQuery(category)}
-                                            >
-                                                {renderHighlightedText(category, searchQuery)}
-                                            </button>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="header-search-recent-list header-search-recent-list-modern">
+                                {recentSearches.length === 0 && (
+                                    <p className="header-search-empty">No recent searches yet.</p>
+                                )}
+                                {recentSearches.map((item) => (
+                                    <button
+                                        key={item}
+                                        type="button"
+                                        className="header-search-recent-chip header-search-recent-chip-modern"
+                                        onClick={() => setSearchQuery(item)}
+                                    >
+                                        <span className="header-search-recent-icon" aria-hidden="true">◷</span>
+                                        <span>{item}</span>
+                                    </button>
+                                ))}
+                            </div>
 
-                                <div className="header-search-panel-section">
-                                    <div className="header-search-panel-section-head">
-                                        <h4>Results</h4>
-                                        {searchQuery.trim() && <span className="header-search-result-count">{filteredSearchProducts.length} found</span>}
-                                    </div>
+                            <div className="header-search-live-list-wrap">
+                                {isSearchLoading && <p className="header-search-empty">Loading products...</p>}
+                                {!isSearchLoading && !searchQuery.trim() && <p className="header-search-empty">Type to search products, shops, or sellers.</p>}
+                                {!isSearchLoading && searchQuery.trim() && searchResults.length === 0 && (
+                                    <p className="header-search-empty">No matching products, shops, or sellers found.</p>
+                                )}
 
-                                    {isSearchLoading && <p className="header-search-empty">Loading products...</p>}
-                                    {!isSearchLoading && !searchQuery.trim() && <p className="header-search-empty">Start typing to search auctions and items.</p>}
-                                    {!isSearchLoading && searchQuery.trim() && filteredSearchProducts.length === 0 && (
-                                        <p className="header-search-empty">No matching products found.</p>
-                                    )}
-
-                                    {!isSearchLoading && filteredSearchProducts.length > 0 && (
-                                        <div className="header-search-results">
-                                            {filteredSearchProducts.map((product) => {
+                                {!isSearchLoading && searchResults.length > 0 && (
+                                    <div className="header-search-results header-search-results-modern">
+                                        {searchResults.map((result, resultIndex) => {
+                                            if (result.kind === 'product') {
+                                                const product = result.product;
                                                 const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image') ?? product.media?.[0];
+
                                                 return (
                                                     <button
-                                                        key={product.id}
+                                                        key={result.id}
                                                         type="button"
-                                                        className={`header-search-result-card${filteredSearchProducts[activeSearchIndex]?.id === product.id ? ' active' : ''}`}
-                                                        onClick={() => openSearchResult(product.id, searchQuery)}
-                                                        onMouseEnter={() => setActiveSearchIndex(filteredSearchProducts.findIndex((item) => item.id === product.id))}
+                                                        className={`header-search-result-card${searchResults[activeSearchIndex]?.id === result.id ? ' active' : ''}`}
+                                                        onClick={() => openSearchResult(result, searchQuery)}
+                                                        onMouseEnter={() => setActiveSearchIndex(resultIndex)}
                                                     >
                                                         <div className="header-search-result-thumb-wrap">
                                                             {thumbnail ? (
@@ -389,15 +491,42 @@ export const Header: React.FC<HeaderProps> = ({
                                                         </div>
                                                         <div className="header-search-result-copy">
                                                             <p className="header-search-result-title">{renderHighlightedText(product.title, searchQuery)}</p>
-                                                            <p className="header-search-result-meta">{renderHighlightedText(product.category || 'Uncategorized', searchQuery)}</p>
+                                                            <p className="header-search-result-meta">{renderHighlightedText(`${product.category || 'Uncategorized'}${product.subcategory ? ` • ${product.subcategory}` : ''}`, searchQuery)} • Product</p>
                                                         </div>
                                                         <span className="header-search-result-price">{formatCurrency(Number(product.current_price || product.starting_price || 0))}</span>
                                                     </button>
                                                 );
-                                            })}
-                                        </div>
-                                    )}
-                                </div>
+                                            }
+
+                                            return (
+                                                <button
+                                                    key={result.id}
+                                                    type="button"
+                                                    className={`header-search-result-card${searchResults[activeSearchIndex]?.id === result.id ? ' active' : ''}`}
+                                                    onClick={() => openSearchResult(result, searchQuery)}
+                                                    onMouseEnter={() => setActiveSearchIndex(resultIndex)}
+                                                >
+                                                    <div className="header-search-result-thumb-wrap">
+                                                        {result.thumbnailUrl ? (
+                                                            <img
+                                                                className="header-search-result-thumb"
+                                                                src={resolveMediaUrl(result.thumbnailUrl)}
+                                                                alt={result.shopName}
+                                                            />
+                                                        ) : (
+                                                            <div className="header-search-result-thumb header-search-result-thumb-empty">Shop</div>
+                                                        )}
+                                                    </div>
+                                                    <div className="header-search-result-copy">
+                                                        <p className="header-search-result-title">{renderHighlightedText(result.shopName, searchQuery)}</p>
+                                                        <p className="header-search-result-meta">{renderHighlightedText(result.sellerName, searchQuery)} • {result.productCount} listing{result.productCount > 1 ? 's' : ''}</p>
+                                                    </div>
+                                                    <span className="header-search-result-price">Shop</span>
+                                                </button>
+                                            );
+                                        })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}

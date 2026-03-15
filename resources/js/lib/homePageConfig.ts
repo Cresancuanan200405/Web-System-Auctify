@@ -1,4 +1,4 @@
-export type CircleTone = 'yellow' | 'black';
+export type CircleTone = 'yellow' | 'black' | 'green' | 'blue' | 'red' | 'purple' | 'teal' | 'navy' | 'silver';
 
 export interface HomePromoCircle {
     id: string;
@@ -22,11 +22,15 @@ export interface HomeVideoAd {
     title: string;
     subtitle: string;
     image: string;
+    description?: string;
+    videoUrl?: string;
+    imageUrl?: string;
 }
 
 export interface HomePageConfig {
     circles: HomePromoCircle[];
     slides: HomeCarouselSlide[];
+    miniSlides: HomeCarouselSlide[];
     videoAds: HomeVideoAd[];
 }
 
@@ -85,6 +89,38 @@ export const DEFAULT_HOME_PAGE_CONFIG: HomePageConfig = {
             title: 'VIDEO ADS PLACEHOLDER',
             subtitle: '1920 x 600 recommended',
             image: '',
+            description: 'Featured ad slot',
+            videoUrl: '',
+            imageUrl: '',
+        },
+    ],
+    miniSlides: [
+        {
+            id: 'ms1',
+            subtitle: 'NEW ARRIVALS',
+            title: 'Fresh Picks This Week',
+            price: 'Starting from ₱500',
+            brands: ['Art', 'Collectibles'],
+            disclaimer: '',
+            image: '/carousel/1.jpg',
+        },
+        {
+            id: 'ms2',
+            subtitle: 'ENDING SOON',
+            title: 'Last Chance Auctions',
+            price: 'Bid before they\'re gone',
+            brands: ['Electronics', 'Luxury'],
+            disclaimer: '',
+            image: '/carousel/2.jpg',
+        },
+        {
+            id: 'ms3',
+            subtitle: 'TRENDING NOW',
+            title: 'Most Watched Items',
+            price: 'Join the bidding',
+            brands: ['Fashion', 'Vehicles'],
+            disclaimer: '',
+            image: '/carousel/3.jpg',
         },
     ],
 };
@@ -95,7 +131,8 @@ const toSafeString = (value: unknown, fallback = '') => {
 
 const normalizeCircle = (value: unknown, index: number): HomePromoCircle => {
     const candidate = typeof value === 'object' && value !== null ? value as Partial<HomePromoCircle> : {};
-    const tone = candidate.tone === 'yellow' ? 'yellow' : 'black';
+    const allowedTones: CircleTone[] = ['yellow', 'black', 'green', 'blue', 'red', 'purple', 'teal', 'navy', 'silver'];
+    const tone = allowedTones.includes(candidate.tone as CircleTone) ? (candidate.tone as CircleTone) : 'black';
 
     return {
         id: toSafeString(candidate.id, `circle-${index + 1}`),
@@ -124,12 +161,18 @@ const normalizeSlide = (value: unknown, index: number): HomeCarouselSlide => {
 
 const normalizeVideoAd = (value: unknown, index: number): HomeVideoAd => {
     const candidate = typeof value === 'object' && value !== null ? value as Partial<HomeVideoAd> : {};
+    const description = toSafeString(candidate.description, toSafeString(candidate.subtitle, '1920 x 600 recommended'));
+    const videoUrl = toSafeString(candidate.videoUrl, '');
+    const imageUrl = toSafeString(candidate.imageUrl, toSafeString(candidate.image, ''));
 
     return {
         id: toSafeString(candidate.id, `video-${index + 1}`),
         title: toSafeString(candidate.title, `Video Ad ${index + 1}`),
-        subtitle: toSafeString(candidate.subtitle, '1920 x 600 recommended'),
-        image: toSafeString(candidate.image, ''),
+        subtitle: toSafeString(candidate.subtitle, description),
+        image: toSafeString(candidate.image, imageUrl),
+        description,
+        videoUrl,
+        imageUrl,
     };
 };
 
@@ -137,15 +180,18 @@ export const normalizeHomePageConfig = (value: unknown): HomePageConfig => {
     const candidate = typeof value === 'object' && value !== null ? value as Partial<HomePageConfig> : {};
     const circlesSource = Array.isArray(candidate.circles) ? candidate.circles : DEFAULT_HOME_PAGE_CONFIG.circles;
     const slidesSource = Array.isArray(candidate.slides) ? candidate.slides : DEFAULT_HOME_PAGE_CONFIG.slides;
+    const miniSlidesSource = Array.isArray(candidate.miniSlides) ? candidate.miniSlides : DEFAULT_HOME_PAGE_CONFIG.miniSlides;
     const videoSource = Array.isArray(candidate.videoAds) ? candidate.videoAds : DEFAULT_HOME_PAGE_CONFIG.videoAds;
 
     const circles = circlesSource.map(normalizeCircle).filter((item) => item.label.trim().length > 0);
     const slides = slidesSource.map(normalizeSlide).filter((item) => item.title.trim().length > 0);
+    const miniSlides = miniSlidesSource.map(normalizeSlide).filter((item) => item.title.trim().length > 0);
     const videoAds = videoSource.map(normalizeVideoAd).filter((item) => item.title.trim().length > 0);
 
     return {
         circles: circles.length > 0 ? circles : DEFAULT_HOME_PAGE_CONFIG.circles,
         slides: slides.length > 0 ? slides : DEFAULT_HOME_PAGE_CONFIG.slides,
+        miniSlides: miniSlides.length > 0 ? miniSlides : DEFAULT_HOME_PAGE_CONFIG.miniSlides,
         videoAds: videoAds.length > 0 ? videoAds : DEFAULT_HOME_PAGE_CONFIG.videoAds,
     };
 };

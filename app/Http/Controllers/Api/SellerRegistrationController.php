@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Models\AdminNotification;
 use App\Models\SellerRegistration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -74,6 +75,14 @@ class SellerRegistrationController extends Controller
                 'status' => 'submitted',
                 'submitted_at' => now(),
             ]
+        );
+
+        $user = $request->user();
+        AdminNotification::notify(
+            'kyc',
+            'Seller KYC submitted',
+            "{$user->name} submitted a seller registration request.",
+            ['user_id' => $user->id]
         );
 
         return response()->json([

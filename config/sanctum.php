@@ -1,11 +1,16 @@
 <?php
 
 return [
-    'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', 'localhost,localhost:3000,127.0.0.1,127.0.0.1:5173')),
+    'stateful' => array_values(array_filter(array_map(
+        static fn (string $value): string => trim($value),
+        explode(',', env('SANCTUM_STATEFUL_DOMAINS', 'localhost,localhost:3000,localhost:5173,127.0.0.1,127.0.0.1:3000,127.0.0.1:5173'))
+    ))),
 
     'guard' => ['web'],
 
-    'expiration' => null,
+    'expiration' => env('SANCTUM_EXPIRATION') !== null
+        ? (int) env('SANCTUM_EXPIRATION')
+        : (env('APP_ENV', 'production') === 'production' ? 480 : null),
 
     'token_prefix' => env('SANCTUM_TOKEN_PREFIX', ''),
 

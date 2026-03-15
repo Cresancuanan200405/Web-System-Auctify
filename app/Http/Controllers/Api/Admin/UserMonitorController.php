@@ -3,10 +3,11 @@
 namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminNotification;
 use App\Models\SellerRegistration;
 use App\Models\User;
+use App\Support\AdminAudit;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 
@@ -184,6 +185,40 @@ class UserMonitorController extends Controller
         return null;
     }
 
+    public function verificationMedia(User $user, string $key)
+    {
+        $verification = $user->accountVerifications()->latest()->first();
+        if (! $verification) {
+            abort(404);
+        }
+
+        $pathByKey = [
+            'selfie' => $verification->selfie_path,
+            'government-id' => $verification->government_id_path,
+            'utility-bill' => $verification->utility_bill_path,
+            'bank-statement' => $verification->bank_statement_path,
+        ];
+
+        if (! array_key_exists($key, $pathByKey)) {
+            abort(404);
+        }
+
+        $path = $pathByKey[$key];
+        if (! $path) {
+            abort(404);
+        }
+
+        if (Storage::disk('local')->exists($path)) {
+            return response()->file(Storage::disk('local')->path($path));
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return response()->file(Storage::disk('public')->path($path));
+        }
+
+        abort(404);
+    }
+
     public function suspend(Request $request, User $user)
     {
         $validated = $request->validate([
@@ -216,6 +251,18 @@ class UserMonitorController extends Controller
 
         $this->logAction($request, $user, 'suspend-account', $validated['reason']);
 
+        AdminNotification::notify(
+            'user',
+            'User suspended',
+            "{$user->name} was suspended by admin.",
+            [
+                'user_id' => $user->id,
+                'reason' => $validated['reason'],
+                'suspended_until' => optional($user->suspended_until)?->toIso8601String(),
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
         return response()->json([
             'message' => 'User account suspended successfully.',
             'suspended_until' => optional($user->suspended_until)?->toIso8601String(),
@@ -242,6 +289,17 @@ class UserMonitorController extends Controller
         ])->save();
 
         $this->logAction($request, $user, 'unsuspend-account', $validated['reason']);
+
+        AdminNotification::notify(
+            'user',
+            'User unsuspended',
+            "{$user->name} was unsuspended by admin.",
+            [
+                'user_id' => $user->id,
+                'reason' => $validated['reason'],
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
 
         return response()->json([
             'message' => 'User account unsuspended successfully.',
@@ -280,6 +338,19 @@ class UserMonitorController extends Controller
             'previous_status' => $previousStatus,
         ]);
 
+        AdminNotification::notify(
+            'seller',
+            'Seller access revoked',
+            "{$user->name}'s seller access was revoked.",
+            [
+                'user_id' => $user->id,
+                'seller_registration_id' => $registration->id,
+                'reason' => $validated['reason'],
+                'previous_status' => $previousStatus,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
         return response()->json([
             'message' => 'Seller role revoked successfully.',
         ]);
@@ -314,6 +385,18 @@ class UserMonitorController extends Controller
             'seller_registration_id' => $registration->id,
         ]);
 
+        AdminNotification::notify(
+            'seller',
+            'Seller access restored',
+            "{$user->name}'s seller access was restored.",
+            [
+                'user_id' => $user->id,
+                'seller_registration_id' => $registration->id,
+                'reason' => $validated['reason'],
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
         return response()->json([
             'message' => 'Seller role restored successfully.',
         ]);
@@ -338,6 +421,17 @@ class UserMonitorController extends Controller
 
         $this->logAction($request, $user, 'delete-account', $validated['reason'], $snapshot);
 
+        AdminNotification::notify(
+            'user',
+            'User deleted',
+            "{$user->name}'s account was deleted by admin.",
+            [
+                'user_id' => $user->id,
+                'reason' => $validated['reason'],
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
         $user->tokens()->delete();
         $user->delete();
 
@@ -348,14 +442,6 @@ class UserMonitorController extends Controller
 
     private function logAction(Request $request, User $targetUser, string $action, string $reason, array $details = []): void
     {
-        DB::table('admin_user_actions')->insert([
-            'admin_user_id' => $request->user()?->id,
-            'target_user_id' => $targetUser->id,
-            'action' => $action,
-            'reason' => $reason,
-            'details' => empty($details) ? null : json_encode($details),
-            'created_at' => now(),
-            'updated_at' => now(),
-        ]);
+        AdminAudit::log($request, $action, $reason, $targetUser->id, $details);
     }
 }

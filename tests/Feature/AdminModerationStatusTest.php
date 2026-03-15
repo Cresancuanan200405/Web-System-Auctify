@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\SellerRegistration;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -101,6 +102,8 @@ class AdminModerationStatusTest extends TestCase
     {
         $admin = User::factory()->create([
             'is_admin' => true,
+            'admin_mfa_enabled' => true,
+            'admin_mfa_secret' => encrypt('JBSWY3DPEHPK3PXP'),
         ]);
         $adminToken = $admin->createToken('admin-moderation')->plainTextToken;
 
@@ -117,6 +120,8 @@ class AdminModerationStatusTest extends TestCase
             'status' => 'submitted',
             'submitted_at' => now(),
         ]);
+
+        Cache::put('admin-mfa-step-up:'.$admin->id, time(), now()->addMinutes(10));
 
         $this->withToken($adminToken)
             ->postJson("/api/admin/users/{$user->id}/revoke-seller", [

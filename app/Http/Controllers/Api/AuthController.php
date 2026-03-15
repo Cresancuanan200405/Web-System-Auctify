@@ -5,12 +5,15 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
+use App\Models\AdminNotification;
+use App\Models\AdminSetting;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rules\Password;
 use Laravel\Socialite\Facades\Socialite;
 
 class AuthController extends Controller
@@ -70,6 +73,10 @@ class AuthController extends Controller
         $isNewGoogleAccount = false;
 
         if (! $user) {
+            if (! (bool) AdminSetting::getValue('allow_registrations', true)) {
+                return redirect()->away($frontendUrl . '/login?google_error=registrations_disabled');
+            }
+
             $isNewGoogleAccount = true;
             $user = User::create([
                 'name' => $googleUser->getName() ?: $googleUser->getNickname() ?: 'Google User',
@@ -167,6 +174,12 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request)
     {
+        if (! (bool) AdminSetting::getValue('allow_registrations', true)) {
+            return response()->json([
+                'message' => 'New account registrations are currently disabled by admin.',
+            ], 403);
+        }
+
         $validated = $request->validated();
         $deletedAccount = $this->findDeletedAccountRecord((string) ($validated['email'] ?? ''));
 
@@ -187,6 +200,13 @@ class AuthController extends Controller
             'last_login_at' => Carbon::now(),
         ])->save();
         $token = $user->createToken('auth')->plainTextToken;
+
+        AdminNotification::notify(
+            'user',
+            'New user registered',
+            "{$user->name} ({$user->email}) just created an account.",
+            ['user_id' => $user->id]
+        );
 
         return response()->json([
             'token' => $token,
@@ -290,7 +310,7 @@ class AuthController extends Controller
             'birthday' => ['nullable', 'date'],
             'gender' => ['nullable', 'string', 'in:male,female'],
             'current_password' => ['nullable', 'string'],
-            'password' => ['nullable', 'string', 'min:8', 'confirmed'],
+            'password' => ['nullable', 'string', Password::defaults(), 'confirmed'],
         ]);
 
         if (isset($validated['first_name']) || isset($validated['last_name'])) {

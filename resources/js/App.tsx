@@ -17,9 +17,9 @@ import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
 import { SellerProfilePage } from './pages/seller/SellerProfilePage';
 import { SellerStorePage } from './pages/SellerStorePage';
-import { ensureAdminAccount, getAdminSession, logoutAdmin } from './lib/adminAuth';
-import { HOME_CATEGORY_OPTIONS } from './lib/homeCategories';
-import { authService, directMessageService, sellerService } from './services/api';
+import { getAdminSession, logoutAdmin, syncAdminSession } from './lib/adminAuth';
+import { HOME_CATEGORY_OPTIONS, getCategoryValue, getSubcategoryValue } from './lib/homeCategories';
+import { authService, bidNotificationService, directMessageService, platformService, sellerService, type PublicPlatformSettings } from './services/api';
 import type { ViewMode, AccountSection } from './types';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -45,6 +45,22 @@ type AccountStatusDialog = {
     variant?: 'account' | 'conversation';
     badge?: string;
     status?: 'suspended' | 'deleted' | 'seller-revoked' | 'session-ended';
+};
+
+const defaultPlatformSettings: PublicPlatformSettings = {
+    allow_registrations: true,
+    maintenance_mode: false,
+    maintenance_message: 'Auctify is currently under maintenance. Please check back soon.',
+    enable_video_ads: true,
+    enable_carousel: true,
+    enable_promo_circles: true,
+    enable_live_chat: true,
+    enable_seller_store: true,
+    enable_home_search_suggestions: true,
+    max_listing_media_files: 10,
+    direct_message_max_attachments: 5,
+    max_home_search_results: 8,
+    max_admin_search_results: 8,
 };
 
 const AppContent: React.FC = () => {
@@ -96,11 +112,16 @@ const AppContent: React.FC = () => {
     const [activeSellerChatName, setActiveSellerChatName] = useState<string>('');
     const [activeSellerChatUserId, setActiveSellerChatUserId] = useState<number | null>(null);
     const [chatUnreadCount, setChatUnreadCount] = useState(0);
+    const [, setChatUnreadUsersCount] = useState(0);
+    const [bidUnreadCount, setBidUnreadCount] = useState(0);
     const [selectedHomeCategory, setSelectedHomeCategory] = useState<string | null>(null);
+    const [selectedHomeSubcategory, setSelectedHomeSubcategory] = useState<string | null>(null);
     const [auctionOrigin, setAuctionOrigin] = useState<'home' | 'seller-store' | 'account-orders' | 'account-reviews' | null>(null);
     const [sellerStoreOrigin, setSellerStoreOrigin] = useState<'home' | 'seller-dashboard' | 'account-orders' | null>(null);
     const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => Boolean(getAdminSession()));
     const [accountStatusDialog, setAccountStatusDialog] = useState<AccountStatusDialog | null>(null);
+    const [platformSettings, setPlatformSettings] = useState<PublicPlatformSettings>(defaultPlatformSettings);
+    const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
 
     const resolveHomeCategoryFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -117,6 +138,10 @@ const AppContent: React.FC = () => {
         return matchedOption?.label ?? null;
     }, []);
 
+    const resolveHomeSubcategoryFromLocation = useCallback(() => {
+        return new URLSearchParams(window.location.search).get('subcategory')?.trim().toLowerCase() || null;
+    }, []);
+
     useEffect(() => {
         localStorage.setItem('ui_view_mode', viewMode);
     }, [viewMode]);
@@ -130,8 +155,89 @@ const AppContent: React.FC = () => {
     }, [accountSection]);
 
     useEffect(() => {
-        ensureAdminAccount();
+        const modalSelectors = [
+            '[role="dialog"][aria-modal="true"]',
+            '.seller-chat-dialog-backdrop',
+            '.delete-modal-overlay',
+            '.admin-home-dialog-overlay',
+            '.admin-lightbox-overlay',
+            '.modal-overlay',
+            '.dialog-backdrop',
+        ].join(', ');
+
+        const updateScrollLock = () => {
+            const hasOpenDialog = Boolean(document.querySelector(modalSelectors));
+            document.body.style.overflow = hasOpenDialog ? 'hidden' : '';
+            document.body.style.touchAction = hasOpenDialog ? 'none' : '';
+            document.documentElement.style.overflow = hasOpenDialog ? 'hidden' : '';
+        };
+
+        updateScrollLock();
+
+        const observer = new MutationObserver(() => {
+            updateScrollLock();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+            attributes: true,
+            attributeFilter: ['class', 'style', 'aria-modal'],
+        });
+
+        return () => {
+            observer.disconnect();
+            document.body.style.overflow = '';
+            document.body.style.touchAction = '';
+            document.documentElement.style.overflow = '';
+        };
     }, []);
+
+    useEffect(() => {
+        let isActive = true;
+
+        const loadPlatformSettings = async () => {
+            try {
+                const response = await platformService.getPublicSettings();
+                if (!isActive) {
+                    return;
+                }
+
+                setPlatformSettings((prev) => ({
+                    ...prev,
+                    ...response.settings,
+                }));
+            } catch {
+                // Keep defaults if settings cannot be fetched.
+            }
+        };
+
+        void loadPlatformSettings();
+
+        const interval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                void loadPlatformSettings();
+            }
+        }, 60000);
+
+        const handleFocus = () => {
+            void loadPlatformSettings();
+        };
+
+        window.addEventListener('focus', handleFocus);
+
+        return () => {
+            isActive = false;
+            window.clearInterval(interval);
+            window.removeEventListener('focus', handleFocus);
+        };
+    }, []);
+
+    useEffect(() => {
+        if (platformSettings.maintenance_mode && viewMode !== 'admin-login' && viewMode !== 'admin-dashboard') {
+            setShowMaintenanceDialog(true);
+        }
+    }, [platformSettings.maintenance_mode, viewMode]);
 
     useEffect(() => {
         if (!authUser) {
@@ -381,6 +487,11 @@ const AppContent: React.FC = () => {
     useEffect(() => {
         if (!authUser) {
             setChatUnreadCount(0);
+            setChatUnreadUsersCount(0);
+            return;
+        }
+
+        if (!platformSettings.enable_live_chat) {
             return;
         }
 
@@ -394,7 +505,9 @@ const AppContent: React.FC = () => {
                 }
 
                 const totalUnread = data.threads.reduce((sum, thread) => sum + Math.max(0, Number(thread.unread_count || 0)), 0);
+                const unreadUsers = data.threads.filter((thread) => Number(thread.unread_count || 0) > 0).length;
                 setChatUnreadCount(totalUnread);
+                setChatUnreadUsersCount(unreadUsers);
             } catch {
                 // Keep UI stable when unread count cannot be fetched.
             }
@@ -402,14 +515,76 @@ const AppContent: React.FC = () => {
 
         void fetchUnreadCount();
         const interval = window.setInterval(() => {
-            void fetchUnreadCount();
-        }, 5000);
+            if (document.visibilityState === 'visible') {
+                void fetchUnreadCount();
+            }
+        }, 20000);
 
         return () => {
             isActive = false;
             window.clearInterval(interval);
         };
-    }, [authUser, isSellerChatOpen]);
+    }, [authUser, platformSettings.enable_live_chat]);
+
+    useEffect(() => {
+        if (!authUser) {
+            setBidUnreadCount(0);
+            return;
+        }
+
+        if (!platformSettings.enable_live_chat) {
+            return;
+        }
+
+        let isActive = true;
+        const seenStorageKey = `seen_bid_notifications_${authUser.id}`;
+
+        const getSeenKeys = (): Set<string> => {
+            try {
+                const stored = localStorage.getItem(seenStorageKey);
+                return stored ? new Set<string>(JSON.parse(stored) as string[]) : new Set<string>();
+            } catch {
+                return new Set<string>();
+            }
+        };
+
+        const fetchBidUnreadCount = async () => {
+            try {
+                const data = await bidNotificationService.getMyNotifications();
+                if (!isActive) {
+                    return;
+                }
+
+                const seenKeys = getSeenKeys();
+                const unread = (data.items ?? []).filter((item) => !seenKeys.has(item.key)).length;
+                setBidUnreadCount(unread);
+            } catch {
+                // Keep UI stable when bid unread count cannot be fetched.
+            }
+        };
+
+        const handleSeenUpdated = () => {
+            void fetchBidUnreadCount();
+        };
+
+        void fetchBidUnreadCount();
+
+        const interval = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                void fetchBidUnreadCount();
+            }
+        }, 20000);
+
+        window.addEventListener('bid-notifications-seen-updated', handleSeenUpdated);
+
+        return () => {
+            isActive = false;
+            window.clearInterval(interval);
+            window.removeEventListener('bid-notifications-seen-updated', handleSeenUpdated);
+        };
+    }, [authUser, platformSettings.enable_live_chat]);
+
+    const combinedChatBadgeCount = chatUnreadCount + bidUnreadCount;
 
     const applyRouteFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -418,6 +593,7 @@ const AppContent: React.FC = () => {
         if (segments.length === 0) {
             const resolvedCategory = resolveHomeCategoryFromLocation();
             setSelectedHomeCategory(resolvedCategory);
+            setSelectedHomeSubcategory(resolvedCategory ? resolveHomeSubcategoryFromLocation() : null);
             setViewMode(resolvedCategory ? 'category' : 'home');
             return;
         }
@@ -425,12 +601,14 @@ const AppContent: React.FC = () => {
         if (segments[0] === 'category') {
             const resolvedCategory = resolveHomeCategoryFromLocation();
             setSelectedHomeCategory(resolvedCategory);
+            setSelectedHomeSubcategory(resolvedCategory ? resolveHomeSubcategoryFromLocation() : null);
             setViewMode(resolvedCategory ? 'category' : 'home');
             return;
         }
 
         if (segments[0] === 'login') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setAuthMode('login');
             setViewMode('auth');
             return;
@@ -438,6 +616,7 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'admin') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
 
             if (segments[1] === 'dashboard') {
                 if (getAdminSession()) {
@@ -457,6 +636,7 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'register') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setAuthMode('register');
             setViewMode('auth');
             return;
@@ -464,6 +644,7 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'account') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setViewMode('account');
             const sectionFromPath = segments[1] as AccountSection | undefined;
             const section = sectionFromPath && VALID_ACCOUNT_SECTIONS.includes(sectionFromPath)
@@ -475,12 +656,14 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'bag') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setViewMode('bag');
             return;
         }
 
         if (segments[0] === 'auction') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setAuctionOrigin(null);
             const auctionId = Number(segments[1]);
             if (Number.isInteger(auctionId) && auctionId > 0) {
@@ -495,7 +678,16 @@ const AppContent: React.FC = () => {
         }
 
         if (segments[0] === 'seller-store') {
+            if (!platformSettings.enable_seller_store) {
+                setSelectedHomeCategory(null);
+                setSelectedHomeSubcategory(null);
+                setViewMode('home');
+                window.history.replaceState({}, '', '/');
+                return;
+            }
+
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             setSellerStoreOrigin(null);
             const sellerId = Number(segments[1]);
             if (Number.isInteger(sellerId) && sellerId > 0) {
@@ -514,6 +706,7 @@ const AppContent: React.FC = () => {
 
         if (segments[0] === 'seller') {
             setSelectedHomeCategory(null);
+            setSelectedHomeSubcategory(null);
             if (segments[1] === 'details') {
                 setViewMode('seller-profile');
                 return;
@@ -539,12 +732,14 @@ const AppContent: React.FC = () => {
         }
 
         setSelectedHomeCategory(null);
+        setSelectedHomeSubcategory(null);
         setViewMode('home');
-    }, [resolveHomeCategoryFromLocation]);
+    }, [platformSettings.enable_seller_store, resolveHomeCategoryFromLocation, resolveHomeSubcategoryFromLocation]);
 
     const handleNavigateHome = () => {
         setViewMode('home');
         setSelectedHomeCategory(null);
+        setSelectedHomeSubcategory(null);
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
         setActiveAuctionId(null);
@@ -556,20 +751,28 @@ const AppContent: React.FC = () => {
         window.history.pushState({}, '', '/');
     };
 
-    const handleNavigateHomeCategory = (categoryLabel: string) => {
+    const handleNavigateHomeCategory = (categoryLabel: string, subcategoryValue?: string) => {
         const normalized = categoryLabel.trim().toLowerCase();
         const matchedOption = HOME_CATEGORY_OPTIONS.find((option) => option.label.toLowerCase() === normalized || option.value === normalized);
+        const normalizedSubcategory = subcategoryValue?.trim().toLowerCase() || null;
 
         setViewMode('category');
         setSelectedHomeCategory(matchedOption?.label ?? categoryLabel);
+        setSelectedHomeSubcategory(normalizedSubcategory);
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
         setActiveAuctionId(null);
         setActiveSellerStoreId(null);
         setActiveSellerStoreName('');
 
+        const queryParams = new URLSearchParams();
+        if (normalizedSubcategory) {
+            queryParams.set('subcategory', normalizedSubcategory);
+        }
+
         const path = matchedOption ? `/category/${matchedOption.value}` : '/category';
-        window.history.pushState({}, '', path);
+        const query = queryParams.toString();
+        window.history.pushState({}, '', `${path}${query ? `?${query}` : ''}`);
         window.scrollTo(0, 0);
     };
 
@@ -583,6 +786,11 @@ const AppContent: React.FC = () => {
     };
 
     const handleNavigateSellerStore = (sellerId: number, sellerName?: string, source: 'home' | 'seller-dashboard' | 'account-orders' | null = 'home') => {
+        if (!platformSettings.enable_seller_store) {
+            toast.info('Seller stores are temporarily unavailable.');
+            return;
+        }
+
         setAuctionOrigin(null);
         setSellerStoreOrigin(source);
         setActiveSellerStoreId(sellerId);
@@ -604,6 +812,11 @@ const AppContent: React.FC = () => {
     };
 
     const handleOpenSellerChat = () => {
+        if (!platformSettings.enable_live_chat) {
+            toast.info('Live chat is currently disabled by admin settings.');
+            return;
+        }
+
         if (!activeSellerStoreId) {
             return;
         }
@@ -629,6 +842,11 @@ const AppContent: React.FC = () => {
     };
 
     const handleOpenUserMessages = () => {
+        if (!platformSettings.enable_live_chat) {
+            toast.info('Live chat is currently disabled by admin settings.');
+            return;
+        }
+
         if (!authUser) {
             setAuthMode('login');
             setViewMode('auth');
@@ -660,6 +878,11 @@ const AppContent: React.FC = () => {
     };
 
     const handleNavigateRegister = () => {
+        if (!platformSettings.allow_registrations) {
+            toast.info('New registrations are temporarily disabled by admin.');
+            return;
+        }
+
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
         setAuthMode('register');
@@ -761,13 +984,13 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleAdminLogout = () => {
+    const handleAdminLogout = useCallback(() => {
         logoutAdmin();
         setIsAdminAuthenticated(false);
         setViewMode('admin-login');
         window.history.pushState({}, '', '/admin/login');
         window.scrollTo(0, 0);
-    };
+    }, []);
 
     const handleAccountDeleted = () => {
         logout();
@@ -869,12 +1092,59 @@ const AppContent: React.FC = () => {
     }, [applyRouteFromLocation]);
 
     useEffect(() => {
+        if (viewMode !== 'admin-login' && viewMode !== 'admin-dashboard') {
+            return;
+        }
+
+        let isActive = true;
+
+        const verifyAdminSession = async () => {
+            const session = await syncAdminSession();
+
+            if (!isActive) {
+                return;
+            }
+
+            if (session) {
+                setIsAdminAuthenticated(true);
+
+                if (viewMode === 'admin-login') {
+                    setViewMode('admin-dashboard');
+                    window.history.replaceState({}, '', '/admin/dashboard');
+                }
+
+                return;
+            }
+
+            setIsAdminAuthenticated(false);
+
+            if (viewMode === 'admin-dashboard') {
+                setViewMode('admin-login');
+                window.history.replaceState({}, '', '/admin/login');
+            }
+        };
+
+        void verifyAdminSession();
+
+        return () => {
+            isActive = false;
+        };
+    }, [viewMode]);
+
+    useEffect(() => {
         const handleOpenAuctifyChat = (event: Event) => {
             const customEvent = event as CustomEvent<{ sellerUserId?: number; sellerName?: string }>;
             const sellerUserId = customEvent.detail?.sellerUserId;
             const sellerName = customEvent.detail?.sellerName;
 
             if (!sellerUserId) {
+                return;
+            }
+
+            if (!platformSettings.enable_live_chat) {
+                window.dispatchEvent(new CustomEvent('auctify-toast', {
+                    detail: { type: 'info', message: 'Live chat is currently disabled by admin settings.' },
+                }));
                 return;
             }
 
@@ -904,7 +1174,7 @@ const AppContent: React.FC = () => {
         return () => {
             window.removeEventListener('open-auctify-chat', handleOpenAuctifyChat as EventListener);
         };
-    }, [authUser]);
+    }, [authUser, platformSettings.enable_live_chat]);
 
     const shouldReturnToSellerStoreFromAuction =
         auctionOrigin === 'seller-store' &&
@@ -984,9 +1254,12 @@ const AppContent: React.FC = () => {
                     onNavigateAccount={handleNavigateAccount}
                     onNavigateSellerProfile={handleNavigateSellerProfile}
                     onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
+                    onNavigateSellerStore={(sellerId, sellerName) => handleNavigateSellerStore(sellerId, sellerName, isSellerContextView ? 'seller-dashboard' : 'home')}
                     showSellerDashboardButton={canAccessSellerDashboard}
                     onNavigateOrdersLogin={handleNavigateOrdersLogin}
                     onNavigateBag={handleNavigateBag}
+                    enableHomeSearchSuggestions={platformSettings.enable_home_search_suggestions}
+                    maxHomeSearchResults={platformSettings.max_home_search_results}
                     onLogout={handleLogout}
                 />
             )}
@@ -995,6 +1268,12 @@ const AppContent: React.FC = () => {
                 <Navigation
                     activeCategory={(viewMode === 'home' || viewMode === 'category') ? selectedHomeCategory : null}
                     onSelectCategory={handleNavigateHomeCategory}
+                    onSelectSubcategory={(category, subcategory) => {
+                        const categoryValue = getCategoryValue(category);
+                        const subcategoryValue = getSubcategoryValue(categoryValue, subcategory);
+                        handleNavigateHomeCategory(category, subcategoryValue);
+                    }}
+                    onNavigateAuction={(auctionId) => handleNavigateAuction(auctionId, 'home')}
                 />
             )}
 
@@ -1011,10 +1290,17 @@ const AppContent: React.FC = () => {
             {(viewMode === 'home' || viewMode === 'category') && !isAdminView && (
                 <HomePage
                     selectedCategory={selectedHomeCategory}
+                    selectedSubcategory={selectedHomeSubcategory}
+                    featureFlags={{
+                        enableVideoAds: platformSettings.enable_video_ads,
+                        enableCarousel: platformSettings.enable_carousel,
+                        enablePromoCircles: platformSettings.enable_promo_circles,
+                    }}
                     isCategoryPage={viewMode === 'category'}
                     onNavigateHome={handleNavigateHome}
                     onNavigateCategory={handleNavigateHomeCategory}
                     onNavigateToRegister={handleNavigateRegister}
+                    onNavigateToBrowse={handleNavigateHome}
                     onNavigateToWishlist={handleNavigateWishlistFromHome}
                     onNavigateToAuction={handleNavigateAuction}
                 />
@@ -1043,7 +1329,7 @@ const AppContent: React.FC = () => {
 
                         handleNavigateHome();
                     }}
-                    onNavigateSellerDashboard={() => handleNavigateSellerDashboard('products')}
+                    onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
                     onNavigateToRegister={handleNavigateRegister}
                     onNavigateToWishlist={handleNavigateWishlistFromHome}
                     onNavigateToSellerStore={handleNavigateSellerStore}
@@ -1071,7 +1357,7 @@ const AppContent: React.FC = () => {
                     backBreadcrumbLabel={sellerStoreOrigin === 'account-orders' ? 'Orders & Tracking' : sellerStoreOrigin === 'seller-dashboard' ? 'Seller Dashboard' : 'Home'}
                     onNavigateToAuction={handleNavigateAuction}
                     onMessageSeller={handleOpenSellerChat}
-                    canMessageSeller={!authUser || authUser.id !== activeSellerStoreId}
+                    canMessageSeller={platformSettings.enable_live_chat && (!authUser || authUser.id !== activeSellerStoreId)}
                 />
             )}
 
@@ -1117,7 +1403,7 @@ const AppContent: React.FC = () => {
 
             {!isSellerContextView && !isAdminView && <Footer />}
 
-            {viewMode === 'seller' && !isAdminView && (
+            {viewMode === 'seller' && !isAdminView && platformSettings.enable_live_chat && (
                 <button
                     className="seller-chat-button"
                     aria-label="Seller chat support"
@@ -1136,25 +1422,31 @@ const AppContent: React.FC = () => {
                         </svg>
                     </span>
                     <span className="seller-chat-label">Chat</span>
+                    {combinedChatBadgeCount > 0 && (
+                        <span className="chat-button-badge" aria-label={`${combinedChatBadgeCount} unread chat updates`}>
+                            {combinedChatBadgeCount > 99 ? '99+' : combinedChatBadgeCount}
+                        </span>
+                    )}
                 </button>
             )}
 
-            {authUser && !isAdminView && (
+            {authUser && !isAdminView && platformSettings.enable_live_chat && (
                 <SellerChatDialog
                     isOpen={isSellerChatOpen && viewMode !== 'auth'}
                     onClose={() => setIsSellerChatOpen(false)}
                     preferredUserId={activeSellerChatUserId}
                     preferredUserName={activeSellerChatName}
                     onNavigateSellerStore={(sellerId, sellerName) => handleNavigateSellerStore(sellerId, sellerName, isSellerContextView ? 'seller-dashboard' : 'home')}
+                    onNavigateAuction={(auctionId) => handleNavigateAuction(auctionId, 'home')}
                 />
             )}
 
-            {!isSellerContextView && !isAdminView && (
+            {!isSellerContextView && !isAdminView && platformSettings.enable_live_chat && (
                 <button className="chat-button" aria-label="Open messages" onClick={handleOpenUserMessages}>
                     <span>A</span>
-                    {chatUnreadCount > 0 && (
-                        <span className="chat-button-badge" aria-label={`${chatUnreadCount} unread messages`}>
-                            {chatUnreadCount > 99 ? '99+' : chatUnreadCount}
+                    {combinedChatBadgeCount > 0 && (
+                        <span className="chat-button-badge" aria-label={`${combinedChatBadgeCount} unread messages and bid alerts`}>
+                            {combinedChatBadgeCount > 99 ? '99+' : combinedChatBadgeCount}
                         </span>
                     )}
                 </button>
@@ -1194,6 +1486,43 @@ const AppContent: React.FC = () => {
                                     type="button"
                                     className="delete-modal-confirm"
                                     onClick={() => setAccountStatusDialog(null)}
+                                >
+                                    Okay
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {showMaintenanceDialog && !isAdminView && (
+                <div className="delete-modal-overlay" role="presentation" onClick={() => setShowMaintenanceDialog(false)}>
+                    <div className="delete-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                        <div className="delete-modal-header">
+                            <h3 className="delete-modal-title">Maintenance Notice</h3>
+                        </div>
+                        <div className="delete-modal-body">
+                            <p className="delete-modal-text">{platformSettings.maintenance_message}</p>
+                            <div className="delete-modal-actions">
+                                <button
+                                    type="button"
+                                    className="delete-modal-confirm"
+                                    onClick={() => {
+                                        setShowMaintenanceDialog(false);
+
+                                        if (authUser) {
+                                            logout();
+                                            setAuctionOrigin(null);
+                                            setSellerStoreOrigin(null);
+                                            setIsSellerChatOpen(false);
+                                            setActiveSellerChatUserId(null);
+                                            setActiveSellerChatName('');
+                                            setAuthMode('login');
+                                            setViewMode('auth');
+                                            window.history.pushState({}, '', '/login');
+                                            window.scrollTo(0, 0);
+                                        }
+                                    }}
                                 >
                                     Okay
                                 </button>

@@ -25,6 +25,9 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
+        'admin_mfa_enabled',
+        'admin_mfa_secret',
+        'admin_mfa_recovery_codes',
         'is_suspended',
         'suspended_reason',
         'suspended_at',
@@ -46,6 +49,8 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'admin_mfa_secret',
+        'admin_mfa_recovery_codes',
     ];
 
     /**
@@ -59,6 +64,8 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
+            'admin_mfa_enabled' => 'boolean',
+            'admin_mfa_recovery_codes' => 'array',
             'is_suspended' => 'boolean',
             'suspended_at' => 'datetime',
             'suspended_until' => 'datetime',

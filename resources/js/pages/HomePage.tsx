@@ -14,10 +14,17 @@ import {
 
 interface HomePageProps {
     selectedCategory: string | null;
+    selectedSubcategory?: string | null;
+    featureFlags?: {
+        enableVideoAds: boolean;
+        enableCarousel: boolean;
+        enablePromoCircles: boolean;
+    };
     isCategoryPage?: boolean;
     onNavigateHome?: () => void;
     onNavigateCategory?: (category: string) => void;
     onNavigateToRegister: () => void;
+    onNavigateToBrowse?: () => void;
     onNavigateToWishlist: () => void;
     onNavigateToAuction: (auctionId: number) => void;
 }
@@ -79,7 +86,7 @@ const DashboardDisappearanceCountdown: React.FC<{ targetTime: number; onExpire: 
     return <p className="home-product-expiry-note">Disappears in {label}</p>;
 };
 
-export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategoryPage = false, onNavigateHome, onNavigateCategory, onNavigateToRegister, onNavigateToWishlist, onNavigateToAuction }) => {
+export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, selectedSubcategory: _selectedSubcategory, featureFlags: _featureFlags, isCategoryPage = false, onNavigateHome, onNavigateCategory, onNavigateToRegister, onNavigateToBrowse: _onNavigateToBrowse, onNavigateToWishlist, onNavigateToAuction }) => {
     const { authUser } = useAuth();
     const carouselRef = useRef<HTMLDivElement>(null);
     const productsSectionRef = useRef<HTMLElement | null>(null);
@@ -94,6 +101,8 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
     const carouselSlides = homePageConfig.slides;
     const promoCircles = homePageConfig.circles;
     const videoAds = homePageConfig.videoAds;
+    const miniSlides = homePageConfig.miniSlides ?? [];
+    const [currentMiniSlide, setCurrentMiniSlide] = useState(0);
 
     const wishlistKey = `wishlist_items_${authUser?.id ?? 'guest'}`;
     const [wishlistItems, setWishlistItems] = useLocalStorage<WishlistItem[]>(wishlistKey, []);
@@ -135,6 +144,14 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
         }
     };
 
+    const scrollMiniCarouselLeft = () => {
+        setCurrentMiniSlide((prev) => (prev - 1 + miniSlides.length) % Math.max(1, miniSlides.length));
+    };
+
+    const scrollMiniCarouselRight = () => {
+        setCurrentMiniSlide((prev) => (prev + 1) % Math.max(1, miniSlides.length));
+    };
+
     useEffect(() => {
         if (isCategoryPage) {
             return;
@@ -154,6 +171,25 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
 
         setCurrentSlide(0);
     }, [carouselSlides.length, currentSlide]);
+
+    useEffect(() => {
+        if (isCategoryPage || miniSlides.length === 0) {
+            return;
+        }
+
+        const interval = setInterval(() => {
+            setCurrentMiniSlide((prev) => (prev + 1) % miniSlides.length);
+        }, 7000);
+
+        return () => clearInterval(interval);
+    }, [miniSlides.length, isCategoryPage]);
+
+    useEffect(() => {
+        if (currentMiniSlide < miniSlides.length) {
+            return;
+        }
+        setCurrentMiniSlide(0);
+    }, [miniSlides.length, currentMiniSlide]);
 
     useEffect(() => {
         let isActive = true;
@@ -440,7 +476,7 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
                         <div className="brand-carousel" ref={carouselRef}>
                             {promoCircles.map((circle) => (
                                 <div key={circle.id} className="brand-circle">
-                                    <div className={`circle ${circle.tone === 'yellow' ? 'yellow' : 'black'}`}>
+                                    <div className={`circle ${circle.tone}`}>
                                         <span className="circle-text">{circle.label}</span>
                                     </div>
                                     <p className="circle-label">{circle.discount}</p>
@@ -480,21 +516,84 @@ export const HomePage: React.FC<HomePageProps> = ({ selectedCategory, isCategory
                         </div>
                     </div>
 
-                    <section className="video-ad-section" aria-label="Video Advertisement Placeholder">
+                    {miniSlides.length > 0 && (() => {
+                        const currentMiniSlideData = miniSlides[currentMiniSlide] ?? miniSlides[0];
+                        return (
+                        <div
+                            className="mini-carousel-banner"
+                            style={{ backgroundImage: currentMiniSlideData?.image ? `url('${resolveMediaUrl(currentMiniSlideData.image)}')` : undefined }}
+                            aria-label="Mini carousel"
+                        >
+                            <div className="mini-carousel-overlay" />
+                            <div className="mini-carousel-body">
+                                <div className="mini-carousel-text">
+                                    <span className="mini-carousel-eyebrow">{currentMiniSlideData?.subtitle || 'FEATURED'}</span>
+                                    <h2 className="mini-carousel-title">{currentMiniSlideData?.title || 'Featured Auctions'}</h2>
+                                    <p className="mini-carousel-price">{currentMiniSlideData?.price || ''}</p>
+                                    {(currentMiniSlideData?.brands ?? []).length > 0 && (
+                                        <div className="mini-carousel-brands">
+                                            {(currentMiniSlideData?.brands ?? []).map((brand, idx) => (
+                                                <span key={idx}>{brand}</span>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                            <div className="mini-carousel-controls">
+                                <button className="mini-carousel-arrow" onClick={scrollMiniCarouselLeft} aria-label="Previous mini slide">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="15 18 9 12 15 6" /></svg>
+                                </button>
+                                <div className="mini-carousel-dots">
+                                    {miniSlides.map((_, idx) => (
+                                        <button
+                                            key={idx}
+                                            className={`mini-carousel-dot ${idx === currentMiniSlide ? 'active' : ''}`}
+                                            onClick={() => setCurrentMiniSlide(idx)}
+                                            aria-label={`Go to mini slide ${idx + 1}`}
+                                        />
+                                    ))}
+                                </div>
+                                <button className="mini-carousel-arrow" onClick={scrollMiniCarouselRight} aria-label="Next mini slide">
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                        );
+                    })()}
+
+                    <section className="video-ad-section" aria-label="Homepage video ads">
                         <div className="video-ad-grid">
-                            {videoAds.map((video) => (
-                                <article
-                                    key={video.id}
-                                    className="video-ad-placeholder"
-                                    style={video.image.trim() ? { backgroundImage: `url('${video.image}')` } : undefined}
-                                >
-                                    <div className="video-ad-overlay" />
-                                    <div className="video-ad-copy">
-                                        <div className="video-ad-label">{video.title}</div>
-                                        <div className="video-ad-size">{video.subtitle}</div>
-                                    </div>
-                                </article>
-                            ))}
+                            {videoAds.map((video) => {
+                                const videoUrl = resolveMediaUrl(video.videoUrl);
+                                const imageUrl = resolveMediaUrl(video.imageUrl || video.image);
+
+                                return (
+                                    <article
+                                        key={video.id}
+                                        className={`video-ad-placeholder ${videoUrl ? 'has-video' : 'has-image'}`}
+                                        style={!videoUrl && imageUrl ? { backgroundImage: `url('${imageUrl}')` } : undefined}
+                                    >
+                                        {videoUrl && (
+                                            <video
+                                                className="video-ad-media"
+                                                src={videoUrl}
+                                                poster={imageUrl || undefined}
+                                                autoPlay
+                                                loop
+                                                muted
+                                                playsInline
+                                                preload="metadata"
+                                                controls
+                                            />
+                                        )}
+                                        <div className="video-ad-overlay" />
+                                        <div className="video-ad-copy">
+                                            <div className="video-ad-label">{video.title}</div>
+                                            <div className="video-ad-size">{video.description || video.subtitle}</div>
+                                        </div>
+                                    </article>
+                                );
+                            })}
                         </div>
                     </section>
                 </>

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
-import { HOME_CATEGORY_OPTIONS } from '../../lib/homeCategories';
+import { HOME_CATEGORY_OPTIONS, getCategoryLabel, getSubcategoryLabel, getSubcategoryOptions } from '../../lib/homeCategories';
 import { sellerService } from '../../services/api';
 import type { AuctionProduct, SellerRegistration, OrderHistoryItem } from '../../types';
 import { getAuctionDisplayStatus, parseAuctionTimestamp } from '../../utils/auctionStatus';
@@ -40,6 +40,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const [now, setNow] = useState(() => Date.now());
     const [savingProduct, setSavingProduct] = useState(false);
     const [deletingProduct, setDeletingProduct] = useState(false);
+    const [orderTab, setOrderTab] = useState<'active' | 'history'>('active');
     const [removedMediaIds, setRemovedMediaIds] = useState<number[]>([]);
     const addMoreMediaInputRef = useRef<HTMLInputElement | null>(null);
     const [additionalMediaEntries, setAdditionalMediaEntries] = useState<
@@ -48,6 +49,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const [editForm, setEditForm] = useState({
         title: '',
         category: '',
+        subcategory: '',
         description: '',
         startingPrice: '',
         maxIncrement: '',
@@ -127,12 +129,17 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const mapProductToEditForm = (product: AuctionProduct) => ({
         title: product.title ?? '',
         category: product.category ?? '',
+        subcategory: product.subcategory ?? '',
         description: product.description ?? '',
         startingPrice: String(product.starting_price ?? ''),
         maxIncrement: String(product.max_increment ?? ''),
         status: product.status ?? 'open',
         endsAt: formatDateTimeLocal(product.ends_at),
     });
+
+    const editSubcategoryOptions = useMemo(() => {
+        return getSubcategoryOptions(editForm.category);
+    }, [editForm.category]);
 
     useEffect(() => {
         let isActive = true;
@@ -393,7 +400,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
 
         const interval = window.setInterval(() => {
             setNow(Date.now());
-        }, 1000);
+        }, 5000);
 
         return () => {
             window.clearInterval(interval);
@@ -535,6 +542,11 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
             return;
         }
 
+        if (!editForm.subcategory) {
+            toast.error('Subcategory is required.');
+            return;
+        }
+
         const startPrice = Number(editForm.startingPrice);
         const increment = Number(editForm.maxIncrement);
 
@@ -559,6 +571,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
             const formData = new FormData();
             formData.append('title', editForm.title.trim());
             formData.append('category', editForm.category);
+            formData.append('subcategory', editForm.subcategory);
             formData.append('description', editForm.description.trim());
             formData.append('starting_price', String(startPrice));
             formData.append('max_increment', String(increment));
@@ -694,7 +707,6 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const SellerOrdersSection: React.FC = () => {
         const { orders, updateOrderStatus } = useSellerOrderHistory(authUser?.id);
         const [markedAsShipped, setMarkedAsShipped] = useState<Set<string>>(new Set());
-        const [orderTab, setOrderTab] = useState<'active' | 'history'>('active');
         const handleContactBuyer = (buyerUserId?: number | string, buyerName?: string) => {
             if (!buyerUserId) {
                 window.dispatchEvent(new CustomEvent('auctify-toast', { detail: { type: 'error', message: 'Buyer chat is unavailable for this order.' } }));
@@ -776,7 +788,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                 Product: <strong>${order.title}</strong><br/>
                                 Amount: <strong>${formatPeso(order.amount_paid)}</strong><br/>
                                 Ordered: ${formatDate(order.purchased_at)}<br/>
-                                Category: ${order.category}
+                                Category: ${getCategoryLabel(order.category)}${order.subcategory ? ` • ${getSubcategoryLabel(order.category, order.subcategory)}` : ''}
                             </div>
                         </div>
 
@@ -982,7 +994,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                             </div>
                                             <div className="seller-order-detail-block">
                                                 <p className="seller-order-detail-label">Category</p>
-                                                <p className="seller-order-detail-value">{order.category || 'Uncategorized'}</p>
+                                                <p className="seller-order-detail-value">{`${getCategoryLabel(order.category)}${order.subcategory ? ` • ${getSubcategoryLabel(order.category, order.subcategory)}` : ''}`}</p>
                                             </div>
                                         </div>
                                     </div>
@@ -1319,7 +1331,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                                             {displayStatus}
                                                         </span>
                                                     </div>
-                                                    <p className="seller-product-category">{product.category || 'Uncategorized'}</p>
+                                                    <p className="seller-product-category">{`${getCategoryLabel(product.category)}${product.subcategory ? ` • ${getSubcategoryLabel(product.category, product.subcategory)}` : ''}`}</p>
                                                     <div className="seller-product-pricing">
                                                         <p>Start: {formatPeso(product.starting_price)}</p>
                                                         <p>Max Increment: {formatPeso(product.max_increment)}</p>
@@ -1375,7 +1387,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                                                 <p className="seller-products-table-id">ID #{product.id}</p>
                                                             </div>
                                                         </td>
-                                                        <td className="seller-products-table-cell">{product.category || '—'}</td>
+                                                        <td className="seller-products-table-cell">{`${getCategoryLabel(product.category)}${product.subcategory ? ` • ${getSubcategoryLabel(product.category, product.subcategory)}` : ''}`}</td>
                                                         <td className="seller-products-table-cell seller-products-table-price">{formatPeso(product.starting_price)}</td>
                                                         <td className="seller-products-table-cell seller-products-table-price">{formatPeso(product.current_price)}</td>
                                                         <td className="seller-products-table-cell">{product.bids_count ?? 0}</td>
@@ -1770,10 +1782,29 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                         <select
                                             className="seller-input"
                                             value={editForm.category}
-                                            onChange={(event) => setEditForm((prev) => ({ ...prev, category: event.target.value }))}
+                                            onChange={(event) => {
+                                                const nextCategory = event.target.value;
+                                                setEditForm((prev) => ({ ...prev, category: nextCategory, subcategory: '' }));
+                                            }}
                                         >
                                             <option value="">Select category</option>
                                             {HOME_CATEGORY_OPTIONS.map((option) => (
+                                                <option key={option.value} value={option.value}>
+                                                    {option.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <p className="seller-product-detail-label">Subcategory</p>
+                                        <select
+                                            className="seller-input"
+                                            value={editForm.subcategory}
+                                            onChange={(event) => setEditForm((prev) => ({ ...prev, subcategory: event.target.value }))}
+                                            disabled={!editForm.category}
+                                        >
+                                            <option value="">Select subcategory</option>
+                                            {editSubcategoryOptions.map((option) => (
                                                 <option key={option.value} value={option.value}>
                                                     {option.label}
                                                 </option>
@@ -1873,7 +1904,11 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                     </div>
                                     <div>
                                         <p className="seller-product-detail-label">Category</p>
-                                        <p className="seller-product-detail-value">{selectedProduct.category || 'Uncategorized'}</p>
+                                        <p className="seller-product-detail-value">{getCategoryLabel(selectedProduct.category)}</p>
+                                    </div>
+                                    <div>
+                                        <p className="seller-product-detail-label">Subcategory</p>
+                                        <p className="seller-product-detail-value">{getSubcategoryLabel(selectedProduct.category, selectedProduct.subcategory) || 'Not specified'}</p>
                                     </div>
                                     <div>
                                         <p className="seller-product-detail-label">Starting Price</p>

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
-import { HOME_CATEGORY_OPTIONS } from '../../lib/homeCategories';
+import { HOME_CATEGORY_OPTIONS, getSubcategoryLabel, getSubcategoryOptions } from '../../lib/homeCategories';
 import { sellerService } from '../../services/api';
 
 interface SellerAddProductPageProps {
@@ -25,6 +25,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
     const [endTimeValue, setEndTimeValue] = useState('7');
     const [productName, setProductName] = useState('');
     const [category, setCategory] = useState('');
+    const [subcategory, setSubcategory] = useState('');
     const [startingPrice, setStartingPrice] = useState('');
     const [maxIncrement, setMaxIncrement] = useState('');
     const [description, setDescription] = useState('');
@@ -166,6 +167,8 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
         return 'Example: 2 days means bidding ends exactly 2 days after the selected start time.';
     }, [endTimeMode]);
 
+    const subcategoryOptions = useMemo(() => getSubcategoryOptions(category), [category]);
+
     const handleSaveProduct = async () => {
         if (!productName.trim()) {
             toast.error('Product name is required.');
@@ -174,6 +177,11 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
 
         if (!category) {
             toast.error('Please select a category.');
+            return;
+        }
+
+        if (!subcategory) {
+            toast.error('Please select a subcategory.');
             return;
         }
 
@@ -203,6 +211,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
         const formData = new FormData();
         formData.append('title', productName.trim());
         formData.append('category', category);
+        formData.append('subcategory', subcategory);
         formData.append('starting_price', startingPrice);
         formData.append('max_increment', maxIncrement);
         formData.append('description', description.trim());
@@ -292,10 +301,30 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                                 <select
                                     className="seller-input"
                                     value={category}
-                                    onChange={(event) => setCategory(event.target.value)}
+                                    onChange={(event) => {
+                                        const nextCategory = event.target.value;
+                                        setCategory(nextCategory);
+                                        setSubcategory('');
+                                    }}
                                 >
                                     <option value="">Select category</option>
                                     {HOME_CATEGORY_OPTIONS.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="seller-input-wrap">
+                                <label className="seller-add-label">Subcategory</label>
+                                <select
+                                    className="seller-input"
+                                    value={subcategory}
+                                    onChange={(event) => setSubcategory(event.target.value)}
+                                    disabled={!category}
+                                >
+                                    <option value="">Select subcategory</option>
+                                    {subcategoryOptions.map((option) => (
                                         <option key={option.value} value={option.value}>
                                             {option.label}
                                         </option>
@@ -458,6 +487,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                         <p className="seller-add-side-title">{productName.trim() || 'Your product title will appear here'}</p>
                         <div className="seller-add-side-meta">
                             <p><span>Category</span><strong>{category || 'Not selected'}</strong></p>
+                            <p><span>Subcategory</span><strong>{getSubcategoryLabel(category, subcategory) || 'Not selected'}</strong></p>
                             <p><span>Start Price</span><strong>{startingPrice ? `P${startingPrice}` : 'P0.00'}</strong></p>
                             <p><span>Max Increment</span><strong>{maxIncrement ? `P${maxIncrement}` : 'P0.00'}</strong></p>
                             <p><span>Media</span><strong>{mediaEntries.length}/10</strong></p>
@@ -469,6 +499,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({ onNa
                         <ul>
                             <li className={productName.trim() ? 'done' : ''}>Clear product title</li>
                             <li className={category ? 'done' : ''}>Correct category selected</li>
+                            <li className={subcategory ? 'done' : ''}>Correct subcategory selected</li>
                             <li className={description.trim() ? 'done' : ''}>Detailed description</li>
                             <li className={mediaEntries.length > 0 ? 'done' : ''}>At least one media file</li>
                             <li className={Number(startingPrice) > 0 ? 'done' : ''}>Valid starting price</li>

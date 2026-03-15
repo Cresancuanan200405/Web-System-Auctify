@@ -16,6 +16,7 @@ class Auction extends Model
         'user_id',
         'title',
         'category',
+        'subcategory',
         'description',
         'starting_price',
         'max_increment',

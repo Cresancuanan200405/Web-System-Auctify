@@ -13,9 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->statefulApi();
         $middleware->encryptCookies(except: []);
+        $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminOnly::class,
+            'admin.ip' => \App\Http\Middleware\RestrictAdminIpAccess::class,
+            'admin.mfa.recent' => \App\Http\Middleware\RequireRecentAdminMfa::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

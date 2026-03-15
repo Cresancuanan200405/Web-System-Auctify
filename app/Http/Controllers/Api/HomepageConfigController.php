@@ -3,27 +3,27 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\HomepageConfig;
+use App\Support\HomepageContentMapper;
 
 class HomepageConfigController extends Controller
 {
     public function show()
     {
-        $config = HomepageConfig::query()->first();
-
-        if (! $config) {
-            return response()->json([
-                'config' => $this->defaultConfig(),
-            ]);
-        }
+        $config = HomepageContentMapper::configPayload();
 
         return response()->json([
-            'config' => [
-                'circles' => $config->circles ?? [],
-                'slides' => $config->slides ?? [],
-                'videoAds' => $config->video_ads ?? [],
-            ],
+            'config' => $this->isConfigEmpty($config)
+                ? $this->defaultConfig()
+                : $config,
         ]);
+    }
+
+    private function isConfigEmpty(array $config): bool
+    {
+        return empty($config['circles'])
+            && empty($config['slides'])
+            && empty($config['miniSlides'])
+            && empty($config['videoAds']);
     }
 
     private function defaultConfig(): array
@@ -83,6 +83,35 @@ class HomepageConfigController extends Controller
                     'title' => 'VIDEO ADS PLACEHOLDER',
                     'subtitle' => '1920 x 600 recommended',
                     'image' => '',
+                ],
+            ],
+            'miniSlides' => [
+                [
+                    'id' => 'ms1',
+                    'subtitle' => 'NEW ARRIVALS',
+                    'title' => 'Fresh Picks This Week',
+                    'price' => 'Starting from ₱500',
+                    'brands' => ['Art', 'Collectibles'],
+                    'disclaimer' => '',
+                    'image' => '/carousel/1.jpg',
+                ],
+                [
+                    'id' => 'ms2',
+                    'subtitle' => 'ENDING SOON',
+                    'title' => 'Last Chance Auctions',
+                    'price' => 'Bid before they\'re gone',
+                    'brands' => ['Electronics', 'Luxury'],
+                    'disclaimer' => '',
+                    'image' => '/carousel/2.jpg',
+                ],
+                [
+                    'id' => 'ms3',
+                    'subtitle' => 'TRENDING NOW',
+                    'title' => 'Most Watched Items',
+                    'price' => 'Join the bidding',
+                    'brands' => ['Fashion', 'Vehicles'],
+                    'disclaimer' => '',
+                    'image' => '/carousel/3.jpg',
                 ],
             ],
         ];

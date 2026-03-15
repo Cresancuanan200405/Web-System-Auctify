@@ -13,6 +13,37 @@ import type {
     DirectMessageThreadResponse,
 } from '../types';
 
+export interface PublicPlatformSettings {
+    allow_registrations: boolean;
+    maintenance_mode: boolean;
+    maintenance_message: string;
+    enable_video_ads: boolean;
+    enable_carousel: boolean;
+    enable_promo_circles: boolean;
+    enable_live_chat: boolean;
+    enable_seller_store: boolean;
+    enable_home_search_suggestions: boolean;
+    max_listing_media_files: number;
+    direct_message_max_attachments: number;
+    max_home_search_results: number;
+    max_admin_search_results: number;
+}
+
+export interface BidNotificationItem {
+    key: string;
+    type: 'new-bid' | 'outbid' | 'ended' | 'won' | 'seller-comment' | 'watching';
+    auction_id: number;
+    auction_title: string;
+    message: string;
+    created_at: string | null;
+    media_url?: string | null;
+}
+
+export interface BidNotificationListResponse {
+    items: BidNotificationItem[];
+    count: number;
+}
+
 export interface LoginCredentials {
     email: string;
     password: string;
@@ -85,6 +116,12 @@ export const authService = {
     me: async () => {
         return apiGet<{ user: User }>('/api/auth/me');
     }
+};
+
+export const platformService = {
+    getPublicSettings: async () => {
+        return apiGet<{ settings: PublicPlatformSettings }>('/api/settings/public');
+    },
 };
 
 // User Profile Services
@@ -294,5 +331,11 @@ export const directMessageService = {
 
     deleteThread: async (userId: number) => {
         return apiDelete<{ message: string }>(`/api/direct-messages/threads/${userId}`);
+    },
+};
+
+export const bidNotificationService = {
+    getMyNotifications: async () => {
+        return apiGet<BidNotificationListResponse>('/api/notifications/bids');
     },
 };

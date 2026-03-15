@@ -528,7 +528,7 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                             </div>
                                             <div className="seller-store-card-body">
                                                 <div className="seller-store-card-topline">
-                                                    <p className="seller-store-card-category">{(product.category || 'Product').toUpperCase()}</p>
+                                                    <p className="seller-store-card-category">{`${(product.category || 'Product').toUpperCase()}${product.subcategory ? ` • ${product.subcategory.toUpperCase()}` : ''}`}</p>
                                                     <span className="seller-store-card-bids">{bidCount} bid{bidCount === 1 ? '' : 's'}</span>
                                                 </div>
                                                 <p className="seller-store-card-title" title={product.title}>{product.title}</p>

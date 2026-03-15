@@ -4,6 +4,8 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auction\StoreAuctionRequest;
+use App\Models\AdminNotification;
+use App\Models\AdminSetting;
 use App\Models\Auction;
 use App\Models\SellerRegistration;
 use Illuminate\Http\JsonResponse;
@@ -172,6 +174,7 @@ class AuctionController extends Controller
                     'user_id' => $auction->user_id,
                     'title' => $auction->title,
                     'category' => $auction->category,
+                    'subcategory' => $auction->subcategory,
                     'description' => $auction->description,
                     'starting_price' => $auction->starting_price,
                     'max_increment' => $auction->max_increment,
@@ -260,6 +263,19 @@ class AuctionController extends Controller
 
         $auction->load('media');
 
+        AdminNotification::notify(
+            'seller',
+            'New seller listing created',
+            "{$request->user()->name} listed \"{$auction->title}\".",
+            [
+                'auction_id' => $auction->id,
+                'seller_user_id' => $request->user()->id,
+                'category' => $auction->category,
+                'starting_price' => (float) $auction->starting_price,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
         return response()->json($this->transformAuction($auction), 201);
     }
 
@@ -307,10 +323,11 @@ class AuctionController extends Controller
         if ($request->hasFile('media')) {
             $newFiles = $request->file('media');
             $existingMediaCount = $auction->media()->count();
+            $maxMediaFiles = max(1, (int) AdminSetting::getValue('max_listing_media_files', 10));
 
-            if ($existingMediaCount + count($newFiles) > 10) {
+            if ($existingMediaCount + count($newFiles) > $maxMediaFiles) {
                 return response()->json([
-                    'message' => 'You can upload a maximum of 10 media files per product.',
+                    'message' => "You can upload a maximum of {$maxMediaFiles} media files per product.",
                 ], 422);
             }
 
@@ -324,6 +341,17 @@ class AuctionController extends Controller
         }
 
         $auction->load('media');
+
+        AdminNotification::notify(
+            'seller',
+            'Seller listing updated',
+            "{$request->user()->name} updated listing \"{$auction->title}\".",
+            [
+                'auction_id' => $auction->id,
+                'seller_user_id' => $request->user()->id,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
 
         return response()->json($this->transformAuction($auction));
     }
@@ -342,6 +370,17 @@ class AuctionController extends Controller
         }
 
         $auction->delete();
+
+        AdminNotification::notify(
+            'seller',
+            'Seller listing removed',
+            "{$request->user()->name} removed listing \"{$auction->title}\".",
+            [
+                'auction_id' => $auction->id,
+                'seller_user_id' => $request->user()->id,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
 
         return response()->json([
             'message' => 'Auction deleted.',

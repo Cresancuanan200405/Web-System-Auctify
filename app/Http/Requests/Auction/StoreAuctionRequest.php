@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests\Auction;
 
+use App\Models\AdminSetting;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Carbon;
 
@@ -14,20 +15,23 @@ class StoreAuctionRequest extends FormRequest
 
     public function rules(): array
     {
+        $maxMediaFiles = max(1, (int) AdminSetting::getValue('max_listing_media_files', 10));
+
         return [
             'title' => ['required', 'string', 'max:255'],
             'category' => ['required', 'string', 'max:100'],
+            'subcategory' => ['nullable', 'string', 'max:120'],
             'description' => ['nullable', 'string'],
             'starting_price' => ['required', 'numeric', 'min:1'],
             'max_increment' => ['required', 'numeric', 'min:0'],
             'start_mode' => ['sometimes', 'in:now,scheduled'],
-            'end_time_mode' => ['sometimes', 'in:days,hours,minutes'],
+            'end_time_mode' => ['sometimes', 'in:days,hours,minutes,custom'],
             'end_time_value' => ['sometimes', 'integer', 'min:1'],
             'starts_at' => ['nullable', 'date'],
             'status' => ['sometimes', 'in:open,closed'],
             'removed_media_ids' => ['sometimes', 'array'],
             'removed_media_ids.*' => ['integer', 'min:1'],
-            'media' => ['sometimes', 'array', 'max:10'],
+            'media' => ['sometimes', 'array', 'max:' . $maxMediaFiles],
             'media.*' => ['file', 'max:51200', 'mimes:jpg,jpeg,jfif,png,gif,webp,bmp,tif,tiff,svg,avif,heic,heif,mp4,mov,webm,mkv,avi,m4v,3gp'],
             'ends_at' => ['nullable', 'date', 'after:starts_at', 'after:now'],
         ];

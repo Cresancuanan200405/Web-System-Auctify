@@ -4,11 +4,32 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Bid\StoreBidRequest;
+use App\Models\AdminNotification;
+use App\Models\AdminSetting;
 use App\Models\Auction;
+
 class BidController extends Controller
 {
     public function store(StoreBidRequest $request, Auction $auction)
     {
+        if ((bool) AdminSetting::getValue('require_verified_for_bidding', false) && ! (bool) $request->user()?->is_verified) {
+            return response()->json([
+                'message' => 'Only verified users can place bids right now.',
+            ], 422);
+        }
+
+        $dailyBidCap = max(1, (int) AdminSetting::getValue('max_daily_bids_per_user', 200));
+        $todayBidCount = $request->user()
+            ->bids()
+            ->where('created_at', '>=', now()->startOfDay())
+            ->count();
+
+        if ($todayBidCount >= $dailyBidCap) {
+            return response()->json([
+                'message' => 'You have reached today\'s bid limit. Please try again tomorrow.',
+            ], 429);
+        }
+
         if ((int) $auction->user_id === (int) $request->user()->id) {
             return response()->json([
                 'message' => 'You cannot bid on your own product.',
@@ -48,6 +69,21 @@ class BidController extends Controller
         $auction->update([
             'current_price' => number_format($amount, 2, '.', ''),
         ]);
+
+        $auction->loadMissing('user');
+        AdminNotification::notify(
+            'bid',
+            'New bid placed',
+            "{$request->user()->name} placed ₱" . number_format($amount, 2) . " on \"{$auction->title}\".",
+            [
+                'auction_id' => $auction->id,
+                'seller_user_id' => $auction->user_id,
+                'seller_name' => $auction->user?->name,
+                'bidder_user_id' => $request->user()->id,
+                'bid_amount' => $amount,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
 
         return response()->json($bid, 201);
     }

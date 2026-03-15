@@ -127,6 +127,7 @@ export interface AuctionProduct {
     };
     title: string;
     category?: string | null;
+    subcategory?: string | null;
     description?: string | null;
     starting_price: string;
     max_increment: string;
@@ -238,6 +239,7 @@ export interface OrderHistoryItem {
     auction_id: number;
     title: string;
     category?: string | null;
+    subcategory?: string | null;
     seller_user_id?: number;
     seller_name: string;
     seller_shop_name?: string;
@@ -257,6 +259,7 @@ export interface WishlistItem {
     id: number;
     title: string;
     category?: string | null;
+    subcategory?: string | null;
     price: string;
     mediaUrl?: string;
     mediaType?: 'image' | 'video';

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Models\AdminSetting;
 use App\Models\DirectMessageAttachment;
 use App\Models\DirectMessage;
 use App\Models\User;
@@ -125,7 +126,7 @@ class DirectMessageController extends Controller
 
         $validated = $request->validate([
             'message' => ['nullable', 'string', 'max:2000'],
-            'attachments' => ['nullable', 'array', 'max:5'],
+            'attachments' => ['nullable', 'array', 'max:' . max(1, (int) AdminSetting::getValue('direct_message_max_attachments', 5))],
             'attachments.*' => ['file', 'max:10240'],
         ]);
 
@@ -256,12 +257,17 @@ class DirectMessageController extends Controller
             return null;
         }
 
+        $sellerRegistration = $user->sellerRegistration;
+        $canExposeSellerShop = $sellerRegistration
+            && in_array((string) $sellerRegistration->status, ['submitted', 'approved'], true)
+            && ! $user->verification_revoked_at;
+
         return [
             'id' => $user->id,
             'name' => $user->name,
             'email' => $user->email,
-            'seller_registration' => $user->sellerRegistration
-                ? ['shop_name' => $user->sellerRegistration->shop_name]
+            'seller_registration' => $canExposeSellerShop
+                ? ['shop_name' => $sellerRegistration->shop_name]
                 : null,
         ];
     }
