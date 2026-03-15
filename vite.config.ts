@@ -13,6 +13,8 @@ export default defineConfig({
     build: {
         outDir: '../public/build',
         emptyOutDir: true,
+        copyPublicDir: false,
+        chunkSizeWarningLimit: 800,
     },
     server: {
         port: 5173,

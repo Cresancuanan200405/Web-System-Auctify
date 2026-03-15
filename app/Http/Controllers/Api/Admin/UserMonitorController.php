@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 
 class UserMonitorController extends Controller
 {
@@ -62,13 +63,19 @@ class UserMonitorController extends Controller
 
     public function show(User $user)
     {
-        $user->load('sellerRegistration');
+        $user->load([
+            'sellerRegistration',
+            'accountVerifications' => static fn ($query) => $query->latest()->limit(1),
+        ]);
+
+        $verification = $user->accountVerifications->first();
 
         return response()->json([
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
                 'email' => $user->email,
+                'avatar' => $user->avatar,
                 'phone' => $user->phone,
                 'birthday' => optional($user->birthday)?->toDateString(),
                 'isVerified' => (bool) $user->is_verified,
@@ -113,8 +120,68 @@ class UserMonitorController extends Controller
                     'createdAt' => optional($user->sellerRegistration->created_at)?->toIso8601String(),
                     'updatedAt' => optional($user->sellerRegistration->updated_at)?->toIso8601String(),
                 ] : null,
+                'verification' => $verification ? [
+                    'status' => $verification->status,
+                    'fullName' => $verification->full_name,
+                    'phone' => $verification->phone,
+                    'address' => $verification->address,
+                    'notes' => $verification->notes,
+                    'submittedAt' => optional($verification->submitted_at)?->toIso8601String(),
+                    'reviewedAt' => optional($verification->reviewed_at)?->toIso8601String(),
+                    'media' => [
+                        [
+                            'key' => 'selfie',
+                            'label' => 'Selfie Verification',
+                            'fileName' => $verification->selfie_path ? basename($verification->selfie_path) : null,
+                            'uploaded' => (bool) $verification->selfie_path,
+                            'previewUrl' => $this->resolveDocumentPreview($verification->selfie_path),
+                        ],
+                        [
+                            'key' => 'government-id',
+                            'label' => 'Government ID',
+                            'fileName' => $verification->government_id_path ? basename($verification->government_id_path) : null,
+                            'uploaded' => (bool) $verification->government_id_path,
+                            'previewUrl' => $this->resolveDocumentPreview($verification->government_id_path),
+                        ],
+                        [
+                            'key' => 'utility-bill',
+                            'label' => 'Utility Bill',
+                            'fileName' => $verification->utility_bill_path ? basename($verification->utility_bill_path) : null,
+                            'uploaded' => (bool) $verification->utility_bill_path,
+                            'previewUrl' => $this->resolveDocumentPreview($verification->utility_bill_path),
+                        ],
+                        [
+                            'key' => 'bank-statement',
+                            'label' => 'Bank Statement',
+                            'fileName' => $verification->bank_statement_path ? basename($verification->bank_statement_path) : null,
+                            'uploaded' => (bool) $verification->bank_statement_path,
+                            'previewUrl' => $this->resolveDocumentPreview($verification->bank_statement_path),
+                        ],
+                    ],
+                ] : null,
             ],
         ]);
+    }
+
+    private function resolveDocumentPreview(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return $path;
+        }
+
+        if (str_starts_with($path, '/')) {
+            return $path;
+        }
+
+        if (Storage::disk('public')->exists($path)) {
+            return Storage::url($path);
+        }
+
+        return null;
     }
 
     public function suspend(Request $request, User $user)

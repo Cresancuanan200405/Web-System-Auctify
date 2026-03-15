@@ -1,0 +1,1128 @@
+.auth-section {
+    max-width: 430px;
+    margin: 56px auto;
+    padding: 0 20px;
+}
+
+.auth-card {
+    width: min(100%, 520px);
+    margin: 10px auto 72px;
+    background: var(--bg-elevated);
+    border-radius: 22px;
+    box-shadow: var(--shadow);
+    padding: 22px 24px 24px;
+    border: 1px solid var(--border);
+}
+
+.chat-button {
+    position: fixed;
+    bottom: 30px;
+    right: 30px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: #1a1a1a;
+    color: #fff;
+    border: none;
+    font-size: 24px;
+    font-weight: 700;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    transition: all 0.2s;
+    z-index: 999;
+}
+
+.chat-button:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.4);
+}
+
+.chat-button-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: #ef4444;
+    color: #fff;
+    border: 2px solid #fff;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+}
+
+.seller-chat-button {
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    height: 58px;
+    min-width: 168px;
+    padding: 0 18px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--bg-elevated);
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+    z-index: 9999;
+    transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+.seller-chat-button:hover {
+    transform: translateY(-1px);
+    background: var(--accent-soft);
+}
+
+.seller-chat-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seller-chat-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+.seller-chat-label {
+    font-size: 28px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.seller-chat-dialog-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(20, 20, 20, 0.28);
+    z-index: 9998;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+}
+
+.seller-chat-dialog {
+    width: min(980px, calc(100vw - 32px));
+    height: min(620px, calc(100vh - 48px));
+    background: var(--bg-elevated);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.seller-chat-dialog-header {
+    height: 54px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+
+.seller-chat-dialog-header h3 {
+    margin: 0;
+    font-size: 34px;
+    line-height: 1;
+    font-weight: 700;
+}
+
+.seller-chat-close-btn {
+    border: 1px solid var(--border);
+    background: var(--bg-elevated);
+    color: var(--text);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    font-size: 22px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.seller-chat-close-btn:hover {
+    background: var(--accent-soft);
+}
+
+.seller-chat-dialog-content {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    min-height: 0;
+    flex: 1;
+}
+
+.seller-chat-left-panel {
+    border-right: 1px solid var(--border);
+    background: var(--bg-elevated);
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.seller-chat-tools {
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 1fr 84px;
+    gap: 8px;
+    border-bottom: 1px solid var(--border);
+}
+
+.seller-chat-search,
+.seller-chat-filter {
+    height: 36px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    padding: 0 10px;
+}
+
+.seller-chat-thread-list {
+    overflow-y: auto;
+    padding: 6px;
+    display: grid;
+    gap: 4px;
+}
+
+.seller-chat-thread {
+    width: 100%;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 10px;
+    align-items: center;
+    padding: 8px;
+    text-align: left;
+    cursor: pointer;
+}
+
+.seller-chat-thread:hover {
+    background: var(--accent-soft);
+}
+
+.seller-chat-thread.active {
+    background: var(--accent-soft);
+}
+
+.seller-chat-thread-body {
+    min-width: 0;
+}
+
+.seller-chat-thread-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.seller-chat-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 999px;
+    background: var(--accent);
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+}
+
+.seller-chat-avatar svg {
+    width: 18px;
+    height: 18px;
+}
+
+.seller-chat-thread-name {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.seller-chat-thread-preview {
+    margin: 2px 0 0;
+    font-size: 13px;
+    color: var(--muted);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.seller-chat-thread-badge {
+    min-width: 20px;
+    height: 20px;
+    padding: 0 6px;
+    border-radius: 999px;
+    background: #0f172a;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.seller-chat-thread-time {
+    margin: 6px 0 0;
+    font-size: 11px;
+    color: #94a3b8;
+}
+
+.seller-chat-thread-empty {
+    margin: 0;
+    padding: 14px 10px;
+    font-size: 13px;
+    color: var(--muted);
+}
+
+/* GöÇGöÇ Thread kebab menu GöÇGöÇ */
+.seller-chat-thread-wrap {
+    position: relative;
+    border-radius: 10px;
+}
+
+.seller-chat-thread-wrap.is-pinned {
+    border-left: 3px solid #f59e0b;
+    border-radius: 0 10px 10px 0;
+}
+
+.seller-chat-thread-wrap.is-pinned .seller-chat-thread {
+    border-radius: 0 10px 10px 0;
+}
+
+.seller-chat-thread-wrap .seller-chat-thread {
+    padding-right: 34px;
+}
+
+.seller-chat-thread-kebab-wrap {
+    position: absolute;
+    right: 5px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 5;
+}
+
+.seller-chat-thread-kebab-btn {
+    width: 26px;
+    height: 26px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 18px;
+    font-weight: 900;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background 0.15s ease;
+    line-height: 1;
+    padding: 0;
+}
+
+.seller-chat-thread-wrap:hover .seller-chat-thread-kebab-btn {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.seller-chat-thread-kebab-btn:hover {
+    background: rgba(0, 0, 0, 0.07);
+    color: var(--text);
+}
+
+.seller-chat-thread-menu {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    min-width: 185px;
+    overflow: hidden;
+    padding: 4px;
+}
+
+.seller-chat-thread-menu-item {
+    width: 100%;
+    padding: 9px 14px;
+    border: none;
+    background: transparent;
+    text-align: left;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text);
+    cursor: pointer;
+    border-radius: 7px;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.seller-chat-thread-menu-item:hover {
+    background: #f3f4f6;
+}
+
+.seller-chat-thread-menu-item-danger {
+    color: #dc2626;
+}
+
+.seller-chat-thread-menu-item-danger:hover {
+    background: #fef2f2;
+    color: #b91c1c;
+}
+
+.seller-chat-pin-icon {
+    font-size: 11px;
+    margin-right: 2px;
+    vertical-align: middle;
+}
+
+.seller-chat-main-pane {
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+}
+
+.seller-chat-conversation-header {
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+
+.seller-chat-conversation-name {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.seller-chat-conversation-name-link {
+    border: none;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    transition: color 0.15s ease;
+}
+
+.seller-chat-conversation-name-link:hover {
+    color: #1d4ed8;
+}
+
+.seller-chat-conversation-name-link:focus-visible {
+    outline: 2px solid #1d4ed8;
+    outline-offset: 2px;
+    border-radius: 4px;
+}
+
+.seller-chat-conversation-subtitle {
+    margin: 4px 0 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.seller-chat-message-list {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 16px;
+    display: grid;
+    gap: 10px;
+    align-content: start;
+}
+
+.seller-chat-message-empty {
+    margin: 0;
+    color: var(--muted);
+    font-size: 13px;
+}
+
+.seller-chat-message-bubble {
+    max-width: min(420px, 100%);
+    padding: 10px 12px;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    display: grid;
+    gap: 6px;
+}
+
+.seller-chat-message-bubble.is-own {
+    margin-left: auto;
+    background: #0f172a;
+    border-color: #0f172a;
+}
+
+.seller-chat-message-bubble.is-other {
+    margin-right: auto;
+    background: #fff;
+}
+
+.seller-chat-message-text {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #1f2937;
+}
+
+.seller-chat-attachment-list {
+    display: grid;
+    gap: 8px;
+}
+
+.seller-chat-attachment {
+    text-decoration: none;
+}
+
+.seller-chat-attachment.is-image {
+    display: block;
+}
+
+.seller-chat-attachment-image {
+    display: block;
+    max-width: 240px;
+    width: 100%;
+    max-height: 220px;
+    object-fit: cover;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+}
+
+.seller-chat-attachment-audio {
+    display: block;
+    width: min(280px, 100%);
+}
+
+.seller-chat-attachment-file {
+    display: grid;
+    gap: 4px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid rgba(148, 163, 184, 0.35);
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.seller-chat-message-bubble.is-own .seller-chat-attachment-file {
+    background: rgba(255, 255, 255, 0.12);
+    border-color: rgba(255, 255, 255, 0.18);
+}
+
+.seller-chat-attachment-file-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f172a;
+    overflow-wrap: anywhere;
+}
+
+.seller-chat-attachment-file-meta {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.seller-chat-message-bubble.is-own .seller-chat-attachment-file-name,
+.seller-chat-message-bubble.is-own .seller-chat-attachment-file-meta {
+    color: #fff;
+}
+
+.seller-chat-message-bubble.is-own .seller-chat-message-text,
+.seller-chat-message-bubble.is-own .seller-chat-message-time {
+    color: #fff;
+}
+
+.seller-chat-message-time {
+    font-size: 11px;
+    color: #64748b;
+    justify-self: end;
+}
+
+.seller-chat-compose {
+    padding: 14px 16px 16px;
+    border-top: 1px solid var(--border);
+    background: var(--bg-elevated);
+}
+
+.seller-chat-compose-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 10px;
+}
+
+.seller-chat-icon-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #fff;
+    color: var(--text);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+}
+
+.seller-chat-icon-btn svg,
+.seller-chat-send-btn svg {
+    width: 18px;
+    height: 18px;
+}
+
+.seller-chat-icon-btn:hover,
+.seller-chat-icon-btn.is-active {
+    background: var(--accent-soft);
+}
+
+.seller-chat-icon-btn.is-recording {
+    border-color: #ef4444;
+    color: #ef4444;
+    background: #fff1f2;
+}
+
+.seller-chat-attach-input {
+    display: none;
+}
+
+.seller-chat-emoji-panel {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    flex-basis: 100%;
+}
+
+.seller-chat-emoji-btn {
+    width: 34px;
+    height: 34px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    cursor: pointer;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.seller-chat-recording-indicator {
+    width: fit-content;
+    color: #ef4444;
+    font-size: 18px;
+    line-height: 1;
+    animation: seller-chat-record-pulse 0.9s ease-in-out infinite;
+}
+
+@keyframes seller-chat-record-pulse {
+    0% { opacity: 0.35; }
+    50% { opacity: 1; }
+    100% { opacity: 0.35; }
+}
+
+.seller-chat-selected-files {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    flex-basis: 100%;
+}
+
+.seller-chat-selected-file-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 100%;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: #eef2ff;
+    color: #3730a3;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.seller-chat-selected-file-chip span {
+    overflow-wrap: anywhere;
+}
+
+.seller-chat-selected-file-chip button {
+    border: none;
+    background: transparent;
+    color: inherit;
+    font-size: 16px;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0;
+}
+
+.seller-chat-compose-input {
+    width: 100%;
+    min-height: 88px;
+    resize: vertical;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: #fff;
+    color: var(--text);
+    font-size: 14px;
+    font-family: inherit;
+    padding: 12px 14px;
+}
+
+.seller-chat-compose-row {
+    margin-top: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.seller-chat-compose-note {
+    margin: 0;
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.seller-chat-send-btn {
+    height: 38px;
+    width: 42px;
+    border-radius: 10px;
+    border: 1px solid #0f172a;
+    background: #0f172a;
+    color: #fff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.seller-chat-send-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.seller-chat-send-btn:hover:not(:disabled) {
+    background: #1e293b;
+}
+
+.seller-chat-empty-pane {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 20px;
+}
+
+.seller-chat-empty-illustration {
+    font-size: 84px;
+    line-height: 1;
+}
+
+.seller-chat-empty-title {
+    margin: 14px 0 0;
+    font-size: 32px;
+    line-height: 1;
+    font-weight: 700;
+    color: var(--text);
+}
+
+.seller-chat-empty-subtitle {
+    margin: 8px 0 0;
+    font-size: 14px;
+    color: var(--muted);
+}
+
+@media (max-width: 980px) {
+    .seller-chat-dialog-content {
+        grid-template-columns: 1fr;
+    }
+
+    .seller-chat-compose-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .seller-chat-empty-pane {
+        display: none;
+    }
+}
+
+.tabs {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 20px;
+    font-weight: 500;
+    color: var(--muted);
+}
+
+.tab {
+    padding: 6px 2px 10px;
+    font-size: 15px;
+    cursor: pointer;
+    position: relative;
+}
+
+.tab.active {
+    color: var(--text);
+}
+
+.tab.active::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 2px;
+    background: var(--text);
+}
+
+.social-row {
+    display: flex;
+    justify-content: center;
+    gap: 26px;
+    margin-bottom: 16px;
+}
+
+.social-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    display: grid;
+    place-items: center;
+    background: #fff;
+    font-weight: 600;
+    color: var(--text);
+    padding: 0;
+    cursor: pointer;
+}
+
+.social-btn img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.divider {
+    text-align: center;
+    color: var(--muted);
+    font-size: 11px;
+    margin: 12px 0 20px;
+}
+
+.auth-google-hint {
+    margin: -8px 0 14px;
+    text-align: center;
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.auth-google-hint-warning {
+    margin-top: -6px;
+    border: 1px solid #f5d08a;
+    background: #fff8e8;
+    color: #7a4b00;
+    border-radius: 10px;
+    padding: 8px 10px;
+}
+
+.auth-google-status-card {
+    margin: -2px 0 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 14px 16px;
+    border-radius: 16px;
+    border: 1px solid #f0c98d;
+    background: linear-gradient(180deg, #fffaf0 0%, #fff4df 100%);
+    box-shadow: 0 10px 24px rgba(122, 75, 0, 0.08);
+}
+
+.auth-google-status-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 12px;
+    background: #7a4b00;
+    color: #fff7e5;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.auth-google-status-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.auth-google-status-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.auth-google-status-title {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 700;
+    color: #7a4b00;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.auth-google-status-text {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.5;
+    color: #6a4a17;
+}
+
+.auth-card .field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.auth-card .field input:not([type="radio"]):not([type="checkbox"]),
+.auth-card .field select {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 15px 14px;
+    font-size: 13px;
+    margin-top: 0;
+    background: #fff;
+}
+
+.auth-card .field > label {
+    position: static;
+    pointer-events: auto;
+    margin-bottom: 2px;
+    top: auto;
+    left: auto;
+    transform: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+    padding: 0;
+    z-index: auto;
+}
+
+.auth-card .floating-field {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 16px;
+    width: 100%;
+}
+
+.auth-card .floating-field > label {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #9aa0a6;
+    background: #fff;
+    padding: 0 6px;
+    pointer-events: none;
+    transition: all 0.18s ease;
+    z-index: 2;
+}
+
+.auth-card .floating-field input:not([type="radio"]):not([type="checkbox"]),
+.auth-card .floating-field select {
+    padding: 18px 14px 10px;
+    width: 100%;
+}
+
+.auth-card .floating-field:focus-within > label,
+.auth-card .floating-field.has-value > label {
+    top: -8px;
+    transform: none;
+    font-size: 12px;
+    color: #666;
+}
+
+.auth-card .floating-field .date-input {
+    color: transparent;
+}
+
+.auth-card .floating-field:focus-within .date-input,
+.auth-card .floating-field.has-value .date-input {
+    color: #1f2937;
+}
+
+.auth-card .floating-field.has-value select {
+    color: #1f2937;
+}
+
+.auth-card .birthday-field {
+    margin-bottom: 16px;
+}
+
+.auth-card .birthday-field input.date-input {
+    width: 100%;
+}
+
+.auth-card .row {
+    margin: 12px 0 20px;
+}
+
+.field {
+    position: relative;
+    display: flex;
+    flex-direction: column-reverse;
+    gap: 0;
+    margin-bottom: 20px;
+}
+
+.field > label {
+    position: absolute;
+    top: 50%;
+    left: 14px;
+    transform: translateY(-50%);
+    font-size: 14px;
+    color: #999;
+    pointer-events: none;
+    transition: all 0.2s ease;
+    background: #fff;
+    padding: 0 6px;
+    z-index: 2;
+}
+
+.field:has(.gender-row) {
+    flex-direction: column;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.field:has(.gender-row) > label {
+    position: static;
+    pointer-events: auto;
+    margin-bottom: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+/* Remove special styling for category dropdown - use standard field styling */
+.field:has(select) {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field:has(.date-input) {
+    flex-direction: column;
+    gap: 8px;
+}
+
+.field input:not([type="radio"]):not([type="checkbox"]) {
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 2px;
+    padding: 16px 14px 8px 14px;
+    font-size: 14px;
+    background: transparent;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+    color: #1f2937;
+}
+
+.field select {
+    border: none;
+    border-bottom: 2px solid #e0e0e0;
+    border-radius: 2px;
+    padding: 16px 14px 8px 14px;
+    font-size: 14px;
+    background: transparent;
+    transition: all 0.2s ease;
+    margin-top: 8px;
+    cursor: pointer;
+    color: #1f2937;
+}
+
+.field select:focus,
+.field select:active {
+    outline: none;
+    border-bottom-color: #1f2937;
+}
+
+.field input:not([type="radio"]):not([type="checkbox"]):focus {
+    outline: none;
+    border-bottom-color: #1f2937;
+}
+
+.field:focus-within select {
+    border-bottom-color: #1f2937;
+}
+
+.field:has(select) > label {
+    position: static;
+    pointer-events: auto;
+    margin-bottom: 0;
+    top: auto;
+    left: auto;
+    transform: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.field:has(.date-input) > label {
+    position: static;
+    pointer-events: auto;
+    margin-bottom: 2px;
+    top: auto;
+    left: auto;
+    transform: none;
+    background: transparent;
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.field select option {
+    color: #1f2937;
+    background: #fff;
+    padding: 8px 14px;
+}
+
+.field:focus-within label,
+.field:has(input:not(:placeholder-shown)) > label {
+    top: -8px;
+    font-size: 12px;
+    color: #666;
+}
+
+.field input:not([type="radio"]):not([type="checkbox"])::placeholder {
+    color: transparent;
+}
+

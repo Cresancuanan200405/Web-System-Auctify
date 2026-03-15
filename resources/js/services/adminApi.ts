@@ -41,17 +41,56 @@ export interface AdminLoginPayload {
 }
 
 export interface AdminSellerDetails {
+    id?: number;
     status?: string | null;
     shopName?: string | null;
     contactEmail?: string | null;
     contactPhone?: string | null;
+    pickupAddressSummary?: string | null;
+    submitBusinessMode?: string | null;
     generalLocation?: string | null;
     registeredAddress?: string | null;
+    zipCode?: string | null;
     sellerType?: string | null;
+    companyRegisteredName?: string | null;
+    registeredLastName?: string | null;
+    registeredFirstName?: string | null;
+    registeredMiddleName?: string | null;
+    registeredSuffix?: string | null;
+    primaryDocumentType?: string | null;
+    primaryDocumentName?: string | null;
+    governmentIdType?: string | null;
+    governmentIdFrontName?: string | null;
+    businessEmail?: string | null;
+    businessPhoneNumber?: string | null;
+    taxTin?: string | null;
     vatStatus?: string | null;
+    birCertificateName?: string | null;
+    submitSwornDeclaration?: string | null;
     submittedAt?: string | null;
     revokedAt?: string | null;
     revokedReason?: string | null;
+    createdAt?: string | null;
+    updatedAt?: string | null;
+}
+
+export interface AdminVerificationMedia {
+    key: string;
+    label: string;
+    fileName?: string | null;
+    uploaded?: boolean;
+    previewUrl?: string | null;
+}
+
+export interface AdminVerificationDetails {
+    status?: string | null;
+    fullName?: string | null;
+    phone?: string | null;
+    address?: string | null;
+    notes?: string | null;
+    submittedAt?: string | null;
+    reviewedAt?: string | null;
+    media?: AdminVerificationMedia[];
 }
 
 export interface AdminUserListItem {
@@ -72,9 +111,11 @@ export interface AdminUserListItem {
 }
 
 export interface AdminUserDetails extends AdminUserListItem {
+    avatar?: string | null;
     birthday?: string | null;
     updatedAt?: string | null;
     sellerRegistration?: AdminSellerDetails | null;
+    verification?: AdminVerificationDetails | null;
 }
 
 export const adminApi = {
