@@ -54,7 +54,7 @@ Route::get('homepage-config', [HomepageConfigController::class, 'show']);
 Route::get('homepage-content', [HomepageContentController::class, 'index']);
 Route::get('settings/public', [AdminSettingController::class, 'publicIndex']);
 
-Route::prefix('admin')->middleware('admin.ip')->group(function () {
+Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
     Route::post('login', [AdminAuthController::class, 'login']);
     Route::post('verify-mfa', [AdminAuthController::class, 'verifyMfa'])->middleware('throttle:admin-mfa');
 

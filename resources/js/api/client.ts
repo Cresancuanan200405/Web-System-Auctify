@@ -1,5 +1,95 @@
 const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-const baseUrl = envBaseUrl ? envBaseUrl.replace(/\/$/, '') : '';
+
+const isLoopbackHost = (host: string) => host === 'localhost' || host === '127.0.0.1';
+
+const resolveBaseUrl = () => {
+    if (!envBaseUrl) {
+        return '';
+    }
+
+    try {
+        const url = new URL(envBaseUrl);
+
+        if (typeof window !== 'undefined') {
+            const browserHost = window.location.hostname;
+
+            // Keep API scheme/port, but align loopback hostnames so XSRF cookie is readable.
+            if (isLoopbackHost(url.hostname) && isLoopbackHost(browserHost) && browserHost !== url.hostname) {
+                url.hostname = browserHost;
+            }
+        }
+
+        return url.toString().replace(/\/$/, '');
+    } catch {
+        return envBaseUrl.replace(/\/$/, '');
+    }
+};
+
+const baseUrl = resolveBaseUrl();
+
+const readCookie = (name: string) => {
+    if (typeof document === 'undefined') {
+        return null;
+    }
+
+    const cookie = document.cookie
+        .split('; ')
+        .find((entry) => entry.startsWith(`${name}=`));
+
+    return cookie ? cookie.slice(name.length + 1) : null;
+};
+
+const getXsrfToken = () => {
+    const cookie = readCookie('XSRF-TOKEN');
+    return cookie ? decodeURIComponent(cookie) : null;
+};
+
+let csrfCookiePromise: Promise<void> | null = null;
+
+const ensureCsrfCookie = async () => {
+    if (getXsrfToken()) {
+        return;
+    }
+
+    if (!csrfCookiePromise) {
+        csrfCookiePromise = fetch(`${baseUrl}/sanctum/csrf-cookie`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                Accept: 'application/json',
+                'X-Requested-With': 'XMLHttpRequest',
+            },
+        })
+            .then((response) => {
+                if (!response.ok) {
+                    throw new Error('Unable to initialize secure session.');
+                }
+            })
+            .finally(() => {
+                csrfCookiePromise = null;
+            });
+    }
+
+    await csrfCookiePromise;
+};
+
+const buildHeaders = async (method: string, headers?: HeadersInit, sendJson = true) => {
+    if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
+        await ensureCsrfCookie();
+    }
+
+    const token = localStorage.getItem('auth_token');
+    const xsrfToken = getXsrfToken();
+
+    return {
+        ...(sendJson ? { 'Content-Type': 'application/json' } : {}),
+        Accept: 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+        ...headers,
+    };
+};
 
 type AccountStatusEventDetail = {
     status: 'suspended' | 'deleted' | 'seller-revoked' | 'session-ended';
@@ -20,16 +110,15 @@ async function request<T>(path: string, options: RequestInit) {
     const token = localStorage.getItem('auth_token');
 
     let response: Response;
+    const method = options.method ?? 'GET';
+    const headers = await buildHeaders(method, options.headers, true);
 
     try {
         response = await fetch(`${baseUrl}${path}`, {
-            headers: {
-                'Content-Type': 'application/json',
-                Accept: 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-                ...options.headers,
-            },
             ...options,
+            method,
+            credentials: 'include',
+            headers,
         });
     } catch {
         const message = 'Unable to connect to the server. Please refresh and try again.';
@@ -127,14 +216,13 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
     const token = localStorage.getItem('auth_token');
 
     let response: Response;
+    const headers = await buildHeaders('POST', undefined, false);
 
     try {
         response = await fetch(`${baseUrl}${path}`, {
             method: 'POST',
-            headers: {
-                Accept: 'application/json',
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
-            },
+            credentials: 'include',
+            headers,
             body: formData,
         });
     } catch {

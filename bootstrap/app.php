@@ -15,6 +15,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->statefulApi();
         $middleware->encryptCookies(except: []);
+        $middleware->validateCsrfTokens(except: [
+            'api/admin/*',
+        ]);
         $middleware->append(\App\Http\Middleware\SecurityHeaders::class);
         $middleware->alias([
             'admin' => \App\Http\Middleware\AdminOnly::class,

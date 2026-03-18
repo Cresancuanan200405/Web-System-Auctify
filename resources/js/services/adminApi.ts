@@ -1,7 +1,33 @@
 import type { HomePageConfig } from '../lib/homePageConfig';
 
 const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
-const baseUrl = envBaseUrl ? envBaseUrl.replace(/\/$/, '') : '';
+
+const isLoopbackHost = (host: string) => host === 'localhost' || host === '127.0.0.1';
+
+const resolveBaseUrl = () => {
+    if (!envBaseUrl) {
+        return '';
+    }
+
+    try {
+        const url = new URL(envBaseUrl);
+
+        if (typeof window !== 'undefined') {
+            const browserHost = window.location.hostname;
+
+            // Keep API port/scheme, but align loopback hostnames so cookies and XSRF token are readable.
+            if (isLoopbackHost(url.hostname) && isLoopbackHost(browserHost) && browserHost !== url.hostname) {
+                url.hostname = browserHost;
+            }
+        }
+
+        return url.toString().replace(/\/$/, '');
+    } catch {
+        return envBaseUrl.replace(/\/$/, '');
+    }
+};
+
+const baseUrl = resolveBaseUrl();
 
 const readCookie = (name: string) => {
     if (typeof document === 'undefined') {

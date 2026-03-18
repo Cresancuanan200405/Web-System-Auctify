@@ -381,11 +381,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onLogout
         };
     }, []);
 
-    const loadUsers = async (token: string) => {
-        const usersResponse = await adminApi.getUsers(token);
-        setRawUsers(usersResponse.users || []);
-    };
-
     useEffect(() => {
         let isActive = true;
 
@@ -399,18 +394,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onLogout
 
         const loadDashboardData = async () => {
             try {
-                const [configResponse] = await Promise.all([
+                const [configResult, usersResult] = await Promise.allSettled([
                     adminApi.getAdminHomepageConfig(token),
+                    adminApi.getUsers(token),
                 ]);
 
                 if (!isActive) {
                     return;
                 }
 
-                const normalizedConfig = normalizeHomePageConfig(configResponse.config);
-                setConfig(normalizedConfig);
-                setSavedConfig(normalizedConfig);
-                await loadUsers(token);
+                if (configResult.status === 'fulfilled') {
+                    const normalizedConfig = normalizeHomePageConfig(configResult.value.config);
+                    setConfig(normalizedConfig);
+                    setSavedConfig(normalizedConfig);
+                } else {
+                    const message = configResult.reason instanceof Error
+                        ? configResult.reason.message
+                        : 'Unable to load admin homepage configuration.';
+                    toast.error(message);
+                }
+
+                if (usersResult.status === 'fulfilled') {
+                    setRawUsers(usersResult.value.users || []);
+                } else {
+                    const message = usersResult.reason instanceof Error
+                        ? usersResult.reason.message
+                        : 'Unable to load users list.';
+                    toast.error(message);
+                }
             } catch (error) {
                 if (isActive) {
                     const message = error instanceof Error ? error.message : 'Unable to load admin dashboard data.';
@@ -1749,7 +1760,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({ onLogout
                 await adminApi.revokeSeller(token, selectedUser.id, reason);
             }
 
-            await loadUsers(token);
+            const refreshedUsers = await adminApi.getUsers(token);
+            setRawUsers(refreshedUsers.users || []);
 
             if (selectedUserId) {
                 try {

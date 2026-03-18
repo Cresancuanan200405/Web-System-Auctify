@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Password;
+use RuntimeException;
 
 class AdminAuthController extends Controller
 {
@@ -85,7 +86,7 @@ class AdminAuthController extends Controller
         }
 
         Auth::guard('web')->login($user);
-        $request->session()->regenerate();
+        $this->regenerateSessionIfAvailable($request);
         $this->markStepUpVerified($request);
 
         AdminAudit::log($request, 'admin-login', 'Admin signed in successfully.', $user->id);
@@ -159,7 +160,7 @@ class AdminAuthController extends Controller
 
         $user->tokens()->where('name', 'admin')->delete();
         Auth::guard('web')->login($user);
-        $request->session()->regenerate();
+        $this->regenerateSessionIfAvailable($request);
         $this->markStepUpVerified($request);
 
         AdminAudit::log($request, 'admin-login-mfa-verified', $usedRecoveryCode ? 'Admin signed in using MFA recovery code.' : 'Admin MFA verification successful.', $user->id);
@@ -199,8 +200,7 @@ class AdminAuthController extends Controller
         }
 
         Auth::guard('web')->logout();
-        $request->session()->invalidate();
-        $request->session()->regenerateToken();
+        $this->invalidateSessionIfAvailable($request);
 
         return response()->json([
             'message' => 'Admin logged out successfully.',
@@ -223,7 +223,7 @@ class AdminAuthController extends Controller
         $user->forceFill(['password' => Hash::make($validated['new_password'])])->save();
 
         $user->tokens()->delete();
-        $request->session()->regenerate();
+        $this->regenerateSessionIfAvailable($request);
 
         AdminAudit::log($request, 'admin-change-password', 'Admin password changed.', $user->id);
 
@@ -400,7 +400,7 @@ class AdminAuthController extends Controller
 
         return response()->json([
             'message' => 'MFA step-up verified.',
-            'verified_until_unix' => (int) $request->session()->get(self::MFA_STEP_UP_SESSION_KEY),
+            'verified_until_unix' => $this->getStepUpTimestamp($request),
         ]);
     }
 
@@ -471,12 +471,61 @@ class AdminAuthController extends Controller
         $verifiedAt = time();
         $stepUpTtl = (int) config('security.admin_mfa_step_up_ttl_seconds', 600);
 
-        if (method_exists($request, 'hasSession') && $request->hasSession()) {
-            $request->session()->put(self::MFA_STEP_UP_SESSION_KEY, $verifiedAt);
-        }
+        $this->putStepUpTimestampInSession($request, $verifiedAt);
 
         if ($request->user()?->id) {
             Cache::put($this->stepUpCacheKey((int) $request->user()->id), $verifiedAt, now()->addSeconds(max(60, $stepUpTtl)));
         }
+    }
+
+    private function regenerateSessionIfAvailable(Request $request): void
+    {
+        try {
+            if (method_exists($request, 'hasSession') && $request->hasSession()) {
+                $request->session()->regenerate();
+            }
+        } catch (RuntimeException) {
+            // Ignore requests that do not carry a session store.
+        }
+    }
+
+    private function invalidateSessionIfAvailable(Request $request): void
+    {
+        try {
+            if (method_exists($request, 'hasSession') && $request->hasSession()) {
+                $request->session()->invalidate();
+                $request->session()->regenerateToken();
+            }
+        } catch (RuntimeException) {
+            // Ignore requests that do not carry a session store.
+        }
+    }
+
+    private function putStepUpTimestampInSession(Request $request, int $verifiedAt): void
+    {
+        try {
+            if (method_exists($request, 'hasSession') && $request->hasSession()) {
+                $request->session()->put(self::MFA_STEP_UP_SESSION_KEY, $verifiedAt);
+            }
+        } catch (RuntimeException) {
+            // Ignore requests that do not carry a session store.
+        }
+    }
+
+    private function getStepUpTimestamp(Request $request): int
+    {
+        try {
+            if (method_exists($request, 'hasSession') && $request->hasSession()) {
+                return (int) $request->session()->get(self::MFA_STEP_UP_SESSION_KEY, 0);
+            }
+        } catch (RuntimeException) {
+            // Ignore requests that do not carry a session store.
+        }
+
+        $adminUserId = (int) ($request->user()?->id ?? 0);
+
+        return $adminUserId > 0
+            ? (int) Cache::get($this->stepUpCacheKey($adminUserId), 0)
+            : 0;
     }
 }
