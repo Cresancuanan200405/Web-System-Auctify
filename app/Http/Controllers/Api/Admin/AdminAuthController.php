@@ -88,10 +88,12 @@ class AdminAuthController extends Controller
         Auth::guard('web')->login($user);
         $this->regenerateSessionIfAvailable($request);
         $this->markStepUpVerified($request);
+        $token = $this->issueAdminToken($user);
 
         AdminAudit::log($request, 'admin-login', 'Admin signed in successfully.', $user->id);
 
         return response()->json([
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -162,10 +164,12 @@ class AdminAuthController extends Controller
         Auth::guard('web')->login($user);
         $this->regenerateSessionIfAvailable($request);
         $this->markStepUpVerified($request);
+        $token = $this->issueAdminToken($user);
 
         AdminAudit::log($request, 'admin-login-mfa-verified', $usedRecoveryCode ? 'Admin signed in using MFA recovery code.' : 'Admin MFA verification successful.', $user->id);
 
         return response()->json([
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -178,8 +182,11 @@ class AdminAuthController extends Controller
     public function session(Request $request)
     {
         $user = $request->user();
+        $user->tokens()->where('name', 'admin')->delete();
+        $token = $this->issueAdminToken($user);
 
         return response()->json([
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -224,11 +231,13 @@ class AdminAuthController extends Controller
 
         $user->tokens()->delete();
         $this->regenerateSessionIfAvailable($request);
+        $token = $this->issueAdminToken($user);
 
         AdminAudit::log($request, 'admin-change-password', 'Admin password changed.', $user->id);
 
         return response()->json([
             'message' => 'Password changed successfully.',
+            'token' => $token,
             'user' => [
                 'id' => $user->id,
                 'name' => $user->name,
@@ -417,6 +426,11 @@ class AdminAuthController extends Controller
     private function stepUpCacheKey(int $adminUserId): string
     {
         return self::MFA_STEP_UP_CACHE_PREFIX.$adminUserId;
+    }
+
+    private function issueAdminToken(User $user): string
+    {
+        return $user->createToken('admin')->plainTextToken;
     }
 
     private function generateRecoveryCodes(int $count = 8): array

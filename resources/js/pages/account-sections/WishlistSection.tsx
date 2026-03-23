@@ -8,10 +8,15 @@ interface WishlistSectionProps {
     onNavigateToAuction: (auctionId: number) => void;
 }
 
-export const WishlistSection: React.FC<WishlistSectionProps> = ({ onNavigateToAuction }) => {
+export const WishlistSection: React.FC<WishlistSectionProps> = ({
+    onNavigateToAuction,
+}) => {
     const { authUser } = useAuth();
     const wishlistKey = `wishlist_items_${authUser?.id ?? 'guest'}`;
-    const [wishlistItems, setWishlistItems] = useLocalStorage<WishlistItem[]>(wishlistKey, []);
+    const [wishlistItems, setWishlistItems] = useLocalStorage<WishlistItem[]>(
+        wishlistKey,
+        [],
+    );
 
     const handleGoShopping = () => {
         window.history.pushState({}, '', '/');
@@ -39,16 +44,30 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({ onNavigateToAu
                 <div className="wishlist-empty-card">
                     <div className="wishlist-illustration" aria-hidden="true">
                         <div className="wishlist-circle">
-                            <svg width="80" height="80" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                            <svg
+                                width="80"
+                                height="80"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="1.6"
+                            >
                                 <path d="M12 21s-5.5-3.2-8.2-6C1.7 12.8 1.5 9.3 3.7 7.1 5.3 5.5 7.9 5.4 9.6 6.7L12 8.9l2.4-2.2c1.7-1.3 4.3-1.2 5.9.4 2.2 2.2 2 5.7-.1 7.9-2.7 2.8-8.2 6-8.2 6z" />
                             </svg>
                         </div>
                     </div>
-                    <div className="wishlist-title">Your Wishlist is empty.</div>
-                    <div className="wishlist-text">
-                        Start saving auctions you love and find them all in one place.
+                    <div className="wishlist-title">
+                        Your Wishlist is empty.
                     </div>
-                    <button type="button" className="wishlist-button" onClick={handleGoShopping}>
+                    <div className="wishlist-text">
+                        Start saving auctions you love and find them all in one
+                        place.
+                    </div>
+                    <button
+                        type="button"
+                        className="wishlist-button"
+                        onClick={handleGoShopping}
+                    >
                         Let's go Shopping!
                     </button>
                 </div>
@@ -67,7 +86,10 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({ onNavigateToAu
                                 tabIndex={0}
                                 onClick={() => onNavigateToAuction(item.id)}
                                 onKeyDown={(event) => {
-                                    if (event.key === 'Enter' || event.key === ' ') {
+                                    if (
+                                        event.key === 'Enter' ||
+                                        event.key === ' '
+                                    ) {
                                         event.preventDefault();
                                         onNavigateToAuction(item.id);
                                     }
@@ -76,18 +98,37 @@ export const WishlistSection: React.FC<WishlistSectionProps> = ({ onNavigateToAu
                                 <div className="wishlist-item-media-wrap">
                                     {item.mediaUrl ? (
                                         item.mediaType === 'video' ? (
-                                            <video className="wishlist-item-media" src={item.mediaUrl} muted preload="metadata" />
+                                            <video
+                                                className="wishlist-item-media"
+                                                src={item.mediaUrl}
+                                                muted
+                                                preload="metadata"
+                                            />
                                         ) : (
-                                            <img className="wishlist-item-media" src={item.mediaUrl} alt={item.title} />
+                                            <img
+                                                className="wishlist-item-media"
+                                                src={item.mediaUrl}
+                                                alt={item.title}
+                                            />
                                         )
                                     ) : (
-                                        <div className="wishlist-item-media wishlist-item-media-empty">No Media</div>
+                                        <div className="wishlist-item-media wishlist-item-media-empty">
+                                            No Media
+                                        </div>
                                     )}
                                 </div>
                                 <div className="wishlist-item-content">
-                                    <p className="wishlist-item-category">{(item.category || 'Product').toUpperCase()}</p>
-                                    <p className="wishlist-item-title">{item.title}</p>
-                                    <p className="wishlist-item-price">{formatPeso(item.price)}</p>
+                                    <p className="wishlist-item-category">
+                                        {(
+                                            item.category || 'Product'
+                                        ).toUpperCase()}
+                                    </p>
+                                    <p className="wishlist-item-title">
+                                        {item.title}
+                                    </p>
+                                    <p className="wishlist-item-price">
+                                        {formatPeso(item.price)}
+                                    </p>
                                     <button
                                         type="button"
                                         className="wishlist-item-remove"

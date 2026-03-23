@@ -1,15 +1,19 @@
 import { useLocalStorage } from './useLocalStorage';
 import type { OrderHistoryItem } from '../types';
 
-const getSellerOrderHistoryKey = (sellerUserId: number) => `seller_order_history_user-${sellerUserId}`;
+const getSellerOrderHistoryKey = (sellerUserId: number) =>
+    `seller_order_history_user-${sellerUserId}`;
 
 const dispatchLocalStorageUpdate = (key: string, value: OrderHistoryItem[]) => {
     window.dispatchEvent(
-        new CustomEvent(`local-storage-${key}`, { detail: value })
+        new CustomEvent(`local-storage-${key}`, { detail: value }),
     );
 };
 
-export const addSellerOrder = (sellerUserId: number, order: OrderHistoryItem) => {
+export const addSellerOrder = (
+    sellerUserId: number,
+    order: OrderHistoryItem,
+) => {
     const key = getSellerOrderHistoryKey(sellerUserId);
 
     try {
@@ -23,14 +27,18 @@ export const addSellerOrder = (sellerUserId: number, order: OrderHistoryItem) =>
     }
 };
 
-export const updateSellerOrderStatus = (sellerUserId: number, orderId: string, newStatus: string) => {
+export const updateSellerOrderStatus = (
+    sellerUserId: number,
+    orderId: string,
+    newStatus: string,
+) => {
     const key = getSellerOrderHistoryKey(sellerUserId);
 
     try {
         const raw = window.localStorage.getItem(key);
         const existing = raw ? (JSON.parse(raw) as OrderHistoryItem[]) : [];
         const updated = existing.map((order) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
+            order.id === orderId ? { ...order, status: newStatus } : order,
         );
         window.localStorage.setItem(key, JSON.stringify(updated));
         dispatchLocalStorageUpdate(key, updated);
@@ -42,12 +50,17 @@ export const updateSellerOrderStatus = (sellerUserId: number, orderId: string, n
 };
 
 export const useSellerOrderHistory = (sellerUserId?: number) => {
-    const storageKey = sellerUserId ? getSellerOrderHistoryKey(sellerUserId) : 'seller_order_history_guest';
-    const [orders, setOrders] = useLocalStorage<OrderHistoryItem[]>(storageKey, []);
+    const storageKey = sellerUserId
+        ? getSellerOrderHistoryKey(sellerUserId)
+        : 'seller_order_history_guest';
+    const [orders, setOrders] = useLocalStorage<OrderHistoryItem[]>(
+        storageKey,
+        [],
+    );
 
     const updateOrderStatus = (orderId: string, newStatus: string) => {
         const updated = orders.map((order) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
+            order.id === orderId ? { ...order, status: newStatus } : order,
         );
         setOrders(updated);
     };
@@ -72,7 +85,9 @@ export const updateBuyerOrderStatus = (
     const key = `order_history_user-${buyerUserId}`;
 
     const normalizedAuctionId = String(auctionId);
-    const normalizedSellerOrderId = sellerOrderId ? sellerOrderId.replace(/-seller$/, '') : '';
+    const normalizedSellerOrderId = sellerOrderId
+        ? sellerOrderId.replace(/-seller$/, '')
+        : '';
 
     const applyStatusUpdate = (list: OrderHistoryItem[]) => {
         let changed = false;
@@ -80,10 +95,15 @@ export const updateBuyerOrderStatus = (
         const updated = list.map((order) => {
             const orderAuctionId = String(order.auction_id);
             const orderId = String(order.id);
-            const orderBuyerUserId = order.buyer_user_id != null ? String(order.buyer_user_id) : '';
+            const orderBuyerUserId =
+                order.buyer_user_id != null ? String(order.buyer_user_id) : '';
             const matchesAuction = orderAuctionId === normalizedAuctionId;
-            const matchesOrderId = normalizedSellerOrderId ? orderId === normalizedSellerOrderId : false;
-            const matchesBuyer = orderBuyerUserId ? orderBuyerUserId === String(buyerUserId) : true;
+            const matchesOrderId = normalizedSellerOrderId
+                ? orderId === normalizedSellerOrderId
+                : false;
+            const matchesBuyer = orderBuyerUserId
+                ? orderBuyerUserId === String(buyerUserId)
+                : true;
 
             if ((matchesAuction || matchesOrderId) && matchesBuyer) {
                 changed = true;
@@ -103,7 +123,11 @@ export const updateBuyerOrderStatus = (
 
         if (primary.changed) {
             window.localStorage.setItem(key, JSON.stringify(primary.updated));
-            window.dispatchEvent(new CustomEvent(`local-storage-${key}`, { detail: primary.updated }));
+            window.dispatchEvent(
+                new CustomEvent(`local-storage-${key}`, {
+                    detail: primary.updated,
+                }),
+            );
             return;
         }
 
@@ -115,12 +139,21 @@ export const updateBuyerOrderStatus = (
             }
 
             const fallbackRaw = window.localStorage.getItem(fallbackKey);
-            const fallbackExisting = fallbackRaw ? (JSON.parse(fallbackRaw) as OrderHistoryItem[]) : [];
+            const fallbackExisting = fallbackRaw
+                ? (JSON.parse(fallbackRaw) as OrderHistoryItem[])
+                : [];
             const fallback = applyStatusUpdate(fallbackExisting);
 
             if (fallback.changed) {
-                window.localStorage.setItem(fallbackKey, JSON.stringify(fallback.updated));
-                window.dispatchEvent(new CustomEvent(`local-storage-${fallbackKey}`, { detail: fallback.updated }));
+                window.localStorage.setItem(
+                    fallbackKey,
+                    JSON.stringify(fallback.updated),
+                );
+                window.dispatchEvent(
+                    new CustomEvent(`local-storage-${fallbackKey}`, {
+                        detail: fallback.updated,
+                    }),
+                );
                 return;
             }
         }
@@ -135,9 +168,13 @@ export const useOrderHistory = () => {
             const rawUser = window.localStorage.getItem('auth_user');
             if (!rawUser) return 'anonymous';
 
-            const parsedUser = JSON.parse(rawUser) as { id?: number; email?: string };
+            const parsedUser = JSON.parse(rawUser) as {
+                id?: number;
+                email?: string;
+            };
             if (parsedUser.id) return `user-${parsedUser.id}`;
-            if (parsedUser.email) return `email-${parsedUser.email.toLowerCase()}`;
+            if (parsedUser.email)
+                return `email-${parsedUser.email.toLowerCase()}`;
         } catch {
             // fall through to anonymous scope
         }
@@ -146,7 +183,10 @@ export const useOrderHistory = () => {
     })();
 
     const orderHistoryKey = `order_history_${userStorageScope}`;
-    const [orders, setOrders] = useLocalStorage<OrderHistoryItem[]>(orderHistoryKey, []);
+    const [orders, setOrders] = useLocalStorage<OrderHistoryItem[]>(
+        orderHistoryKey,
+        [],
+    );
 
     const addOrder = (order: OrderHistoryItem) => {
         setOrders([order, ...orders]);
@@ -154,7 +194,7 @@ export const useOrderHistory = () => {
 
     const updateOrderStatus = (orderId: string, newStatus: string) => {
         const updated = orders.map((order) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
+            order.id === orderId ? { ...order, status: newStatus } : order,
         );
         setOrders(updated);
     };

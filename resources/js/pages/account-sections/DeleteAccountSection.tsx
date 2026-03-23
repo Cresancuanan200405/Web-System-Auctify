@@ -6,7 +6,9 @@ interface DeleteAccountSectionProps {
     onAccountDeleted: () => void;
 }
 
-export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAccountDeleted }) => {
+export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({
+    onAccountDeleted,
+}) => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
 
     return (
@@ -22,7 +24,9 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAc
 
             <div className="delete-card">
                 <div className="delete-info-header">
-                    <span className="delete-info-icon" aria-hidden="true">!</span>
+                    <span className="delete-info-icon" aria-hidden="true">
+                        !
+                    </span>
                     <span className="delete-info-title">
                         Important information &amp; disclaimers
                     </span>
@@ -31,27 +35,32 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAc
                 <div className="delete-info-text">
                     <ol className="delete-list">
                         <li>
-                            Once your account is deleted, your profile, preferences and saved
-                            auctions will be permanently removed. Any remaining wallet balance or
-                            cashback will be forfeited.
+                            Once your account is deleted, your profile,
+                            preferences and saved auctions will be permanently
+                            removed. Any remaining wallet balance or cashback
+                            will be forfeited.
                         </li>
                         <li>
-                            Make sure there are no ongoing auctions, unpaid orders or pending
-                            withdrawals. If there are any active activities, your deletion request
-                            may be delayed or rejected.
+                            Make sure there are no ongoing auctions, unpaid
+                            orders or pending withdrawals. If there are any
+                            active activities, your deletion request may be
+                            delayed or rejected.
                         </li>
                         <li>
-                            Auctify may retain limited transactional records as required for
-                            financial auditing, fraud prevention and regulatory obligations.
+                            Auctify may retain limited transactional records as
+                            required for financial auditing, fraud prevention
+                            and regulatory obligations.
                         </li>
                         <li>
-                            After deletion, you will no longer be able to access your Auctify
-                            account, view order history or download invoices using this login.
+                            After deletion, you will no longer be able to access
+                            your Auctify account, view order history or download
+                            invoices using this login.
                         </li>
                         <li>
-                            Submitting a deletion request will sign you out from all active
-                            sessions. You will need to create a new account if you wish to bid on
-                            Auctify again in the future.
+                            Submitting a deletion request will sign you out from
+                            all active sessions. You will need to create a new
+                            account if you wish to bid on Auctify again in the
+                            future.
                         </li>
                     </ol>
                 </div>
@@ -71,11 +80,14 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAc
                 <div className="delete-modal-overlay">
                     <div className="delete-modal">
                         <div className="delete-modal-header">
-                            <h2 className="delete-modal-title">Delete Your Account?</h2>
+                            <h2 className="delete-modal-title">
+                                Delete Your Account?
+                            </h2>
                         </div>
                         <div className="delete-modal-body">
                             <p className="delete-modal-text">
-                                Once you confirm to delete your account, your account data will be permanently and
+                                Once you confirm to delete your account, your
+                                account data will be permanently and
                                 irreversibly deleted.
                             </p>
                             <div className="delete-modal-actions">
@@ -91,19 +103,32 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({ onAc
                                     className="delete-modal-confirm"
                                     onClick={async () => {
                                         try {
-                                            await apiClient.apiDelete<{ message: string }>('/api/auth/delete-account');
+                                            await apiClient.apiDelete<{
+                                                message: string;
+                                            }>('/api/auth/delete-account');
                                             setIsDeleteModalOpen(false);
-                                            toast.success('Your Auctify account was deleted successfully.', {
-                                                autoClose: 3500,
-                                            });
+                                            toast.success(
+                                                'Your Auctify account was deleted successfully.',
+                                                {
+                                                    autoClose: 3500,
+                                                },
+                                            );
                                             onAccountDeleted();
                                         } catch (apiError: unknown) {
                                             const errorMessage =
                                                 (typeof apiError === 'object' &&
-                                                    apiError !== null &&
-                                                    'message' in apiError &&
-                                                    typeof (apiError as { message?: unknown }).message === 'string'
-                                                    ? (apiError as { message: string }).message
+                                                apiError !== null &&
+                                                'message' in apiError &&
+                                                typeof (
+                                                    apiError as {
+                                                        message?: unknown;
+                                                    }
+                                                ).message === 'string'
+                                                    ? (
+                                                          apiError as {
+                                                              message: string;
+                                                          }
+                                                      ).message
                                                     : undefined) ||
                                                 'Something went wrong while deleting your account.';
 

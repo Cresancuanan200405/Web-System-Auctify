@@ -6,6 +6,7 @@ export interface AdminSession {
     userId: number;
     email: string;
     name: string;
+    token: string | null;
     loggedInAt: string;
 }
 
@@ -46,7 +47,9 @@ export const saveAdminSession = (session: AdminSession) => {
     window.localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
 };
 
-export const updateAdminSession = (sessionPatch: Pick<AdminSession, 'userId' | 'email' | 'name'>) => {
+export const updateAdminSession = (
+    sessionPatch: Pick<AdminSession, 'userId' | 'email' | 'name'>,
+) => {
     const currentSession = getAdminSession();
 
     if (!currentSession) {
@@ -57,6 +60,7 @@ export const updateAdminSession = (sessionPatch: Pick<AdminSession, 'userId' | '
         userId: sessionPatch.userId,
         email: sessionPatch.email,
         name: sessionPatch.name,
+        token: currentSession.token,
         loggedInAt: new Date().toISOString(),
     };
 
@@ -68,14 +72,18 @@ export const clearAdminSession = () => {
     window.localStorage.removeItem(ADMIN_SESSION_KEY);
 };
 
-export const loginAdmin = async (email: string, password: string): Promise<AdminLoginOutcome> => {
+export const loginAdmin = async (
+    email: string,
+    password: string,
+): Promise<AdminLoginOutcome> => {
     const response = await adminApi.login(email, password);
 
     if (response.mfa_required && response.challenge_token) {
         return {
             status: 'mfa_required',
             challengeToken: response.challenge_token,
-            message: response.message || 'MFA code required to complete sign in.',
+            message:
+                response.message || 'MFA code required to complete sign in.',
         };
     }
 
@@ -87,6 +95,10 @@ export const loginAdmin = async (email: string, password: string): Promise<Admin
         userId: response.user.id,
         email: response.user.email,
         name: response.user.name,
+        token:
+            typeof response.token === 'string' && response.token.trim() !== ''
+                ? response.token
+                : null,
         loggedInAt: new Date().toISOString(),
     };
 
@@ -97,8 +109,16 @@ export const loginAdmin = async (email: string, password: string): Promise<Admin
     };
 };
 
-export const verifyAdminMfa = async (challengeToken: string, code?: string, recoveryCode?: string): Promise<AdminSession> => {
-    const response = await adminApi.verifyMfa(challengeToken, code, recoveryCode);
+export const verifyAdminMfa = async (
+    challengeToken: string,
+    code?: string,
+    recoveryCode?: string,
+): Promise<AdminSession> => {
+    const response = await adminApi.verifyMfa(
+        challengeToken,
+        code,
+        recoveryCode,
+    );
 
     if (!response.user) {
         throw new Error('MFA verification failed.');
@@ -108,6 +128,10 @@ export const verifyAdminMfa = async (challengeToken: string, code?: string, reco
         userId: response.user.id,
         email: response.user.email,
         name: response.user.name,
+        token:
+            typeof response.token === 'string' && response.token.trim() !== ''
+                ? response.token
+                : null,
         loggedInAt: new Date().toISOString(),
     };
 
@@ -122,7 +146,11 @@ export const getAdminSession = () => {
         return null;
     }
 
-    if (!Number.isInteger(session.userId) || typeof session.email !== 'string' || typeof session.name !== 'string') {
+    if (
+        !Number.isInteger(session.userId) ||
+        typeof session.email !== 'string' ||
+        typeof session.name !== 'string'
+    ) {
         clearAdminSession();
         return null;
     }
@@ -131,11 +159,20 @@ export const getAdminSession = () => {
 };
 
 export const getAdminAuthToken = () => {
-    return getAdminSession() ? 'cookie-session' : null;
+    const session = getAdminSession();
+
+    if (!session) {
+        return null;
+    }
+
+    return session.token && session.token.trim() !== ''
+        ? session.token
+        : 'cookie-session';
 };
 
 export const syncAdminSession = async () => {
     try {
+        const existingSession = getAdminSession();
         const response = await adminApi.getSession();
 
         if (!response.user) {
@@ -147,6 +184,11 @@ export const syncAdminSession = async () => {
             userId: response.user.id,
             email: response.user.email,
             name: response.user.name,
+            token:
+                typeof response.token === 'string' &&
+                response.token.trim() !== ''
+                    ? response.token
+                    : (existingSession?.token ?? null),
             loggedInAt: new Date().toISOString(),
         };
 

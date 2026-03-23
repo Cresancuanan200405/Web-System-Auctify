@@ -11,10 +11,16 @@ window.Pusher = Pusher;
 
 export function createEchoConnection() {
     const token = window.localStorage.getItem('auth_token');
-    const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || window.location.origin;
-    const scheme = import.meta.env.VITE_REVERB_SCHEME === 'https' ? 'https' : 'http';
-    const host = import.meta.env.VITE_REVERB_HOST?.trim() || window.location.hostname;
-    const port = Number(import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80));
+    const apiBase =
+        import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') ||
+        window.location.origin;
+    const scheme =
+        import.meta.env.VITE_REVERB_SCHEME === 'https' ? 'https' : 'http';
+    const host =
+        import.meta.env.VITE_REVERB_HOST?.trim() || window.location.hostname;
+    const port = Number(
+        import.meta.env.VITE_REVERB_PORT || (scheme === 'https' ? 443 : 80),
+    );
 
     return new Echo({
         broadcaster: 'reverb',

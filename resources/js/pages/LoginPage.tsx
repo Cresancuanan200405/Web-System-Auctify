@@ -10,7 +10,10 @@ interface LoginPageProps {
     onLoginSuccess: () => void;
 }
 
-export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLoginSuccess }) => {
+export const LoginPage: React.FC<LoginPageProps> = ({
+    onNavigateRegister,
+    onLoginSuccess,
+}) => {
     const { login } = useAuth();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
@@ -33,11 +36,15 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
                 typeof err === 'object' &&
                 err !== null &&
                 'response' in err &&
-                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                typeof (err as { response?: { data?: { message?: unknown } } })
+                    .response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } })
+                          .response?.data?.message
                     : undefined;
 
-            const errorMessage = responseMessage || 'Login failed. Please check your credentials.';
+            const errorMessage =
+                responseMessage ||
+                'Login failed. Please check your credentials.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
@@ -49,12 +56,22 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
         <section className="auth-card" id="auth">
             <div className="tabs">
                 <div className="tab active">Login</div>
-                <div className="tab" onClick={onNavigateRegister}>Sign up</div>
+                <div className="tab" onClick={onNavigateRegister}>
+                    Sign up
+                </div>
             </div>
 
             <div className="social-row">
-                <img src="/icons/facebook.png" alt="Facebook" className="social-btn" />
-                <img src="/icons/google.png" alt="Google" className="social-btn" />
+                <img
+                    src="/icons/facebook.png"
+                    alt="Facebook"
+                    className="social-btn"
+                />
+                <img
+                    src="/icons/google.png"
+                    alt="Google"
+                    className="social-btn"
+                />
             </div>
 
             <div className="divider">Or continue with</div>
@@ -90,7 +107,12 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
                     <span>Forgot Password?</span>
                 </div>
 
-                <Button type="submit" variant="primary" isLoading={loading} className="primary-btn">
+                <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={loading}
+                    className="primary-btn"
+                >
                     {loading ? 'Please wait...' : 'Login'}
                 </Button>
             </form>
@@ -98,7 +120,8 @@ export const LoginPage: React.FC<LoginPageProps> = ({ onNavigateRegister, onLogi
             {error && <div className="message error">{error}</div>}
 
             <div className="hint">
-                By continuing you agree to our Terms and Conditions and Privacy Policy.
+                By continuing you agree to our Terms and Conditions and Privacy
+                Policy.
             </div>
         </section>
     );

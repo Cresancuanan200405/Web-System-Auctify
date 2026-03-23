@@ -3,7 +3,10 @@ import { useState, useEffect } from 'react';
 /**
  * Custom hook for managing localStorage with state synchronization
  */
-export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
+export function useLocalStorage<T>(
+    key: string,
+    initialValue: T,
+): [T, (value: T) => void] {
     const [storedValue, setStoredValue] = useState<T>(() => {
         try {
             const item = window.localStorage.getItem(key);
@@ -20,7 +23,9 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
             window.localStorage.setItem(key, JSON.stringify(value));
             // Notify other hook instances in this tab about the update
             window.dispatchEvent(
-                new CustomEvent(`local-storage-${key}`, { detail: value as unknown as NonNullable<T> })
+                new CustomEvent(`local-storage-${key}`, {
+                    detail: value as unknown as NonNullable<T>,
+                }),
             );
         } catch (error) {
             console.error(`Error saving ${key} to localStorage:`, error);
@@ -54,10 +59,15 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
         const handleStorage = (event: StorageEvent) => {
             if (event.key !== key) return;
             try {
-                const newValue = event.newValue ? JSON.parse(event.newValue) : initialValue;
+                const newValue = event.newValue
+                    ? JSON.parse(event.newValue)
+                    : initialValue;
                 setStoredValue(newValue);
             } catch (error) {
-                console.error(`Error syncing ${key} from localStorage event:`, error);
+                console.error(
+                    `Error syncing ${key} from localStorage event:`,
+                    error,
+                );
             }
         };
 
@@ -71,7 +81,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
 
         return () => {
             window.removeEventListener('storage', handleStorage);
-            window.removeEventListener(`local-storage-${key}`, handleCustomEvent);
+            window.removeEventListener(
+                `local-storage-${key}`,
+                handleCustomEvent,
+            );
         };
     }, [key, initialValue]);
 
@@ -81,7 +94,10 @@ export function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T)
 /**
  * Hook for managing individual preference flags
  */
-export function usePreference(key: string, defaultValue: boolean = false): [boolean, (value: boolean) => void] {
+export function usePreference(
+    key: string,
+    defaultValue: boolean = false,
+): [boolean, (value: boolean) => void] {
     const [value, setValue] = useState<boolean>(() => {
         const stored = localStorage.getItem(key);
         return stored !== null ? stored === 'true' : defaultValue;

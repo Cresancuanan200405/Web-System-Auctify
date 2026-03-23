@@ -6,7 +6,9 @@ interface AdminLoginPageProps {
     onLoginSuccess: () => void;
 }
 
-export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }) => {
+export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
+    onLoginSuccess,
+}) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [mfaCode, setMfaCode] = useState('');
@@ -17,7 +19,9 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
 
     React.useEffect(() => {
         const originalTitle = document.title;
-        const iconElement = document.querySelector("link[rel='icon']") as HTMLLinkElement | null;
+        const iconElement = document.querySelector(
+            "link[rel='icon']",
+        ) as HTMLLinkElement | null;
         const originalHref = iconElement?.href ?? null;
 
         document.title = 'Auctify Admin Login';
@@ -49,7 +53,11 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
                         return;
                     }
 
-                    const session = await verifyAdminMfa(challengeToken, undefined, recoveryCode);
+                    const session = await verifyAdminMfa(
+                        challengeToken,
+                        undefined,
+                        recoveryCode,
+                    );
                     toast.success(`Welcome back, ${session.name}.`);
                     onLoginSuccess();
                     return;
@@ -87,7 +95,11 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
             toast.success(`Welcome back, ${result.session.name}.`);
             onLoginSuccess();
         } catch (error) {
-            toast.error(error instanceof Error ? error.message : 'Invalid admin credentials.');
+            toast.error(
+                error instanceof Error
+                    ? error.message
+                    : 'Invalid admin credentials.',
+            );
             setIsSubmitting(false);
         }
     };
@@ -106,37 +118,71 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
                 {/* ── Left: welcome ── */}
                 <div className="admin-login-welcome">
                     <div className="admin-login-wordmark">
-                        <img src="/icons/Admin Logo.png" alt="Auctify Admin" className="admin-login-brand-logo" />
+                        <img
+                            src="/icons/Admin Logo.png"
+                            alt="Auctify Admin"
+                            className="admin-login-brand-logo"
+                        />
                         <span>Auctify Admin</span>
                     </div>
 
                     <h1 className="admin-login-headline">Welcome!</h1>
-                    <div className="admin-login-headline-rule" aria-hidden="true" />
+                    <div
+                        className="admin-login-headline-rule"
+                        aria-hidden="true"
+                    />
 
                     <p className="admin-login-description">
-                        The Auctify console gives you full control over your platform — manage promotions, monitor users, adjust system settings, and publish content updates, all from one secure dashboard.
+                        The Auctify console gives you full control over your
+                        platform — manage promotions, monitor users, adjust
+                        system settings, and publish content updates, all from
+                        one secure dashboard.
                     </p>
 
-                    <ul className="admin-login-features" aria-label="Feature highlights">
+                    <ul
+                        className="admin-login-features"
+                        aria-label="Feature highlights"
+                    >
                         <li>
-                            <span className="admin-login-feature-dot" aria-hidden="true" />
-                            Manage homepage carousel, promo circles, and video ads
+                            <span
+                                className="admin-login-feature-dot"
+                                aria-hidden="true"
+                            />
+                            Manage homepage carousel, promo circles, and video
+                            ads
                         </li>
                         <li>
-                            <span className="admin-login-feature-dot" aria-hidden="true" />
-                            Monitor, verify, and moderate seller &amp; buyer accounts
+                            <span
+                                className="admin-login-feature-dot"
+                                aria-hidden="true"
+                            />
+                            Monitor, verify, and moderate seller &amp; buyer
+                            accounts
                         </li>
                         <li>
-                            <span className="admin-login-feature-dot" aria-hidden="true" />
-                            Configure system settings and feature flags in real time
+                            <span
+                                className="admin-login-feature-dot"
+                                aria-hidden="true"
+                            />
+                            Configure system settings and feature flags in real
+                            time
                         </li>
                         <li>
-                            <span className="admin-login-feature-dot" aria-hidden="true" />
-                            Receive live platform notifications and analytics signals
+                            <span
+                                className="admin-login-feature-dot"
+                                aria-hidden="true"
+                            />
+                            Receive live platform notifications and analytics
+                            signals
                         </li>
                     </ul>
 
-                    <a href="/" className="admin-login-learn-more" target="_blank" rel="noopener noreferrer">
+                    <a
+                        href="/"
+                        className="admin-login-learn-more"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                    >
                         Go to Auctify
                     </a>
                 </div>
@@ -145,7 +191,11 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
                 <div className="admin-login-form-col">
                     <form className="admin-login-card" onSubmit={handleSubmit}>
                         <div className="admin-login-card-header">
-                            <h2>{challengeToken ? 'Multi-factor verification' : 'Sign in'}</h2>
+                            <h2>
+                                {challengeToken
+                                    ? 'Multi-factor verification'
+                                    : 'Sign in'}
+                            </h2>
                             <p>
                                 {challengeToken
                                     ? 'Enter your authenticator code to finish admin sign in.'
@@ -156,24 +206,32 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
                         {!challengeToken && (
                             <>
                                 <div className="admin-login-field">
-                                    <label htmlFor="admin-email">User Name</label>
+                                    <label htmlFor="admin-email">
+                                        User Name
+                                    </label>
                                     <input
                                         id="admin-email"
                                         type="email"
                                         value={email}
-                                        onChange={(event) => setEmail(event.target.value)}
+                                        onChange={(event) =>
+                                            setEmail(event.target.value)
+                                        }
                                         placeholder="admin@auctify.com"
                                         autoComplete="username"
                                     />
                                 </div>
 
                                 <div className="admin-login-field">
-                                    <label htmlFor="admin-password">Password</label>
+                                    <label htmlFor="admin-password">
+                                        Password
+                                    </label>
                                     <input
                                         id="admin-password"
                                         type="password"
                                         value={password}
-                                        onChange={(event) => setPassword(event.target.value)}
+                                        onChange={(event) =>
+                                            setPassword(event.target.value)
+                                        }
                                         placeholder="••••••••••"
                                         autoComplete="current-password"
                                     />
@@ -183,12 +241,16 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
 
                         {challengeToken && !useRecoveryCode && (
                             <div className="admin-login-field">
-                                <label htmlFor="admin-mfa-code">Authenticator Code</label>
+                                <label htmlFor="admin-mfa-code">
+                                    Authenticator Code
+                                </label>
                                 <input
                                     id="admin-mfa-code"
                                     type="text"
                                     value={mfaCode}
-                                    onChange={(event) => setMfaCode(event.target.value)}
+                                    onChange={(event) =>
+                                        setMfaCode(event.target.value)
+                                    }
                                     placeholder="123456"
                                     autoComplete="one-time-code"
                                     inputMode="numeric"
@@ -198,12 +260,16 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
 
                         {challengeToken && useRecoveryCode && (
                             <div className="admin-login-field">
-                                <label htmlFor="admin-recovery-code">Recovery Code</label>
+                                <label htmlFor="admin-recovery-code">
+                                    Recovery Code
+                                </label>
                                 <input
                                     id="admin-recovery-code"
                                     type="text"
                                     value={recoveryCode}
-                                    onChange={(event) => setRecoveryCode(event.target.value)}
+                                    onChange={(event) =>
+                                        setRecoveryCode(event.target.value)
+                                    }
                                     placeholder="ABCD-EFGH"
                                     autoComplete="off"
                                 />
@@ -214,14 +280,26 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({ onLoginSuccess }
                             <button
                                 type="button"
                                 className="admin-login-learn-more"
-                                onClick={() => setUseRecoveryCode((prev) => !prev)}
+                                onClick={() =>
+                                    setUseRecoveryCode((prev) => !prev)
+                                }
                             >
-                                {useRecoveryCode ? 'Use authenticator code instead' : 'Use a recovery code'}
+                                {useRecoveryCode
+                                    ? 'Use authenticator code instead'
+                                    : 'Use a recovery code'}
                             </button>
                         )}
 
-                        <button type="submit" className="admin-login-submit" disabled={isSubmitting}>
-                            {isSubmitting ? 'Verifying…' : challengeToken ? 'Verify MFA' : 'Submit'}
+                        <button
+                            type="submit"
+                            className="admin-login-submit"
+                            disabled={isSubmitting}
+                        >
+                            {isSubmitting
+                                ? 'Verifying…'
+                                : challengeToken
+                                  ? 'Verify MFA'
+                                  : 'Submit'}
                         </button>
 
                         {challengeToken && (

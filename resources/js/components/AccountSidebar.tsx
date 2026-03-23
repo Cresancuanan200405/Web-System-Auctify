@@ -30,7 +30,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
         { section: 'cards', label: 'My Cards' },
         { section: 'addresses', label: 'Saved Addresses' },
         { section: 'preferences', label: 'Preferences' },
-        { section: 'wishlist', label: 'Wishlist' }
+        { section: 'wishlist', label: 'Wishlist' },
     ];
 
     return (
@@ -55,22 +55,30 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
                 >
                     <span>Account Verification</span>
                     {!isVerificationAllowed && (
-                        <span className="account-sidebar-item-note">{revokedNotice || 'Unavailable: seller access revoked'}</span>
+                        <span className="account-sidebar-item-note">
+                            {revokedNotice ||
+                                'Unavailable: seller access revoked'}
+                        </span>
                     )}
                 </button>
                 <button
                     className={`account-sidebar-item account-sidebar-item-secondary become-seller-item ${
                         activeSection === 'seller' ? 'active' : ''
-                    } ${(!isVerified || !isVerificationAllowed) ? 'disabled' : ''}`}
+                    } ${!isVerified || !isVerificationAllowed ? 'disabled' : ''}`}
                     type="button"
                     onClick={onBecomeSellerClick}
                 >
                     <span>Become a Seller</span>
                     {!isVerificationAllowed && (
-                        <span className="account-sidebar-item-note">{revokedNotice || 'Unavailable: seller access revoked'}</span>
+                        <span className="account-sidebar-item-note">
+                            {revokedNotice ||
+                                'Unavailable: seller access revoked'}
+                        </span>
                     )}
                     {isVerificationAllowed && !isVerified && (
-                        <span className="account-sidebar-item-note">Complete account verification first</span>
+                        <span className="account-sidebar-item-note">
+                            Complete account verification first
+                        </span>
                     )}
                 </button>
             </div>

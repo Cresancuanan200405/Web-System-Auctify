@@ -29,11 +29,11 @@ export const PasswordSection: React.FC = () => {
             await userService.changePassword({
                 current_password: currentPassword,
                 new_password: newPassword,
-                new_password_confirmation: confirmPassword
+                new_password_confirmation: confirmPassword,
             });
-            
+
             toast.success('Password changed successfully!');
-            
+
             // Clear form
             setCurrentPassword('');
             setNewPassword('');
@@ -43,8 +43,10 @@ export const PasswordSection: React.FC = () => {
                 typeof err === 'object' &&
                 err !== null &&
                 'response' in err &&
-                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                typeof (err as { response?: { data?: { message?: unknown } } })
+                    .response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } })
+                          .response?.data?.message
                     : undefined;
             const errorMessage = responseMessage || 'Failed to change password';
             toast.error(errorMessage);
@@ -71,31 +73,41 @@ export const PasswordSection: React.FC = () => {
                             label="Current Password"
                             type="password"
                             value={currentPassword}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+                            onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                            ) => setCurrentPassword(e.target.value)}
                             placeholder="Enter current password"
                             required
                         />
-                        
+
                         <InputField
                             label="New Password"
                             type="password"
                             value={newPassword}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
+                            onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                            ) => setNewPassword(e.target.value)}
                             placeholder="Minimum 8 characters"
                             required
                         />
-                        
+
                         <InputField
                             label="Confirm New Password"
                             type="password"
                             value={confirmPassword}
-                            onChange={(e: React.ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+                            onChange={(
+                                e: React.ChangeEvent<HTMLInputElement>,
+                            ) => setConfirmPassword(e.target.value)}
                             placeholder="Re-enter new password"
                             required
                         />
 
                         <div className="account-form-actions">
-                            <Button type="submit" variant="primary" isLoading={loading}>
+                            <Button
+                                type="submit"
+                                variant="primary"
+                                isLoading={loading}
+                            >
                                 Update Password
                             </Button>
                         </div>

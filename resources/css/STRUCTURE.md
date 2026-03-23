@@ -5,26 +5,26 @@ This project keeps a single CSS entry file and splits actual rules into section 
 ## Entry Point
 
 - `app.css`
-  - Imports Google Fonts.
-  - Imports section files in fixed order.
+    - Imports Google Fonts.
+    - Imports section files in fixed order.
 
 ## Section Files
 
 - `sections/shell.css`
-  - Global tokens and shared shell layout.
-  - Header, nav, top-level wrappers.
+    - Global tokens and shared shell layout.
+    - Header, nav, top-level wrappers.
 
 - `sections/marketplace.css`
-  - Home, bag, auction detail, seller store/profile marketplace pages.
+    - Home, bag, auction detail, seller store/profile marketplace pages.
 
 - `sections/auth.css`
-  - Login, register, auth card and auth form UI.
+    - Login, register, auth card and auth form UI.
 
 - `sections/account.css`
-  - Account area and sections: wallet, cards, addresses, orders, reviews, seller dashboard/add-product flows.
+    - Account area and sections: wallet, cards, addresses, orders, reviews, seller dashboard/add-product flows.
 
 - `sections/admin.css`
-  - Admin login and admin dashboard styles.
+    - Admin login and admin dashboard styles.
 
 ## Rules For Future CSS Changes
 

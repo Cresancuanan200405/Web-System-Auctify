@@ -176,13 +176,19 @@
     position: relative;
     overflow: hidden;
     transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18), 0 2px 6px rgba(0, 0, 0, 0.1);
+    box-shadow:
+        0 12px 40px rgba(0, 0, 0, 0.18),
+        0 2px 6px rgba(0, 0, 0, 0.1);
 }
 
 .hero-banner-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(244, 208, 63, 0.25) 0%, rgba(249, 231, 159, 0.25) 100%);
+    background: linear-gradient(
+        135deg,
+        rgba(244, 208, 63, 0.25) 0%,
+        rgba(249, 231, 159, 0.25) 100%
+    );
     z-index: 1;
 }
 
@@ -304,7 +310,12 @@
 .mini-carousel-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.12) 55%, rgba(0, 0, 0, 0) 100%);
+    background: linear-gradient(
+        90deg,
+        rgba(0, 0, 0, 0.38) 0%,
+        rgba(0, 0, 0, 0.12) 55%,
+        rgba(0, 0, 0, 0) 100%
+    );
     z-index: 1;
 }
 
@@ -386,7 +397,9 @@
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
     flex-shrink: 0;
 }
 
@@ -551,8 +564,16 @@
     border: 1px solid rgba(255, 255, 255, 0.08);
     border-radius: 14px;
     background:
-        radial-gradient(circle at left center, rgba(56, 189, 248, 0.12), transparent 30%),
-        radial-gradient(circle at right center, rgba(59, 130, 246, 0.12), transparent 28%),
+        radial-gradient(
+            circle at left center,
+            rgba(56, 189, 248, 0.12),
+            transparent 30%
+        ),
+        radial-gradient(
+            circle at right center,
+            rgba(59, 130, 246, 0.12),
+            transparent 28%
+        ),
         linear-gradient(135deg, #0f172a 0%, #111827 52%, #1e293b 100%);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
@@ -568,7 +589,12 @@
     top: 50%;
     width: 18%;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(30, 41, 59, 0.18), transparent);
+    background: linear-gradient(
+        90deg,
+        transparent,
+        rgba(30, 41, 59, 0.18),
+        transparent
+    );
     transform: translateY(-50%);
 }
 
@@ -615,7 +641,10 @@
 
 .home-product-card-clickable {
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .home-product-card-clickable:hover {
@@ -692,7 +721,11 @@
     justify-content: center;
     cursor: pointer;
     flex: 0 0 auto;
-    transition: transform 0.16s ease, color 0.16s ease, border-color 0.16s ease, background 0.16s ease;
+    transition:
+        transform 0.16s ease,
+        color 0.16s ease,
+        border-color 0.16s ease,
+        background 0.16s ease;
 }
 
 .home-product-wishlist-btn-bottom svg {
@@ -720,9 +753,15 @@
 }
 
 @keyframes home-wishlist-pulse {
-    0% { transform: scale(1); }
-    45% { transform: scale(1.22); }
-    100% { transform: scale(1); }
+    0% {
+        transform: scale(1);
+    }
+    45% {
+        transform: scale(1.22);
+    }
+    100% {
+        transform: scale(1);
+    }
 }
 
 .home-product-image {
@@ -1089,7 +1128,12 @@
     cursor: pointer;
     flex: 0 0 auto;
     box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
-    transition: transform 0.2s ease, color 0.2s ease, border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        color 0.2s ease,
+        border-color 0.2s ease,
+        background 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .auction-detail-wishlist-btn:hover {
@@ -1373,7 +1417,11 @@
     border-radius: 28px;
     border: 1px solid rgba(148, 163, 184, 0.22);
     background:
-        radial-gradient(circle at top right, rgba(59, 130, 246, 0.2), transparent 30%),
+        radial-gradient(
+            circle at top right,
+            rgba(59, 130, 246, 0.2),
+            transparent 30%
+        ),
         linear-gradient(135deg, #f8fbff 0%, #eef6ff 48%, #ffffff 100%);
     padding: 28px;
     box-shadow: 0 24px 60px rgba(15, 23, 42, 0.1);
@@ -1475,7 +1523,10 @@
     font-size: 13px;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        background 0.18s ease;
 }
 
 .seller-profile-cta {
@@ -1911,7 +1962,10 @@
     font-weight: 700;
     cursor: pointer;
     box-shadow: 0 14px 28px rgba(2, 6, 23, 0.22);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        filter 0.2s ease;
 }
 
 .auction-detail-cta:hover {
@@ -1924,7 +1978,10 @@
     border-color: #0b6b4d;
     background: linear-gradient(135deg, #16a56f 0%, #0b6b4d 100%);
     box-shadow: 0 10px 20px rgba(11, 107, 77, 0.22);
-    transition: transform 180ms ease, box-shadow 180ms ease, filter 180ms ease;
+    transition:
+        transform 180ms ease,
+        box-shadow 180ms ease,
+        filter 180ms ease;
 }
 
 .auction-detail-checkout-btn:hover {
@@ -2439,7 +2496,9 @@
     border-radius: 20px;
     border: 2px dashed rgba(0, 0, 0, 0.22);
     background: linear-gradient(135deg, #f7f7f7 0%, #ececec 100%);
-    box-shadow: 0 16px 46px rgba(0, 0, 0, 0.18), 0 4px 10px rgba(0, 0, 0, 0.1);
+    box-shadow:
+        0 16px 46px rgba(0, 0, 0, 0.18),
+        0 4px 10px rgba(0, 0, 0, 0.1);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -2478,7 +2537,11 @@
 .video-ad-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(180deg, rgba(15, 23, 42, 0.12) 0%, rgba(15, 23, 42, 0.68) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(15, 23, 42, 0.12) 0%,
+        rgba(15, 23, 42, 0.68) 100%
+    );
     z-index: 1;
     pointer-events: none;
 }
@@ -2529,4 +2592,3 @@
     justify-content: center;
     font-size: 120px;
 }
-

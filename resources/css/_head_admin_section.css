@@ -1,8 +1,19 @@
 .admin-login-shell {
     min-height: calc(100vh - 48px);
     padding: 36px;
-    background: radial-gradient(circle at 0 0, #ffe7a8 0%, rgba(255, 231, 168, 0.3) 28%, transparent 52%),
-        radial-gradient(circle at 90% 80%, #d4f6ef 0%, rgba(212, 246, 239, 0.45) 34%, transparent 58%),
+    background:
+        radial-gradient(
+            circle at 0 0,
+            #ffe7a8 0%,
+            rgba(255, 231, 168, 0.3) 28%,
+            transparent 52%
+        ),
+        radial-gradient(
+            circle at 90% 80%,
+            #d4f6ef 0%,
+            rgba(212, 246, 239, 0.45) 34%,
+            transparent 58%
+        ),
         linear-gradient(160deg, #f5f7fb 0%, #eef3f9 48%, #f4f5f1 100%);
     display: flex;
     align-items: center;
@@ -491,7 +502,12 @@
 .admin-neo-shell {
     min-height: calc(100vh - 48px);
     padding: 12px;
-    background: radial-gradient(circle at 0% 0%, #0b5b57 0%, #044743 52%, #0d3636 100%);
+    background: radial-gradient(
+        circle at 0% 0%,
+        #0b5b57 0%,
+        #044743 52%,
+        #0d3636 100%
+    );
     display: grid;
     grid-template-columns: 88px 1fr;
     gap: 12px;
@@ -548,7 +564,10 @@
     justify-content: center;
     padding: 0;
     cursor: pointer;
-    transition: background-color 0.2s ease, color 0.2s ease, transform 0.2s ease;
+    transition:
+        background-color 0.2s ease,
+        color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .admin-neo-menu-btn:hover {
@@ -799,7 +818,11 @@
     margin-top: 20px;
     height: 170px;
     border-radius: 16px;
-    background: linear-gradient(180deg, rgba(59, 127, 120, 0.2) 0%, rgba(59, 127, 120, 0.02) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(59, 127, 120, 0.2) 0%,
+        rgba(59, 127, 120, 0.02) 100%
+    );
     border: 1px solid #dce4e8;
     display: flex;
     align-items: flex-end;
@@ -1289,8 +1312,16 @@
     border: 1px solid #d8e2ee;
     border-radius: 18px;
     background:
-        radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.12), transparent 42%),
-        radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.12), transparent 46%),
+        radial-gradient(
+            circle at 0% 0%,
+            rgba(37, 99, 235, 0.12),
+            transparent 42%
+        ),
+        radial-gradient(
+            circle at 100% 100%,
+            rgba(14, 165, 233, 0.12),
+            transparent 46%
+        ),
         linear-gradient(145deg, #ffffff 0%, #f7faff 100%);
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
     padding: 18px 20px;
@@ -1418,7 +1449,11 @@
     border: 1px solid #d8e1eb;
     border-radius: 16px;
     background:
-        radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.08), transparent 35%),
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(37, 99, 235, 0.08),
+            transparent 35%
+        ),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     padding: 16px;
     box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
@@ -1491,11 +1526,18 @@
     border: 1px solid #d5e0ec;
     border-radius: 16px;
     background:
-        radial-gradient(circle at right top, rgba(59, 130, 246, 0.08), transparent 36%),
+        radial-gradient(
+            circle at right top,
+            rgba(59, 130, 246, 0.08),
+            transparent 36%
+        ),
         linear-gradient(165deg, #ffffff 0%, #f8fbff 100%);
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .seller-store-card:hover {
@@ -1651,7 +1693,11 @@
     border: 1px solid #d8e1eb;
     border-radius: 16px;
     background:
-        radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.08), transparent 36%),
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(14, 165, 233, 0.08),
+            transparent 36%
+        ),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     padding: 16px;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
@@ -2508,7 +2554,10 @@
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
 }
 
 .account-edit-panel .field select {
@@ -2519,7 +2568,10 @@
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
     cursor: pointer;
 }
 
@@ -2615,7 +2667,7 @@
     margin: -4px;
 }
 
-.radio-label input[type="radio"] {
+.radio-label input[type='radio'] {
     cursor: pointer;
     width: 16px;
     height: 16px;
@@ -2638,7 +2690,7 @@
     color: var(--muted);
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
     margin-top: 2px;
     cursor: pointer;
     width: 16px;
@@ -2959,7 +3011,3 @@
         min-height: 480px;
     }
 }
-
-
-
-

@@ -4,7 +4,7 @@
 export function formatCurrency(amount: number): string {
     return `₱${amount.toLocaleString('en-PH', {
         minimumFractionDigits: 2,
-        maximumFractionDigits: 2
+        maximumFractionDigits: 2,
     })}`;
 }
 
@@ -15,7 +15,7 @@ export function formatDate(dateString: string): string {
     return new Date(dateString).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'long',
-        day: 'numeric'
+        day: 'numeric',
     });
 }
 
@@ -48,7 +48,7 @@ export function maskCardNumber(cardNumber: string): string {
 export function getInitials(name: string): string {
     return name
         .split(' ')
-        .map(part => part[0])
+        .map((part) => part[0])
         .join('')
         .toUpperCase()
         .slice(0, 2);

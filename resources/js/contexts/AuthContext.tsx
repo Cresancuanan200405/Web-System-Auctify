@@ -12,15 +12,62 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [authUser, setAuthUser] = useState<User | null>(() => {
-        const stored = localStorage.getItem('auth_user');
-        return stored ? JSON.parse(stored) : null;
-    });
+const getInitialAuthState = () => {
+    const storedToken = localStorage.getItem('auth_token');
+    const storedUserRaw = localStorage.getItem('auth_user');
 
-    const [authToken, setAuthToken] = useState<string | null>(() => {
-        return localStorage.getItem('auth_token');
-    });
+    if (!storedToken || !storedUserRaw) {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+
+        return {
+            authToken: null,
+            authUser: null,
+        };
+    }
+
+    try {
+        const storedUser = JSON.parse(storedUserRaw) as User;
+
+        if (
+            !storedUser ||
+            typeof storedUser !== 'object' ||
+            typeof storedUser.id !== 'number'
+        ) {
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('auth_user');
+
+            return {
+                authToken: null,
+                authUser: null,
+            };
+        }
+
+        return {
+            authToken: storedToken,
+            authUser: storedUser,
+        };
+    } catch {
+        localStorage.removeItem('auth_token');
+        localStorage.removeItem('auth_user');
+
+        return {
+            authToken: null,
+            authUser: null,
+        };
+    }
+};
+
+export const AuthProvider: React.FC<{ children: ReactNode }> = ({
+    children,
+}) => {
+    const [authUser, setAuthUser] = useState<User | null>(
+        () => getInitialAuthState().authUser,
+    );
+
+    const [authToken, setAuthToken] = useState<string | null>(
+        () => getInitialAuthState().authToken,
+    );
 
     const login = (token: string, user: User) => {
         localStorage.setItem('auth_token', token);
@@ -42,7 +89,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     };
 
     return (
-        <AuthContext.Provider value={{ authUser, authToken, login, logout, updateUser }}>
+        <AuthContext.Provider
+            value={{ authUser, authToken, login, logout, updateUser }}
+        >
             {children}
         </AuthContext.Provider>
     );

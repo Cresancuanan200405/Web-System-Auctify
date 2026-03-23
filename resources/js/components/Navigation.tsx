@@ -21,10 +21,17 @@ export const Navigation: React.FC<NavigationProps> = ({
     const [hoveredMenu, setHoveredMenu] = useState<string | null>(null);
     const [isMegamenuHovering, setIsMegamenuHovering] = useState(false);
     const [products, setProducts] = useState<AuctionProduct[]>([]);
-    const [activePreviewCategory, setActivePreviewCategory] = useState<string | null>(null);
-    const [activePreviewSubcategory, setActivePreviewSubcategory] = useState<string | null>(null);
+    const [activePreviewCategory, setActivePreviewCategory] = useState<
+        string | null
+    >(null);
+    const [activePreviewSubcategory, setActivePreviewSubcategory] = useState<
+        string | null
+    >(null);
 
-    const handleSelectCategory = (event: React.MouseEvent<HTMLButtonElement>, category: string) => {
+    const handleSelectCategory = (
+        event: React.MouseEvent<HTMLButtonElement>,
+        category: string,
+    ) => {
         event.preventDefault();
         onSelectCategory?.(category);
     };
@@ -52,8 +59,12 @@ export const Navigation: React.FC<NavigationProps> = ({
         setHoveredMenu('active');
         updateMenuTopOffset(event.currentTarget);
 
-        const firstLink = event.currentTarget.querySelector('.megamenu-sidebar .megamenu-link') as HTMLAnchorElement | null;
-        const categoryButton = event.currentTarget.querySelector('.nav-item-button') as HTMLButtonElement | null;
+        const firstLink = event.currentTarget.querySelector(
+            '.megamenu-sidebar .megamenu-link',
+        ) as HTMLAnchorElement | null;
+        const categoryButton = event.currentTarget.querySelector(
+            '.nav-item-button',
+        ) as HTMLButtonElement | null;
         const categoryText = categoryButton?.textContent?.trim();
 
         if (categoryText) {
@@ -88,7 +99,10 @@ export const Navigation: React.FC<NavigationProps> = ({
             return url;
         }
 
-        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+            /\/$/,
+            '',
+        );
         if (!apiBase) {
             return url;
         }
@@ -126,42 +140,63 @@ export const Navigation: React.FC<NavigationProps> = ({
         }
 
         const categoryValue = getCategoryValue(activePreviewCategory);
-        const subcategoryValue = getSubcategoryValue(categoryValue, activePreviewSubcategory);
+        const subcategoryValue = getSubcategoryValue(
+            categoryValue,
+            activePreviewSubcategory,
+        );
 
         return products
-            .filter((product) => (product.category ?? '').trim().toLowerCase() === categoryValue)
-            .filter((product) => (product.subcategory ?? '').trim().toLowerCase() === subcategoryValue)
+            .filter(
+                (product) =>
+                    (product.category ?? '').trim().toLowerCase() ===
+                    categoryValue,
+            )
+            .filter(
+                (product) =>
+                    (product.subcategory ?? '').trim().toLowerCase() ===
+                    subcategoryValue,
+            )
             .slice(0, 6);
     }, [activePreviewCategory, activePreviewSubcategory, products]);
 
-    const livePreviewItems = previewProducts.length > 0
-        ? previewProducts.map((product) => {
-            const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image') ?? product.media?.[0];
-            return (
-                <button
-                    key={product.id}
-                    type="button"
-                    className="brand-box brand-box-product"
-                    onClick={() => onNavigateAuction?.(product.id)}
-                >
-                    {thumbnail?.url ? (
-                        <img
-                            className="brand-box-product-image"
-                            src={resolveMediaUrl(thumbnail.url)}
-                            alt={product.title}
-                        />
-                    ) : (
-                        <div className="brand-box-product-image brand-box-product-image-empty">No Image</div>
-                    )}
-                    <span className="brand-box-product-title">{product.title}</span>
-                </button>
-            );
-        })
-        : null;
+    const livePreviewItems =
+        previewProducts.length > 0
+            ? previewProducts.map((product) => {
+                  const thumbnail =
+                      (product.media ?? []).find(
+                          (media) => media.media_type === 'image',
+                      ) ?? product.media?.[0];
+                  return (
+                      <button
+                          key={product.id}
+                          type="button"
+                          className="brand-box brand-box-product"
+                          onClick={() => onNavigateAuction?.(product.id)}
+                      >
+                          {thumbnail?.url ? (
+                              <img
+                                  className="brand-box-product-image"
+                                  src={resolveMediaUrl(thumbnail.url)}
+                                  alt={product.title}
+                              />
+                          ) : (
+                              <div className="brand-box-product-image brand-box-product-image-empty">
+                                  No Image
+                              </div>
+                          )}
+                          <span className="brand-box-product-title">
+                              {product.title}
+                          </span>
+                      </button>
+                  );
+              })
+            : null;
 
     const handleMegamenuLinkClick = (event: React.MouseEvent<HTMLElement>) => {
         const target = event.target as HTMLElement;
-        const link = target.closest('a.megamenu-link, a.megamenu-shop-all') as HTMLAnchorElement | null;
+        const link = target.closest(
+            'a.megamenu-link, a.megamenu-shop-all',
+        ) as HTMLAnchorElement | null;
 
         if (!link) {
             return;
@@ -194,7 +229,9 @@ export const Navigation: React.FC<NavigationProps> = ({
 
     const handleMegamenuLinkHover = (event: React.MouseEvent<HTMLElement>) => {
         const target = event.target as HTMLElement;
-        const link = target.closest('a.megamenu-link') as HTMLAnchorElement | null;
+        const link = target.closest(
+            'a.megamenu-link',
+        ) as HTMLAnchorElement | null;
 
         if (!link) {
             return;
@@ -220,7 +257,9 @@ export const Navigation: React.FC<NavigationProps> = ({
         };
 
         handleViewportChange();
-        window.addEventListener('scroll', handleViewportChange, { passive: true });
+        window.addEventListener('scroll', handleViewportChange, {
+            passive: true,
+        });
         window.addEventListener('resize', handleViewportChange);
 
         return () => {
@@ -232,43 +271,83 @@ export const Navigation: React.FC<NavigationProps> = ({
     return (
         <nav
             className={`main-nav ${isMegamenuHovering ? 'megamenu-hovering' : ''}`}
-            style={{ '--menu-top-offset': `${menuTopOffset}px` } as React.CSSProperties}
+            style={
+                {
+                    '--menu-top-offset': `${menuTopOffset}px`,
+                } as React.CSSProperties
+            }
             onClick={handleMegamenuLinkClick}
             onMouseOver={handleMegamenuLinkHover}
         >
             {/* Electronics */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'electronics' ? 'active' : ''}`}
-                    onClick={(event) => handleSelectCategory(event, 'Electronics')}
+                    onClick={(event) =>
+                        handleSelectCategory(event, 'Electronics')
+                    }
                 >
                     ELECTRONICS
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
-                        <div className="megamenu-section-title">Electronics</div>
-                        <a href="#new-auctions" className="megamenu-link">New Auctions</a>
-                        <a href="#ending-soon" className="megamenu-link">Ending Soon</a>
-                        <a href="#hot-items" className="megamenu-link">Hot Items</a>
-                        <a href="#laptops" className="megamenu-link">Laptops & Computers</a>
-                        <a href="#phones" className="megamenu-link">Phones & Accessories</a>
-                        <a href="#audio" className="megamenu-link">Audio & Video</a>
-                        <a href="#gaming" className="megamenu-link">Gaming</a>
+                        <div className="megamenu-section-title">
+                            Electronics
+                        </div>
+                        <a href="#new-auctions" className="megamenu-link">
+                            New Auctions
+                        </a>
+                        <a href="#ending-soon" className="megamenu-link">
+                            Ending Soon
+                        </a>
+                        <a href="#hot-items" className="megamenu-link">
+                            Hot Items
+                        </a>
+                        <a href="#laptops" className="megamenu-link">
+                            Laptops & Computers
+                        </a>
+                        <a href="#phones" className="megamenu-link">
+                            Phones & Accessories
+                        </a>
+                        <a href="#audio" className="megamenu-link">
+                            Audio & Video
+                        </a>
+                        <a href="#gaming" className="megamenu-link">
+                            Gaming
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Electronics</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Latest Gadgets</div>
-                                <div className="featured-item">Premium Brands</div>
+                                <div className="featured-item">
+                                    Latest Gadgets
+                                </div>
+                                <div className="featured-item">
+                                    Premium Brands
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Sellers'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Popular Sellers'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -286,41 +365,77 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Collectibles */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'collectibles' ? 'active' : ''}`}
-                    onClick={(event) => handleSelectCategory(event, 'Collectibles')}
+                    onClick={(event) =>
+                        handleSelectCategory(event, 'Collectibles')
+                    }
                 >
                     COLLECTIBLES
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
-                        <div className="megamenu-section-title">Collectibles</div>
-                        <a href="#coins" className="megamenu-link">Rare Coins</a>
-                        <a href="#trading-cards" className="megamenu-link">Trading Cards</a>
-                        <a href="#memorabilia" className="megamenu-link">Sports Memorabilia</a>
-                        <a href="#vintage-items" className="megamenu-link">Vintage Items</a>
-                        <a href="#stamps" className="megamenu-link">Stamps & Documents</a>
-                        <a href="#action-figures" className="megamenu-link">Action Figures</a>
+                        <div className="megamenu-section-title">
+                            Collectibles
+                        </div>
+                        <a href="#coins" className="megamenu-link">
+                            Rare Coins
+                        </a>
+                        <a href="#trading-cards" className="megamenu-link">
+                            Trading Cards
+                        </a>
+                        <a href="#memorabilia" className="megamenu-link">
+                            Sports Memorabilia
+                        </a>
+                        <a href="#vintage-items" className="megamenu-link">
+                            Vintage Items
+                        </a>
+                        <a href="#stamps" className="megamenu-link">
+                            Stamps & Documents
+                        </a>
+                        <a href="#action-figures" className="megamenu-link">
+                            Action Figures
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Collectibles</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Trending Now</h3>
                             <div className="featured-items">
-                                <div className="featured-item">High Value Items</div>
-                                <div className="featured-item">Authenticated Items</div>
+                                <div className="featured-item">
+                                    High Value Items
+                                </div>
+                                <div className="featured-item">
+                                    Authenticated Items
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Categories'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Categories'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
-                                    <div className="brand-box">Graded Items</div>
+                                    <div className="brand-box">
+                                        Graded Items
+                                    </div>
                                     <div className="brand-box">Vintage</div>
                                     <div className="brand-box">Modern</div>
                                     <div className="brand-box">Rare</div>
@@ -334,7 +449,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Art */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'art' ? 'active' : ''}`}
@@ -342,38 +461,68 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     ART
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Art</div>
-                        <a href="#paintings" className="megamenu-link">Paintings</a>
-                        <a href="#sculptures" className="megamenu-link">Sculptures</a>
-                        <a href="#photography" className="megamenu-link">Photography</a>
-                        <a href="#prints" className="megamenu-link">Prints & Drawings</a>
-                        <a href="#contemporary" className="megamenu-link">Contemporary Art</a>
-                        <a href="#digital" className="megamenu-link">Digital Art</a>
+                        <a href="#paintings" className="megamenu-link">
+                            Paintings
+                        </a>
+                        <a href="#sculptures" className="megamenu-link">
+                            Sculptures
+                        </a>
+                        <a href="#photography" className="megamenu-link">
+                            Photography
+                        </a>
+                        <a href="#prints" className="megamenu-link">
+                            Prints & Drawings
+                        </a>
+                        <a href="#contemporary" className="megamenu-link">
+                            Contemporary Art
+                        </a>
+                        <a href="#digital" className="megamenu-link">
+                            Digital Art
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Art</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Artist Collections</div>
-                                <div className="featured-item">Signed Works</div>
+                                <div className="featured-item">
+                                    Artist Collections
+                                </div>
+                                <div className="featured-item">
+                                    Signed Works
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Art Styles'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Art Styles'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
                                     <div className="brand-box">Abstract</div>
                                     <div className="brand-box">Modern</div>
                                     <div className="brand-box">Classical</div>
-                                    <div className="brand-box">Contemporary</div>
+                                    <div className="brand-box">
+                                        Contemporary
+                                    </div>
                                     <div className="brand-box">Surreal</div>
-                                    <div className="brand-box">Impressionist</div>
+                                    <div className="brand-box">
+                                        Impressionist
+                                    </div>
                                 </>
                             )}
                         </div>
@@ -382,7 +531,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Luxury */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'luxury' ? 'active' : ''}`}
@@ -390,35 +543,63 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     LUXURY
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Luxury</div>
-                        <a href="#designer-bags" className="megamenu-link">Designer Bags</a>
-                        <a href="#luxury-watches" className="megamenu-link">Luxury Watches</a>
-                        <a href="#fine-jewelry" className="megamenu-link">Fine Jewelry</a>
-                        <a href="#designer-fashion" className="megamenu-link">Designer Fashion</a>
-                        <a href="#luxury-accessories" className="megamenu-link">Accessories</a>
-                        <a href="#haute-couture" className="megamenu-link">Haute Couture</a>
+                        <a href="#designer-bags" className="megamenu-link">
+                            Designer Bags
+                        </a>
+                        <a href="#luxury-watches" className="megamenu-link">
+                            Luxury Watches
+                        </a>
+                        <a href="#fine-jewelry" className="megamenu-link">
+                            Fine Jewelry
+                        </a>
+                        <a href="#designer-fashion" className="megamenu-link">
+                            Designer Fashion
+                        </a>
+                        <a href="#luxury-accessories" className="megamenu-link">
+                            Accessories
+                        </a>
+                        <a href="#haute-couture" className="megamenu-link">
+                            Haute Couture
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Luxury</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Premium Collections</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Certified Authentic</div>
-                                <div className="featured-item">Limited Edition</div>
+                                <div className="featured-item">
+                                    Certified Authentic
+                                </div>
+                                <div className="featured-item">
+                                    Limited Edition
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Luxury Brands'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Luxury Brands'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
                                     <div className="brand-box">Hermès</div>
                                     <div className="brand-box">Gucci</div>
-                                    <div className="brand-box">Louis Vuitton</div>
+                                    <div className="brand-box">
+                                        Louis Vuitton
+                                    </div>
                                     <div className="brand-box">Chanel</div>
                                     <div className="brand-box">Cartier</div>
                                     <div className="brand-box">Rolex</div>
@@ -430,7 +611,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Antiques */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'antiques' ? 'active' : ''}`}
@@ -438,29 +623,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     ANTIQUES
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Antiques</div>
-                        <a href="#furniture" className="megamenu-link">Antique Furniture</a>
-                        <a href="#porcelain" className="megamenu-link">Porcelain & Pottery</a>
-                        <a href="#silver" className="megamenu-link">Silver & Metals</a>
-                        <a href="#textiles" className="megamenu-link">Textiles & Rugs</a>
-                        <a href="#decor" className="megamenu-link">Decorative Items</a>
-                        <a href="#vintage-tools" className="megamenu-link">Vintage Tools</a>
+                        <a href="#furniture" className="megamenu-link">
+                            Antique Furniture
+                        </a>
+                        <a href="#porcelain" className="megamenu-link">
+                            Porcelain & Pottery
+                        </a>
+                        <a href="#silver" className="megamenu-link">
+                            Silver & Metals
+                        </a>
+                        <a href="#textiles" className="megamenu-link">
+                            Textiles & Rugs
+                        </a>
+                        <a href="#decor" className="megamenu-link">
+                            Decorative Items
+                        </a>
+                        <a href="#vintage-tools" className="megamenu-link">
+                            Vintage Tools
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Antiques</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Premium Pieces</div>
-                                <div className="featured-item">Authenticated</div>
+                                <div className="featured-item">
+                                    Premium Pieces
+                                </div>
+                                <div className="featured-item">
+                                    Authenticated
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Periods'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Periods'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -478,7 +689,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Vehicles */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'vehicles' ? 'active' : ''}`}
@@ -486,29 +701,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     VEHICLES
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Vehicles</div>
-                        <a href="#classic-cars" className="megamenu-link">Classic Cars</a>
-                        <a href="#motorcycles" className="megamenu-link">Motorcycles</a>
-                        <a href="#vintage-bikes" className="megamenu-link">Vintage Bikes</a>
-                        <a href="#sports-cars" className="megamenu-link">Sports Cars</a>
-                        <a href="#luxury-cars" className="megamenu-link">Luxury Vehicles</a>
-                        <a href="#parts" className="megamenu-link">Parts & Accessories</a>
+                        <a href="#classic-cars" className="megamenu-link">
+                            Classic Cars
+                        </a>
+                        <a href="#motorcycles" className="megamenu-link">
+                            Motorcycles
+                        </a>
+                        <a href="#vintage-bikes" className="megamenu-link">
+                            Vintage Bikes
+                        </a>
+                        <a href="#sports-cars" className="megamenu-link">
+                            Sports Cars
+                        </a>
+                        <a href="#luxury-cars" className="megamenu-link">
+                            Luxury Vehicles
+                        </a>
+                        <a href="#parts" className="megamenu-link">
+                            Parts & Accessories
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Vehicles</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Collector Cars</div>
-                                <div className="featured-item">Restored Vehicles</div>
+                                <div className="featured-item">
+                                    Collector Cars
+                                </div>
+                                <div className="featured-item">
+                                    Restored Vehicles
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Brands'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Popular Brands'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -526,7 +767,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Fashion */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'fashion' ? 'active' : ''}`}
@@ -534,29 +779,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     FASHION
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Fashion</div>
-                        <a href="#vintage-dresses" className="megamenu-link">Vintage Dresses</a>
-                        <a href="#designer-shoes" className="megamenu-link">Designer Shoes</a>
-                        <a href="#mens-suits" className="megamenu-link">Men's Suits</a>
-                        <a href="#accessories" className="megamenu-link">Accessories</a>
-                        <a href="#streetwear" className="megamenu-link">Streetwear</a>
-                        <a href="#haute-couture" className="megamenu-link">Haute Couture</a>
+                        <a href="#vintage-dresses" className="megamenu-link">
+                            Vintage Dresses
+                        </a>
+                        <a href="#designer-shoes" className="megamenu-link">
+                            Designer Shoes
+                        </a>
+                        <a href="#mens-suits" className="megamenu-link">
+                            Men's Suits
+                        </a>
+                        <a href="#accessories" className="megamenu-link">
+                            Accessories
+                        </a>
+                        <a href="#streetwear" className="megamenu-link">
+                            Streetwear
+                        </a>
+                        <a href="#haute-couture" className="megamenu-link">
+                            Haute Couture
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Fashion</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Designer Collections</div>
-                                <div className="featured-item">Limited Editions</div>
+                                <div className="featured-item">
+                                    Designer Collections
+                                </div>
+                                <div className="featured-item">
+                                    Limited Editions
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Fashion Brands'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Fashion Brands'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -574,7 +845,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Property */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'property' ? 'active' : ''}`}
@@ -582,29 +857,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     PROPERTY
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Property</div>
-                        <a href="#residential" className="megamenu-link">Residential</a>
-                        <a href="#commercial" className="megamenu-link">Commercial</a>
-                        <a href="#land" className="megamenu-link">Land</a>
-                        <a href="#historic" className="megamenu-link">Historic Buildings</a>
-                        <a href="#condominiums" className="megamenu-link">Condominiums</a>
-                        <a href="#foreclosures" className="megamenu-link">Foreclosures</a>
+                        <a href="#residential" className="megamenu-link">
+                            Residential
+                        </a>
+                        <a href="#commercial" className="megamenu-link">
+                            Commercial
+                        </a>
+                        <a href="#land" className="megamenu-link">
+                            Land
+                        </a>
+                        <a href="#historic" className="megamenu-link">
+                            Historic Buildings
+                        </a>
+                        <a href="#condominiums" className="megamenu-link">
+                            Condominiums
+                        </a>
+                        <a href="#foreclosures" className="megamenu-link">
+                            Foreclosures
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Property</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Premium Properties</div>
-                                <div className="featured-item">Investment Opportunities</div>
+                                <div className="featured-item">
+                                    Premium Properties
+                                </div>
+                                <div className="featured-item">
+                                    Investment Opportunities
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Locations'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Popular Locations'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -622,7 +923,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* Niche */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'niche' ? 'active' : ''}`}
@@ -630,29 +935,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     NICHE
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">Niche</div>
-                        <a href="#rare-finds" className="megamenu-link">Rare Finds</a>
-                        <a href="#oddities" className="megamenu-link">Oddities</a>
-                        <a href="#handmade" className="megamenu-link">Handmade Crafts</a>
-                        <a href="#movie-props" className="megamenu-link">Movie Props</a>
-                        <a href="#historical" className="megamenu-link">Historical Items</a>
-                        <a href="#one-of-a-kind" className="megamenu-link">One-of-a-Kind</a>
+                        <a href="#rare-finds" className="megamenu-link">
+                            Rare Finds
+                        </a>
+                        <a href="#oddities" className="megamenu-link">
+                            Oddities
+                        </a>
+                        <a href="#handmade" className="megamenu-link">
+                            Handmade Crafts
+                        </a>
+                        <a href="#movie-props" className="megamenu-link">
+                            Movie Props
+                        </a>
+                        <a href="#historical" className="megamenu-link">
+                            Historical Items
+                        </a>
+                        <a href="#one-of-a-kind" className="megamenu-link">
+                            One-of-a-Kind
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">Niche</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Unique Finds</div>
-                                <div className="featured-item">Rare Collections</div>
+                                <div className="featured-item">
+                                    Unique Finds
+                                </div>
+                                <div className="featured-item">
+                                    Rare Collections
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Categories'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Categories'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -670,7 +1001,11 @@ export const Navigation: React.FC<NavigationProps> = ({
             </div>
 
             {/* School */}
-            <div className="nav-item-wrapper" onMouseEnter={handleMenuMouseEnter} onMouseLeave={handleMenuMouseLeave}>
+            <div
+                className="nav-item-wrapper"
+                onMouseEnter={handleMenuMouseEnter}
+                onMouseLeave={handleMenuMouseLeave}
+            >
                 <button
                     type="button"
                     className={`nav-item nav-item-button ${activeCategory?.toLowerCase() === 'school' ? 'active' : ''}`}
@@ -678,29 +1013,55 @@ export const Navigation: React.FC<NavigationProps> = ({
                 >
                     SCHOOL
                 </button>
-                <div className="nav-megamenu" onMouseEnter={handleMegamenuEnter} onMouseLeave={handleMegamenuLeave}>
+                <div
+                    className="nav-megamenu"
+                    onMouseEnter={handleMegamenuEnter}
+                    onMouseLeave={handleMegamenuLeave}
+                >
                     <div className="megamenu-sidebar">
                         <div className="megamenu-section-title">School</div>
-                        <a href="#textbooks" className="megamenu-link">Textbooks</a>
-                        <a href="#laptops" className="megamenu-link">Laptops & Tablets</a>
-                        <a href="#scientific" className="megamenu-link">Scientific Equipment</a>
-                        <a href="#stationery" className="megamenu-link">Stationery</a>
-                        <a href="#uniforms" className="megamenu-link">Uniforms</a>
-                        <a href="#school-bags" className="megamenu-link">School Bags</a>
+                        <a href="#textbooks" className="megamenu-link">
+                            Textbooks
+                        </a>
+                        <a href="#laptops" className="megamenu-link">
+                            Laptops & Tablets
+                        </a>
+                        <a href="#scientific" className="megamenu-link">
+                            Scientific Equipment
+                        </a>
+                        <a href="#stationery" className="megamenu-link">
+                            Stationery
+                        </a>
+                        <a href="#uniforms" className="megamenu-link">
+                            Uniforms
+                        </a>
+                        <a href="#school-bags" className="megamenu-link">
+                            School Bags
+                        </a>
                     </div>
                     <div className="megamenu-content">
                         <div className="megamenu-header">School</div>
-                        <a href="#shop-all" className="megamenu-shop-all">Shop All</a>
+                        <a href="#shop-all" className="megamenu-shop-all">
+                            Shop All
+                        </a>
                         <div className="megamenu-featured">
                             <h3>Featured Auctions</h3>
                             <div className="featured-items">
-                                <div className="featured-item">Educational Tech</div>
-                                <div className="featured-item">School Essentials</div>
+                                <div className="featured-item">
+                                    Educational Tech
+                                </div>
+                                <div className="featured-item">
+                                    School Essentials
+                                </div>
                             </div>
                         </div>
                     </div>
                     <div className="megamenu-brands">
-                        <h3>{previewProducts.length > 0 ? 'Live Matching Products' : 'Popular Items'}</h3>
+                        <h3>
+                            {previewProducts.length > 0
+                                ? 'Live Matching Products'
+                                : 'Popular Items'}
+                        </h3>
                         <div className="brand-grid">
                             {livePreviewItems ?? (
                                 <>
@@ -709,7 +1070,9 @@ export const Navigation: React.FC<NavigationProps> = ({
                                     <div className="brand-box">Backpacks</div>
                                     <div className="brand-box">Tablets</div>
                                     <div className="brand-box">Lab Kits</div>
-                                    <div className="brand-box">Art Supplies</div>
+                                    <div className="brand-box">
+                                        Art Supplies
+                                    </div>
                                 </>
                             )}
                         </div>

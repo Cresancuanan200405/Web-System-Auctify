@@ -5,7 +5,10 @@ import { formatCurrency } from '../../utils/helpers';
 type ReviewsTab = 'to-review' | 'submitted';
 
 interface ReviewsSectionProps {
-    onNavigateToAuction: (auctionId: number, source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews') => void;
+    onNavigateToAuction: (
+        auctionId: number,
+        source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews',
+    ) => void;
 }
 
 interface OrderReview {
@@ -20,7 +23,9 @@ const getReviewsKey = () => {
         const raw = window.localStorage.getItem('auth_user');
         if (!raw) return 'order_reviews_anonymous';
         const user = JSON.parse(raw) as { id?: number };
-        return user.id ? `order_reviews_user-${user.id}` : 'order_reviews_anonymous';
+        return user.id
+            ? `order_reviews_user-${user.id}`
+            : 'order_reviews_anonymous';
     } catch {
         return 'order_reviews_anonymous';
     }
@@ -45,7 +50,9 @@ const saveReview = (review: OrderReview) => {
     }
 };
 
-export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuction }) => {
+export const ReviewsSection: React.FC<ReviewsSectionProps> = ({
+    onNavigateToAuction,
+}) => {
     const [activeTab, setActiveTab] = useState<ReviewsTab>('to-review');
     const { orders } = useOrderHistory();
     const [reviewOrderId, setReviewOrderId] = useState<string | null>(null);
@@ -53,7 +60,9 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
     const [reviewHoverRating, setReviewHoverRating] = useState(0);
     const [reviewComment, setReviewComment] = useState('');
     const [submittingReview, setSubmittingReview] = useState(false);
-    const [reviews, setReviews] = useState<Record<string, OrderReview>>(() => loadReviews());
+    const [reviews, setReviews] = useState<Record<string, OrderReview>>(() =>
+        loadReviews(),
+    );
 
     const handleContinueShopping = () => {
         window.history.pushState({}, '', '/');
@@ -63,7 +72,10 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
     const resolveMediaUrl = (url?: string) => {
         if (!url) return '';
         if (url.startsWith('http://') || url.startsWith('https://')) return url;
-        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+            /\/$/,
+            '',
+        );
         if (!apiBase) return url;
         return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
     };
@@ -79,7 +91,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
         }
 
         return new Intl.DateTimeFormat('en-PH', {
-            month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
         }).format(date);
     };
 
@@ -87,7 +103,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
         return orders
             .filter((order) => order.status === 'delivered')
             .slice()
-            .sort((left, right) => new Date(right.purchased_at).getTime() - new Date(left.purchased_at).getTime());
+            .sort(
+                (left, right) =>
+                    new Date(right.purchased_at).getTime() -
+                    new Date(left.purchased_at).getTime(),
+            );
     }, [orders]);
 
     const ordersToReview = useMemo(() => {
@@ -100,7 +120,9 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
             .map((order) => ({ order, review: reviews[order.id] }));
     }, [deliveredOrders, reviews]);
 
-    const reviewOrder = reviewOrderId ? deliveredOrders.find((order) => order.id === reviewOrderId) ?? null : null;
+    const reviewOrder = reviewOrderId
+        ? (deliveredOrders.find((order) => order.id === reviewOrderId) ?? null)
+        : null;
 
     const handleSubmitReview = async (orderId: string) => {
         if (reviewRating === 0) {
@@ -124,7 +146,14 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
         setReviewRating(0);
         setReviewHoverRating(0);
         setReviewComment('');
-        window.dispatchEvent(new CustomEvent('auctify-toast', { detail: { type: 'success', message: 'Review submitted! Thank you.' } }));
+        window.dispatchEvent(
+            new CustomEvent('auctify-toast', {
+                detail: {
+                    type: 'success',
+                    message: 'Review submitted! Thank you.',
+                },
+            }),
+        );
     };
 
     const closeReviewModal = () => {
@@ -141,34 +170,66 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
     return (
         <div className="reviews-main">
             {reviewOrder && (
-                <div className="orders-modal-backdrop" onClick={closeReviewModal}>
-                    <div className="orders-modal" onClick={(event) => event.stopPropagation()}>
+                <div
+                    className="orders-modal-backdrop"
+                    onClick={closeReviewModal}
+                >
+                    <div
+                        className="orders-modal"
+                        onClick={(event) => event.stopPropagation()}
+                    >
                         <div className="orders-modal-header">
-                            <h3 className="orders-modal-title">Leave a Review</h3>
-                            <button type="button" className="orders-modal-close" onClick={closeReviewModal}>✕</button>
+                            <h3 className="orders-modal-title">
+                                Leave a Review
+                            </h3>
+                            <button
+                                type="button"
+                                className="orders-modal-close"
+                                onClick={closeReviewModal}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <div className="orders-modal-body">
                             <div className="orders-review-product-info">
                                 {reviewOrder.media_url && (
-                                    <img className="orders-review-media" src={resolveMediaUrl(reviewOrder.media_url)} alt={reviewOrder.title} />
+                                    <img
+                                        className="orders-review-media"
+                                        src={resolveMediaUrl(
+                                            reviewOrder.media_url,
+                                        )}
+                                        alt={reviewOrder.title}
+                                    />
                                 )}
                                 <div>
-                                    <p className="orders-review-product-title">{reviewOrder.title}</p>
-                                    <p className="orders-review-seller">Sold by {reviewOrder.seller_name}</p>
+                                    <p className="orders-review-product-title">
+                                        {reviewOrder.title}
+                                    </p>
+                                    <p className="orders-review-seller">
+                                        Sold by {reviewOrder.seller_name}
+                                    </p>
                                 </div>
                             </div>
 
                             <div className="orders-review-rating-section">
-                                <p className="orders-review-rating-label">How would you rate this product?</p>
+                                <p className="orders-review-rating-label">
+                                    How would you rate this product?
+                                </p>
                                 <div className="orders-review-stars">
                                     {[1, 2, 3, 4, 5].map((star) => (
                                         <button
                                             key={star}
                                             type="button"
                                             className={`orders-review-star ${star <= (reviewHoverRating || reviewRating) ? 'active' : ''}`}
-                                            onClick={() => setReviewRating(star)}
-                                            onMouseEnter={() => setReviewHoverRating(star)}
-                                            onMouseLeave={() => setReviewHoverRating(0)}
+                                            onClick={() =>
+                                                setReviewRating(star)
+                                            }
+                                            onMouseEnter={() =>
+                                                setReviewHoverRating(star)
+                                            }
+                                            onMouseLeave={() =>
+                                                setReviewHoverRating(0)
+                                            }
                                         >
                                             ★
                                         </button>
@@ -176,7 +237,16 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                                 </div>
                                 {reviewRating > 0 && (
                                     <p className="orders-review-rating-text">
-                                        {['', 'Poor', 'Fair', 'Good', 'Very Good', 'Excellent'][reviewRating]}
+                                        {
+                                            [
+                                                '',
+                                                'Poor',
+                                                'Fair',
+                                                'Good',
+                                                'Very Good',
+                                                'Excellent',
+                                            ][reviewRating]
+                                        }
                                     </p>
                                 )}
                             </div>
@@ -185,21 +255,33 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                                 className="orders-review-textarea"
                                 placeholder="Share your experience with this product (optional)..."
                                 value={reviewComment}
-                                onChange={(event) => setReviewComment(event.target.value)}
+                                onChange={(event) =>
+                                    setReviewComment(event.target.value)
+                                }
                                 rows={4}
                             />
 
                             <div className="orders-modal-actions">
-                                <button type="button" className="orders-modal-btn orders-modal-btn-cancel" onClick={closeReviewModal}>
+                                <button
+                                    type="button"
+                                    className="orders-modal-btn orders-modal-btn-cancel"
+                                    onClick={closeReviewModal}
+                                >
                                     Cancel
                                 </button>
                                 <button
                                     type="button"
                                     className="orders-modal-btn orders-modal-btn-submit"
-                                    onClick={() => handleSubmitReview(reviewOrder.id)}
-                                    disabled={reviewRating === 0 || submittingReview}
+                                    onClick={() =>
+                                        handleSubmitReview(reviewOrder.id)
+                                    }
+                                    disabled={
+                                        reviewRating === 0 || submittingReview
+                                    }
                                 >
-                                    {submittingReview ? 'Submitting...' : 'Submit Review'}
+                                    {submittingReview
+                                        ? 'Submitting...'
+                                        : 'Submit Review'}
                                 </button>
                             </div>
                         </div>
@@ -238,10 +320,14 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                         </svg>
                     </div>
                     <div className="reviews-empty-text-main">
-                        No products to review yet. Start shopping and write a review after the
-                        delivery!
+                        No products to review yet. Start shopping and write a
+                        review after the delivery!
                     </div>
-                    <button type="button" className="reviews-empty-button" onClick={handleContinueShopping}>
+                    <button
+                        type="button"
+                        className="reviews-empty-button"
+                        onClick={handleContinueShopping}
+                    >
                         Continue Shopping
                     </button>
                 </div>
@@ -254,22 +340,51 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                             <div className="reviews-card-media-wrap">
                                 {order.media_url ? (
                                     order.media_type === 'video' ? (
-                                        <video className="reviews-card-media" src={resolveMediaUrl(order.media_url)} preload="metadata" />
+                                        <video
+                                            className="reviews-card-media"
+                                            src={resolveMediaUrl(
+                                                order.media_url,
+                                            )}
+                                            preload="metadata"
+                                        />
                                     ) : (
-                                        <img className="reviews-card-media" src={resolveMediaUrl(order.media_url)} alt={order.title} />
+                                        <img
+                                            className="reviews-card-media"
+                                            src={resolveMediaUrl(
+                                                order.media_url,
+                                            )}
+                                            alt={order.title}
+                                        />
                                     )
                                 ) : (
-                                    <div className="reviews-card-media reviews-card-media-empty">No image</div>
+                                    <div className="reviews-card-media reviews-card-media-empty">
+                                        No image
+                                    </div>
                                 )}
                             </div>
                             <div className="reviews-card-copy">
-                                <p className="reviews-card-kicker">Delivered product</p>
-                                <h3 className="reviews-card-title">{order.title}</h3>
-                                <p className="reviews-card-meta">{order.seller_name} • Delivered {formatDate(order.purchased_at)}</p>
-                                <p className="reviews-card-price">{formatCurrency(Number(order.amount_paid || 0))}</p>
+                                <p className="reviews-card-kicker">
+                                    Delivered product
+                                </p>
+                                <h3 className="reviews-card-title">
+                                    {order.title}
+                                </h3>
+                                <p className="reviews-card-meta">
+                                    {order.seller_name} • Delivered{' '}
+                                    {formatDate(order.purchased_at)}
+                                </p>
+                                <p className="reviews-card-price">
+                                    {formatCurrency(
+                                        Number(order.amount_paid || 0),
+                                    )}
+                                </p>
                             </div>
                             <div className="reviews-card-actions">
-                                <button type="button" className="reviews-card-btn" onClick={() => setReviewOrderId(order.id)}>
+                                <button
+                                    type="button"
+                                    className="reviews-card-btn"
+                                    onClick={() => setReviewOrderId(order.id)}
+                                >
                                     Review Now
                                 </button>
                             </div>
@@ -296,7 +411,11 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                     <div className="reviews-empty-text-main">
                         You haven&apos;t submitted any product reviews yet.
                     </div>
-                    <button type="button" className="reviews-empty-button" onClick={handleContinueShopping}>
+                    <button
+                        type="button"
+                        className="reviews-empty-button"
+                        onClick={handleContinueShopping}
+                    >
                         Continue Shopping
                     </button>
                 </div>
@@ -309,34 +428,68 @@ export const ReviewsSection: React.FC<ReviewsSectionProps> = ({ onNavigateToAuct
                             key={order.id}
                             type="button"
                             className="reviews-card reviews-card-submitted reviews-card-clickable"
-                            onClick={() => handleOpenReviewedProduct(order.auction_id)}
+                            onClick={() =>
+                                handleOpenReviewedProduct(order.auction_id)
+                            }
                         >
                             <div className="reviews-card-media-wrap">
                                 {order.media_url ? (
                                     order.media_type === 'video' ? (
-                                        <video className="reviews-card-media" src={resolveMediaUrl(order.media_url)} preload="metadata" />
+                                        <video
+                                            className="reviews-card-media"
+                                            src={resolveMediaUrl(
+                                                order.media_url,
+                                            )}
+                                            preload="metadata"
+                                        />
                                     ) : (
-                                        <img className="reviews-card-media" src={resolveMediaUrl(order.media_url)} alt={order.title} />
+                                        <img
+                                            className="reviews-card-media"
+                                            src={resolveMediaUrl(
+                                                order.media_url,
+                                            )}
+                                            alt={order.title}
+                                        />
                                     )
                                 ) : (
-                                    <div className="reviews-card-media reviews-card-media-empty">No image</div>
+                                    <div className="reviews-card-media reviews-card-media-empty">
+                                        No image
+                                    </div>
                                 )}
                             </div>
                             <div className="reviews-card-copy">
-                                <p className="reviews-card-kicker">Submitted review</p>
-                                <h3 className="reviews-card-title">{order.title}</h3>
-                                <p className="reviews-card-meta">{order.seller_name} • Reviewed {formatDate(review.reviewedAt)}</p>
-                                <div className="reviews-card-stars" aria-label={`${review.rating} out of 5 stars`}>
+                                <p className="reviews-card-kicker">
+                                    Submitted review
+                                </p>
+                                <h3 className="reviews-card-title">
+                                    {order.title}
+                                </h3>
+                                <p className="reviews-card-meta">
+                                    {order.seller_name} • Reviewed{' '}
+                                    {formatDate(review.reviewedAt)}
+                                </p>
+                                <div
+                                    className="reviews-card-stars"
+                                    aria-label={`${review.rating} out of 5 stars`}
+                                >
                                     {[1, 2, 3, 4, 5].map((star) => (
-                                        <span key={star} className={`reviews-card-star${star <= review.rating ? ' filled' : ''}`}>★</span>
+                                        <span
+                                            key={star}
+                                            className={`reviews-card-star${star <= review.rating ? 'filled' : ''}`}
+                                        >
+                                            ★
+                                        </span>
                                     ))}
                                 </div>
                                 <p className="reviews-card-comment">
-                                    {review.comment?.trim() || 'No written feedback provided.'}
+                                    {review.comment?.trim() ||
+                                        'No written feedback provided.'}
                                 </p>
                             </div>
                             <div className="reviews-card-actions">
-                                <span className="reviews-card-badge">Submitted</span>
+                                <span className="reviews-card-badge">
+                                    Submitted
+                                </span>
                             </div>
                         </button>
                     ))}

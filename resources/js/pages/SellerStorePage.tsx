@@ -18,7 +18,12 @@ const PRICE_FILTERS = [
     { key: 'under1000', label: 'PHP 0 - PHP 1000', min: 0, max: 1000 },
     { key: '1000to3000', label: 'PHP 1000 - PHP 3000', min: 1000, max: 3000 },
     { key: '3000to5000', label: 'PHP 3000 - PHP 5000', min: 3000, max: 5000 },
-    { key: 'above5000', label: 'PHP > 5000', min: 5000, max: Number.POSITIVE_INFINITY },
+    {
+        key: 'above5000',
+        label: 'PHP > 5000',
+        min: 5000,
+        max: Number.POSITIVE_INFINITY,
+    },
 ] as const;
 
 interface StoredOrderReview {
@@ -55,12 +60,18 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
     const [loading, setLoading] = useState(true);
     const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
     const [selectedPriceKeys, setSelectedPriceKeys] = useState<string[]>([]);
-    const [selectedStatuses, setSelectedStatuses] = useState<Array<'open' | 'closed' | 'scheduled'>>([]);
+    const [selectedStatuses, setSelectedStatuses] = useState<
+        Array<'open' | 'closed' | 'scheduled'>
+    >([]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [sortOrder, setSortOrder] = useState<'latest' | 'price-asc' | 'price-desc' | 'name-asc'>('latest');
+    const [sortOrder, setSortOrder] = useState<
+        'latest' | 'price-asc' | 'price-desc' | 'name-asc'
+    >('latest');
     const [selectedReviewRating, setSelectedReviewRating] = useState<number>(0);
 
-    const getProductStatus = (product: AuctionProduct): 'open' | 'closed' | 'scheduled' => {
+    const getProductStatus = (
+        product: AuctionProduct,
+    ): 'open' | 'closed' | 'scheduled' => {
         return getAuctionDisplayStatus(product);
     };
 
@@ -70,7 +81,8 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
         const load = async () => {
             setLoading(true);
             try {
-                const sellerProducts = await auctionService.getSellerStoreProducts(sellerId);
+                const sellerProducts =
+                    await auctionService.getSellerStoreProducts(sellerId);
                 if (!isActive) {
                     return;
                 }
@@ -110,13 +122,19 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
 
         const nextProducts = products.filter((product) => {
             const category = product.category?.trim() ?? '';
-            const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(category);
+            const matchesCategory =
+                selectedCategories.length === 0 ||
+                selectedCategories.includes(category);
 
-            const numericPrice = Number(product.current_price || product.starting_price || 0);
+            const numericPrice = Number(
+                product.current_price || product.starting_price || 0,
+            );
             const matchesPrice =
                 selectedPriceKeys.length === 0 ||
                 selectedPriceKeys.some((priceKey) => {
-                    const rule = PRICE_FILTERS.find((item) => item.key === priceKey);
+                    const rule = PRICE_FILTERS.find(
+                        (item) => item.key === priceKey,
+                    );
                     if (!rule) {
                         return false;
                     }
@@ -124,40 +142,66 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                 });
 
             const status = getProductStatus(product);
-            const matchesStatus = selectedStatuses.length === 0 || selectedStatuses.includes(status);
+            const matchesStatus =
+                selectedStatuses.length === 0 ||
+                selectedStatuses.includes(status);
             const matchesSearch =
                 normalizedSearch.length === 0 ||
                 product.title.toLowerCase().includes(normalizedSearch) ||
                 category.toLowerCase().includes(normalizedSearch);
 
-            return matchesCategory && matchesPrice && matchesStatus && matchesSearch;
+            return (
+                matchesCategory &&
+                matchesPrice &&
+                matchesStatus &&
+                matchesSearch
+            );
         });
 
         nextProducts.sort((left, right) => {
             if (sortOrder === 'price-asc') {
-                return Number(left.current_price || left.starting_price || 0) - Number(right.current_price || right.starting_price || 0);
+                return (
+                    Number(left.current_price || left.starting_price || 0) -
+                    Number(right.current_price || right.starting_price || 0)
+                );
             }
 
             if (sortOrder === 'price-desc') {
-                return Number(right.current_price || right.starting_price || 0) - Number(left.current_price || left.starting_price || 0);
+                return (
+                    Number(right.current_price || right.starting_price || 0) -
+                    Number(left.current_price || left.starting_price || 0)
+                );
             }
 
             if (sortOrder === 'name-asc') {
                 return left.title.localeCompare(right.title);
             }
 
-            return new Date(right.created_at ?? '').getTime() - new Date(left.created_at ?? '').getTime();
+            return (
+                new Date(right.created_at ?? '').getTime() -
+                new Date(left.created_at ?? '').getTime()
+            );
         });
 
         return nextProducts;
-    }, [products, searchTerm, selectedCategories, selectedPriceKeys, selectedStatuses, sortOrder]);
+    }, [
+        products,
+        searchTerm,
+        selectedCategories,
+        selectedPriceKeys,
+        selectedStatuses,
+        sortOrder,
+    ]);
 
     const sellerReviews = useMemo<SellerStoreReviewItem[]>(() => {
         try {
-            const normalizeOrderId = (value: string) => value.replace(/-seller$/, '');
+            const normalizeOrderId = (value: string) =>
+                value.replace(/-seller$/, '');
             const sellerOrderKey = `seller_order_history_user-${sellerId}`;
             const sellerOrdersRaw = window.localStorage.getItem(sellerOrderKey);
-            const sellerOrders = sellerOrdersRaw ? (JSON.parse(sellerOrdersRaw) as OrderHistoryItem[]) : [];
+            const sellerOrders = sellerOrdersRaw
+                ? (JSON.parse(sellerOrdersRaw) as OrderHistoryItem[])
+                : [];
 
             if (sellerOrders.length === 0) {
                 return [];
@@ -170,13 +214,20 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                 orderById.set(normalizedOrderId, order);
 
                 if (order.buyer_user_id != null) {
-                    orderByAuctionAndBuyer.set(`${String(order.auction_id)}-${String(order.buyer_user_id)}`, order);
+                    orderByAuctionAndBuyer.set(
+                        `${String(order.auction_id)}-${String(order.buyer_user_id)}`,
+                        order,
+                    );
                 }
             });
 
             const collected: SellerStoreReviewItem[] = [];
 
-            for (let index = 0; index < window.localStorage.length; index += 1) {
+            for (
+                let index = 0;
+                index < window.localStorage.length;
+                index += 1
+            ) {
                 const key = window.localStorage.key(index);
                 if (!key || !key.startsWith('order_reviews_user-')) {
                     continue;
@@ -189,14 +240,22 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                     continue;
                 }
 
-                const parsed = JSON.parse(raw) as Record<string, StoredOrderReview>;
+                const parsed = JSON.parse(raw) as Record<
+                    string,
+                    StoredOrderReview
+                >;
                 Object.values(parsed).forEach((review) => {
-                    const normalizedReviewOrderId = normalizeOrderId(String(review.orderId));
+                    const normalizedReviewOrderId = normalizeOrderId(
+                        String(review.orderId),
+                    );
                     let matchingOrder = orderById.get(normalizedReviewOrderId);
 
                     if (!matchingOrder && buyerUserId) {
-                        const auctionIdFromReview = normalizedReviewOrderId.split('-')[0];
-                        matchingOrder = orderByAuctionAndBuyer.get(`${auctionIdFromReview}-${buyerUserId}`);
+                        const auctionIdFromReview =
+                            normalizedReviewOrderId.split('-')[0];
+                        matchingOrder = orderByAuctionAndBuyer.get(
+                            `${auctionIdFromReview}-${buyerUserId}`,
+                        );
                     }
 
                     if (!matchingOrder) {
@@ -213,7 +272,9 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                         orderId: normalizedReviewOrderId,
                         auctionId: matchingOrder.auction_id,
                         rating: Math.max(1, Math.min(5, Math.round(rating))),
-                        comment: review.comment?.trim() || 'No written feedback provided.',
+                        comment:
+                            review.comment?.trim() ||
+                            'No written feedback provided.',
                         reviewedAt: review.reviewedAt,
                         buyerName: matchingOrder.buyer_name || 'Verified Buyer',
                         buyerEmail: matchingOrder.buyer_email || '',
@@ -223,7 +284,11 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                 });
             }
 
-            return collected.sort((left, right) => new Date(right.reviewedAt).getTime() - new Date(left.reviewedAt).getTime());
+            return collected.sort(
+                (left, right) =>
+                    new Date(right.reviewedAt).getTime() -
+                    new Date(left.reviewedAt).getTime(),
+            );
         } catch {
             return [];
         }
@@ -234,7 +299,9 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
             return sellerReviews;
         }
 
-        return sellerReviews.filter((review) => review.rating === selectedReviewRating);
+        return sellerReviews.filter(
+            (review) => review.rating === selectedReviewRating,
+        );
     }, [sellerReviews, selectedReviewRating]);
 
     const reviewAverage = useMemo(() => {
@@ -242,7 +309,10 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
             return 0;
         }
 
-        const total = filteredSellerReviews.reduce((accumulator, item) => accumulator + item.rating, 0);
+        const total = filteredSellerReviews.reduce(
+            (accumulator, item) => accumulator + item.rating,
+            0,
+        );
         return total / filteredSellerReviews.length;
     }, [filteredSellerReviews]);
 
@@ -265,7 +335,10 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
             return url;
         }
 
-        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+            /\/$/,
+            '',
+        );
         if (!apiBase) {
             return url;
         }
@@ -324,19 +397,25 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
 
     const toggleCategory = (category: string) => {
         setSelectedCategories((prev) =>
-            prev.includes(category) ? prev.filter((item) => item !== category) : [...prev, category],
+            prev.includes(category)
+                ? prev.filter((item) => item !== category)
+                : [...prev, category],
         );
     };
 
     const togglePriceKey = (key: string) => {
         setSelectedPriceKeys((prev) =>
-            prev.includes(key) ? prev.filter((item) => item !== key) : [...prev, key],
+            prev.includes(key)
+                ? prev.filter((item) => item !== key)
+                : [...prev, key],
         );
     };
 
     const toggleStatus = (status: 'open' | 'closed' | 'scheduled') => {
         setSelectedStatuses((prev) =>
-            prev.includes(status) ? prev.filter((item) => item !== status) : [...prev, status],
+            prev.includes(status)
+                ? prev.filter((item) => item !== status)
+                : [...prev, status],
         );
     };
 
@@ -349,20 +428,32 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
     };
 
     const sellerTitle = sellerName?.trim() || `Shop #${sellerId}`;
-    const activeFilterCount = selectedCategories.length + selectedPriceKeys.length + selectedStatuses.length;
+    const activeFilterCount =
+        selectedCategories.length +
+        selectedPriceKeys.length +
+        selectedStatuses.length;
 
     return (
         <main className="content seller-store-content">
             <div className="seller-store-shell">
                 <div className="page-breadcrumb seller-store-breadcrumb">
-                    <button type="button" onClick={onNavigateBack ?? onNavigateSellerDashboard}>{backBreadcrumbLabel}</button>
+                    <button
+                        type="button"
+                        onClick={onNavigateBack ?? onNavigateSellerDashboard}
+                    >
+                        {backBreadcrumbLabel}
+                    </button>
                     <span>›</span>
-                    <span className="seller-store-shop-label">Shop Name: {sellerTitle}</span>
+                    <span className="seller-store-shop-label">
+                        Shop Name: {sellerTitle}
+                    </span>
                 </div>
 
                 <header className="seller-store-hero">
                     <div className="seller-store-hero-copy">
-                        <p className="seller-store-hero-kicker">Seller Storefront</p>
+                        <p className="seller-store-hero-kicker">
+                            Seller Storefront
+                        </p>
                         <h1>{sellerTitle}</h1>
                         <p>{filteredProducts.length} item(s) found</p>
                     </div>
@@ -380,7 +471,11 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                             type="button"
                             className="seller-store-clear-btn"
                             onClick={clearAllFilters}
-                            disabled={activeFilterCount === 0 && !searchTerm.trim() && sortOrder === 'latest'}
+                            disabled={
+                                activeFilterCount === 0 &&
+                                !searchTerm.trim() &&
+                                sortOrder === 'latest'
+                            }
                         >
                             Clear Filters
                         </button>
@@ -392,16 +487,29 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                         <div className="seller-store-panel">
                             <div className="seller-store-panel-head">
                                 <h3>Categories</h3>
-                                <span>{selectedCategories.length} selected</span>
+                                <span>
+                                    {selectedCategories.length} selected
+                                </span>
                             </div>
                             <div className="seller-store-options">
-                                {categories.length === 0 && <p className="seller-store-empty-filter">No categories yet.</p>}
+                                {categories.length === 0 && (
+                                    <p className="seller-store-empty-filter">
+                                        No categories yet.
+                                    </p>
+                                )}
                                 {categories.map((category) => (
-                                    <label key={category} className="seller-store-check-row">
+                                    <label
+                                        key={category}
+                                        className="seller-store-check-row"
+                                    >
                                         <input
                                             type="checkbox"
-                                            checked={selectedCategories.includes(category)}
-                                            onChange={() => toggleCategory(category)}
+                                            checked={selectedCategories.includes(
+                                                category,
+                                            )}
+                                            onChange={() =>
+                                                toggleCategory(category)
+                                            }
                                         />
                                         <span>{category}</span>
                                     </label>
@@ -418,7 +526,9 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                 <label className="seller-store-check-row">
                                     <input
                                         type="checkbox"
-                                        checked={selectedStatuses.includes('open')}
+                                        checked={selectedStatuses.includes(
+                                            'open',
+                                        )}
                                         onChange={() => toggleStatus('open')}
                                     />
                                     <span>Open</span>
@@ -426,7 +536,9 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                 <label className="seller-store-check-row">
                                     <input
                                         type="checkbox"
-                                        checked={selectedStatuses.includes('closed')}
+                                        checked={selectedStatuses.includes(
+                                            'closed',
+                                        )}
                                         onChange={() => toggleStatus('closed')}
                                     />
                                     <span>Closed</span>
@@ -434,8 +546,12 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                 <label className="seller-store-check-row">
                                     <input
                                         type="checkbox"
-                                        checked={selectedStatuses.includes('scheduled')}
-                                        onChange={() => toggleStatus('scheduled')}
+                                        checked={selectedStatuses.includes(
+                                            'scheduled',
+                                        )}
+                                        onChange={() =>
+                                            toggleStatus('scheduled')
+                                        }
                                     />
                                     <span>Scheduled</span>
                                 </label>
@@ -449,11 +565,18 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                             </div>
                             <div className="seller-store-options">
                                 {PRICE_FILTERS.map((item) => (
-                                    <label key={item.key} className="seller-store-check-row">
+                                    <label
+                                        key={item.key}
+                                        className="seller-store-check-row"
+                                    >
                                         <input
                                             type="checkbox"
-                                            checked={selectedPriceKeys.includes(item.key)}
-                                            onChange={() => togglePriceKey(item.key)}
+                                            checked={selectedPriceKeys.includes(
+                                                item.key,
+                                            )}
+                                            onChange={() =>
+                                                togglePriceKey(item.key)
+                                            }
                                         />
                                         <span>{item.label}</span>
                                     </label>
@@ -470,37 +593,75 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                     className="seller-store-search"
                                     placeholder="Search products"
                                     value={searchTerm}
-                                    onChange={(event) => setSearchTerm(event.target.value)}
+                                    onChange={(event) =>
+                                        setSearchTerm(event.target.value)
+                                    }
                                 />
                                 <select
                                     className="seller-store-sort"
                                     value={sortOrder}
-                                    onChange={(event) => setSortOrder(event.target.value as 'latest' | 'price-asc' | 'price-desc' | 'name-asc')}
+                                    onChange={(event) =>
+                                        setSortOrder(
+                                            event.target.value as
+                                                | 'latest'
+                                                | 'price-asc'
+                                                | 'price-desc'
+                                                | 'name-asc',
+                                        )
+                                    }
                                 >
                                     <option value="latest">Latest</option>
-                                    <option value="price-asc">Price: Low to High</option>
-                                    <option value="price-desc">Price: High to Low</option>
-                                    <option value="name-asc">Name: A to Z</option>
+                                    <option value="price-asc">
+                                        Price: Low to High
+                                    </option>
+                                    <option value="price-desc">
+                                        Price: High to Low
+                                    </option>
+                                    <option value="name-asc">
+                                        Name: A to Z
+                                    </option>
                                 </select>
                             </div>
                             <p className="seller-store-filter-meta">
-                                {activeFilterCount > 0 ? `${activeFilterCount} filter(s) active` : 'No filters applied'}
+                                {activeFilterCount > 0
+                                    ? `${activeFilterCount} filter(s) active`
+                                    : 'No filters applied'}
                             </p>
                         </header>
 
-                        {loading && <p className="seller-store-state">Loading seller products...</p>}
+                        {loading && (
+                            <p className="seller-store-state">
+                                Loading seller products...
+                            </p>
+                        )}
                         {!loading && filteredProducts.length === 0 && (
-                            <p className="seller-store-state">No products matched your filters.</p>
+                            <p className="seller-store-state">
+                                No products matched your filters.
+                            </p>
                         )}
 
                         {!loading && filteredProducts.length > 0 && (
                             <div className="seller-store-grid">
                                 {filteredProducts.map((product) => {
                                     const status = getProductStatus(product);
-                                    const thumbnail = (product.media ?? []).find((media) => media.media_type === 'image');
-                                    const videoCount = (product.media ?? []).filter((media) => media.media_type === 'video').length;
-                                    const imageCount = (product.media ?? []).filter((media) => media.media_type === 'image').length;
-                                    const bidCount = Number(product.bids_count ?? 0);
+                                    const thumbnail = (
+                                        product.media ?? []
+                                    ).find(
+                                        (media) => media.media_type === 'image',
+                                    );
+                                    const videoCount = (
+                                        product.media ?? []
+                                    ).filter(
+                                        (media) => media.media_type === 'video',
+                                    ).length;
+                                    const imageCount = (
+                                        product.media ?? []
+                                    ).filter(
+                                        (media) => media.media_type === 'image',
+                                    ).length;
+                                    const bidCount = Number(
+                                        product.bids_count ?? 0,
+                                    );
 
                                     return (
                                         <article
@@ -508,43 +669,98 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                             className="seller-store-card"
                                             role="button"
                                             tabIndex={0}
-                                            onClick={() => onNavigateToAuction(product.id)}
+                                            onClick={() =>
+                                                onNavigateToAuction(product.id)
+                                            }
                                             onKeyDown={(event) => {
-                                                if (event.key === 'Enter' || event.key === ' ') {
+                                                if (
+                                                    event.key === 'Enter' ||
+                                                    event.key === ' '
+                                                ) {
                                                     event.preventDefault();
-                                                    onNavigateToAuction(product.id);
+                                                    onNavigateToAuction(
+                                                        product.id,
+                                                    );
                                                 }
                                             }}
                                         >
                                             <div className="seller-store-card-media-wrap">
-                                                <span className={`seller-store-card-status seller-store-card-status-${status}`}>
+                                                <span
+                                                    className={`seller-store-card-status seller-store-card-status-${status}`}
+                                                >
                                                     {status}
                                                 </span>
                                                 {thumbnail ? (
-                                                    <img className="seller-store-card-media" src={resolveMediaUrl(thumbnail.url)} alt={product.title} />
+                                                    <img
+                                                        className="seller-store-card-media"
+                                                        src={resolveMediaUrl(
+                                                            thumbnail.url,
+                                                        )}
+                                                        alt={product.title}
+                                                    />
                                                 ) : (
-                                                    <div className="seller-store-card-media seller-store-card-media-empty">No image</div>
+                                                    <div className="seller-store-card-media seller-store-card-media-empty">
+                                                        No image
+                                                    </div>
                                                 )}
                                             </div>
                                             <div className="seller-store-card-body">
                                                 <div className="seller-store-card-topline">
                                                     <p className="seller-store-card-category">{`${(product.category || 'Product').toUpperCase()}${product.subcategory ? ` • ${product.subcategory.toUpperCase()}` : ''}`}</p>
-                                                    <span className="seller-store-card-bids">{bidCount} bid{bidCount === 1 ? '' : 's'}</span>
+                                                    <span className="seller-store-card-bids">
+                                                        {bidCount} bid
+                                                        {bidCount === 1
+                                                            ? ''
+                                                            : 's'}
+                                                    </span>
                                                 </div>
-                                                <p className="seller-store-card-title" title={product.title}>{product.title}</p>
-                                                <p className="seller-store-card-deadline">Ends: {formatDate(product.ends_at)}</p>
+                                                <p
+                                                    className="seller-store-card-title"
+                                                    title={product.title}
+                                                >
+                                                    {product.title}
+                                                </p>
+                                                <p className="seller-store-card-deadline">
+                                                    Ends:{' '}
+                                                    {formatDate(
+                                                        product.ends_at,
+                                                    )}
+                                                </p>
                                                 <div className="seller-store-card-metrics">
-                                                    <span>{imageCount} image{imageCount === 1 ? '' : 's'}</span>
-                                                    <span>{videoCount} video{videoCount === 1 ? '' : 's'}</span>
+                                                    <span>
+                                                        {imageCount} image
+                                                        {imageCount === 1
+                                                            ? ''
+                                                            : 's'}
+                                                    </span>
+                                                    <span>
+                                                        {videoCount} video
+                                                        {videoCount === 1
+                                                            ? ''
+                                                            : 's'}
+                                                    </span>
                                                 </div>
                                                 <div className="seller-store-card-pricing">
                                                     <div>
-                                                        <p className="seller-store-card-price-label">Current bid</p>
-                                                        <p className="seller-store-card-price">{formatPeso(product.current_price || product.starting_price)}</p>
+                                                        <p className="seller-store-card-price-label">
+                                                            Current bid
+                                                        </p>
+                                                        <p className="seller-store-card-price">
+                                                            {formatPeso(
+                                                                product.current_price ||
+                                                                    product.starting_price,
+                                                            )}
+                                                        </p>
                                                     </div>
                                                     <div>
-                                                        <p className="seller-store-card-price-label">Starting</p>
-                                                        <p className="seller-store-card-start">{formatPeso(product.starting_price)}</p>
+                                                        <p className="seller-store-card-price-label">
+                                                            Starting
+                                                        </p>
+                                                        <p className="seller-store-card-start">
+                                                            {formatPeso(
+                                                                product.starting_price,
+                                                            )}
+                                                        </p>
                                                     </div>
                                                 </div>
                                             </div>
@@ -558,33 +774,57 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                             <section className="seller-store-reviews-box">
                                 <div className="seller-store-reviews-head">
                                     <div>
-                                        <p className="seller-store-reviews-kicker">Buyer Feedback</p>
-                                        <h3>What buyers say about this store</h3>
+                                        <p className="seller-store-reviews-kicker">
+                                            Buyer Feedback
+                                        </p>
+                                        <h3>
+                                            What buyers say about this store
+                                        </h3>
                                     </div>
-                                    <div className="seller-store-reviews-summary" aria-label="Store review summary">
-                                        <p className="seller-store-reviews-score">{reviewAverage > 0 ? reviewAverage.toFixed(1) : '0.0'}</p>
-                                        <div className="seller-store-reviews-stars" aria-hidden="true">
+                                    <div
+                                        className="seller-store-reviews-summary"
+                                        aria-label="Store review summary"
+                                    >
+                                        <p className="seller-store-reviews-score">
+                                            {reviewAverage > 0
+                                                ? reviewAverage.toFixed(1)
+                                                : '0.0'}
+                                        </p>
+                                        <div
+                                            className="seller-store-reviews-stars"
+                                            aria-hidden="true"
+                                        >
                                             {[1, 2, 3, 4, 5].map((star) => (
                                                 <span
                                                     key={star}
-                                                    className={`seller-store-star${star <= Math.round(reviewAverage) ? ' is-filled' : ''}`}
+                                                    className={`seller-store-star${star <= Math.round(reviewAverage) ? 'is-filled' : ''}`}
                                                 >
                                                     ★
                                                 </span>
                                             ))}
                                         </div>
                                         <p className="seller-store-reviews-count">
-                                            {filteredSellerReviews.length} review{filteredSellerReviews.length === 1 ? '' : 's'}
-                                            {selectedReviewRating > 0 && ` • ${sellerReviews.length} total`}
+                                            {filteredSellerReviews.length}{' '}
+                                            review
+                                            {filteredSellerReviews.length === 1
+                                                ? ''
+                                                : 's'}
+                                            {selectedReviewRating > 0 &&
+                                                ` • ${sellerReviews.length} total`}
                                         </p>
                                     </div>
                                 </div>
 
-                                <div className="seller-store-review-filters" aria-label="Review star filters">
+                                <div
+                                    className="seller-store-review-filters"
+                                    aria-label="Review star filters"
+                                >
                                     <button
                                         type="button"
-                                        className={`seller-store-review-filter-btn${selectedReviewRating === 0 ? ' active' : ''}`}
-                                        onClick={() => setSelectedReviewRating(0)}
+                                        className={`seller-store-review-filter-btn${selectedReviewRating === 0 ? 'active' : ''}`}
+                                        onClick={() =>
+                                            setSelectedReviewRating(0)
+                                        }
                                     >
                                         All
                                     </button>
@@ -592,8 +832,10 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                         <button
                                             key={rating}
                                             type="button"
-                                            className={`seller-store-review-filter-btn${selectedReviewRating === rating ? ' active' : ''}`}
-                                            onClick={() => setSelectedReviewRating(rating)}
+                                            className={`seller-store-review-filter-btn${selectedReviewRating === rating ? 'active' : ''}`}
+                                            onClick={() =>
+                                                setSelectedReviewRating(rating)
+                                            }
                                         >
                                             {rating}★
                                         </button>
@@ -601,54 +843,112 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                 </div>
 
                                 {sellerReviews.length === 0 && (
-                                    <p className="seller-store-reviews-empty">No buyer reviews yet. New feedback will appear here after completed orders are reviewed.</p>
+                                    <p className="seller-store-reviews-empty">
+                                        No buyer reviews yet. New feedback will
+                                        appear here after completed orders are
+                                        reviewed.
+                                    </p>
                                 )}
 
-                                {sellerReviews.length > 0 && filteredSellerReviews.length === 0 && (
-                                    <p className="seller-store-reviews-empty">No reviews found for {selectedReviewRating}★ yet.</p>
-                                )}
+                                {sellerReviews.length > 0 &&
+                                    filteredSellerReviews.length === 0 && (
+                                        <p className="seller-store-reviews-empty">
+                                            No reviews found for{' '}
+                                            {selectedReviewRating}★ yet.
+                                        </p>
+                                    )}
 
                                 {filteredSellerReviews.length > 0 && (
                                     <div className="seller-store-reviews-grid">
                                         {filteredSellerReviews.map((review) => (
-                                            <article key={review.id} className="seller-store-review-card">
+                                            <article
+                                                key={review.id}
+                                                className="seller-store-review-card"
+                                            >
                                                 <div className="seller-store-review-top">
-                                                    <div className="seller-store-review-avatar" aria-hidden="true">
-                                                        {getInitials(review.buyerName)}
+                                                    <div
+                                                        className="seller-store-review-avatar"
+                                                        aria-hidden="true"
+                                                    >
+                                                        {getInitials(
+                                                            review.buyerName,
+                                                        )}
                                                     </div>
                                                     <div className="seller-store-review-identity">
-                                                        <p className="seller-store-review-buyer">{review.buyerName}</p>
-                                                        <p className="seller-store-review-meta">{review.buyerEmail || 'Verified buyer'} • {formatReviewDate(review.reviewedAt)}</p>
+                                                        <p className="seller-store-review-buyer">
+                                                            {review.buyerName}
+                                                        </p>
+                                                        <p className="seller-store-review-meta">
+                                                            {review.buyerEmail ||
+                                                                'Verified buyer'}{' '}
+                                                            •{' '}
+                                                            {formatReviewDate(
+                                                                review.reviewedAt,
+                                                            )}
+                                                        </p>
                                                     </div>
-                                                    <div className="seller-store-review-stars" aria-label={`${review.rating} out of 5 stars`}>
-                                                        {[1, 2, 3, 4, 5].map((star) => (
-                                                            <span key={star} className={`seller-store-star${star <= review.rating ? ' is-filled' : ''}`}>★</span>
-                                                        ))}
+                                                    <div
+                                                        className="seller-store-review-stars"
+                                                        aria-label={`${review.rating} out of 5 stars`}
+                                                    >
+                                                        {[1, 2, 3, 4, 5].map(
+                                                            (star) => (
+                                                                <span
+                                                                    key={star}
+                                                                    className={`seller-store-star${star <= review.rating ? 'is-filled' : ''}`}
+                                                                >
+                                                                    ★
+                                                                </span>
+                                                            ),
+                                                        )}
                                                     </div>
                                                 </div>
 
                                                 <div className="seller-store-review-body">
-                                                    <p className="seller-store-review-text">{review.comment}</p>
+                                                    <p className="seller-store-review-text">
+                                                        {review.comment}
+                                                    </p>
                                                 </div>
 
                                                 <button
                                                     type="button"
                                                     className="seller-store-review-product"
-                                                    onClick={() => onNavigateToAuction(review.auctionId)}
+                                                    onClick={() =>
+                                                        onNavigateToAuction(
+                                                            review.auctionId,
+                                                        )
+                                                    }
                                                     title="View product"
                                                 >
                                                     {review.productMediaUrl ? (
                                                         <img
                                                             className="seller-store-review-product-thumb"
-                                                            src={resolveMediaUrl(review.productMediaUrl)}
-                                                            alt={review.productTitle}
+                                                            src={resolveMediaUrl(
+                                                                review.productMediaUrl,
+                                                            )}
+                                                            alt={
+                                                                review.productTitle
+                                                            }
                                                         />
                                                     ) : (
-                                                        <div className="seller-store-review-product-thumb seller-store-review-product-thumb-empty">No image</div>
+                                                        <div className="seller-store-review-product-thumb seller-store-review-product-thumb-empty">
+                                                            No image
+                                                        </div>
                                                     )}
                                                     <div>
-                                                        <p className="seller-store-review-product-label">Reviewed item</p>
-                                                        <p className="seller-store-review-product-title" title={review.productTitle}>{review.productTitle}</p>
+                                                        <p className="seller-store-review-product-label">
+                                                            Reviewed item
+                                                        </p>
+                                                        <p
+                                                            className="seller-store-review-product-title"
+                                                            title={
+                                                                review.productTitle
+                                                            }
+                                                        >
+                                                            {
+                                                                review.productTitle
+                                                            }
+                                                        </p>
                                                     </div>
                                                 </button>
                                             </article>

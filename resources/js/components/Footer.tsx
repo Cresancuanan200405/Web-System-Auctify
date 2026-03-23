@@ -7,45 +7,82 @@ export const Footer: React.FC = () => {
                 <div className="footer-section">
                     <h3 className="footer-title">AUCTIFY</h3>
                     <p className="footer-desc">
-                        As the Premier Online Auction Platform, we create endless bidding possibilities through an
-                        ever-expanding range of products from the most coveted international and local sellers,
-                        putting you at the centre of it all. With AUCTIFY, You Own Now.
+                        As the Premier Online Auction Platform, we create
+                        endless bidding possibilities through an ever-expanding
+                        range of products from the most coveted international
+                        and local sellers, putting you at the centre of it all.
+                        With AUCTIFY, You Own Now.
                     </p>
                 </div>
 
                 <div className="footer-section">
                     <h4 className="footer-heading">CUSTOMER SERVICE</h4>
                     <ul className="footer-links">
-                        <li><a href="#faq">FAQ</a></li>
-                        <li><a href="#guide">Bidding Guide</a></li>
-                        <li><a href="#returns">Returns & Refunds</a></li>
-                        <li><a href="#contact">Contact Us</a></li>
-                        <li><a href="#gift">Buy Gift Cards</a></li>
-                        <li><a href="#index">Product Index</a></li>
-                        <li><a href="#sellers">Sellers</a></li>
+                        <li>
+                            <a href="#faq">FAQ</a>
+                        </li>
+                        <li>
+                            <a href="#guide">Bidding Guide</a>
+                        </li>
+                        <li>
+                            <a href="#returns">Returns & Refunds</a>
+                        </li>
+                        <li>
+                            <a href="#contact">Contact Us</a>
+                        </li>
+                        <li>
+                            <a href="#gift">Buy Gift Cards</a>
+                        </li>
+                        <li>
+                            <a href="#index">Product Index</a>
+                        </li>
+                        <li>
+                            <a href="#sellers">Sellers</a>
+                        </li>
                     </ul>
                 </div>
 
                 <div className="footer-section">
                     <h4 className="footer-heading">ABOUT US</h4>
                     <ul className="footer-links">
-                        <li><a href="#who">Who We Are</a></li>
-                        <li><a href="#property">Intellectual Property</a></li>
-                        <li><a href="#sell">Sell With Us</a></li>
-                        <li><a href="#careers">Careers</a></li>
-                        <li><a href="#promotions">Promotions</a></li>
-                        <li><a href="#influencer">Influencer Program</a></li>
-                        <li><a href="#partner">Partner Program</a></li>
-                        <li><a href="#advertise">Advertise with Us</a></li>
-                        <li><a href="#terms">Terms & Conditions</a></li>
-                        <li><a href="#privacy">Privacy Policy</a></li>
+                        <li>
+                            <a href="#who">Who We Are</a>
+                        </li>
+                        <li>
+                            <a href="#property">Intellectual Property</a>
+                        </li>
+                        <li>
+                            <a href="#sell">Sell With Us</a>
+                        </li>
+                        <li>
+                            <a href="#careers">Careers</a>
+                        </li>
+                        <li>
+                            <a href="#promotions">Promotions</a>
+                        </li>
+                        <li>
+                            <a href="#influencer">Influencer Program</a>
+                        </li>
+                        <li>
+                            <a href="#partner">Partner Program</a>
+                        </li>
+                        <li>
+                            <a href="#advertise">Advertise with Us</a>
+                        </li>
+                        <li>
+                            <a href="#terms">Terms & Conditions</a>
+                        </li>
+                        <li>
+                            <a href="#privacy">Privacy Policy</a>
+                        </li>
                     </ul>
                 </div>
 
                 <div className="footer-section">
                     <h4 className="footer-heading">NEW TO AUCTIFY?</h4>
                     <p className="footer-newsletter-text">
-                        Get the latest auction listings and product launches just by subscribing to our newsletter.
+                        Get the latest auction listings and product launches
+                        just by subscribing to our newsletter.
                     </p>
                     <input
                         type="email"
@@ -57,7 +94,8 @@ export const Footer: React.FC = () => {
                         <button className="footer-btn">FOR COLLECTIBLES</button>
                     </div>
                     <p className="footer-privacy-note">
-                        By signing up, you agree to the terms in our Privacy Policy
+                        By signing up, you agree to the terms in our Privacy
+                        Policy
                     </p>
                 </div>
             </div>
@@ -69,11 +107,21 @@ export const Footer: React.FC = () => {
                         <a href="#facebook" aria-label="Facebook">
                             <img src="/icons/facebook.png" alt="Facebook" />
                         </a>
-                        <a href="#instagram" aria-label="Instagram">📷</a>
-                        <a href="#twitter" aria-label="Twitter">🐦</a>
-                        <a href="#blog" aria-label="Blog">📝</a>
-                        <a href="#youtube" aria-label="YouTube">▶</a>
-                        <a href="#linkedin" aria-label="LinkedIn">in</a>
+                        <a href="#instagram" aria-label="Instagram">
+                            📷
+                        </a>
+                        <a href="#twitter" aria-label="Twitter">
+                            🐦
+                        </a>
+                        <a href="#blog" aria-label="Blog">
+                            📝
+                        </a>
+                        <a href="#youtube" aria-label="YouTube">
+                            ▶
+                        </a>
+                        <a href="#linkedin" aria-label="LinkedIn">
+                            in
+                        </a>
                     </div>
                 </div>
 

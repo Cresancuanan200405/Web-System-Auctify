@@ -1,8 +1,10 @@
 import type { HomePageConfig } from '../lib/homePageConfig';
 
 const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
+const ADMIN_SESSION_KEY = 'auctify_admin_session';
 
-const isLoopbackHost = (host: string) => host === 'localhost' || host === '127.0.0.1';
+const isLoopbackHost = (host: string) =>
+    host === 'localhost' || host === '127.0.0.1';
 
 const resolveBaseUrl = () => {
     if (!envBaseUrl) {
@@ -16,7 +18,11 @@ const resolveBaseUrl = () => {
             const browserHost = window.location.hostname;
 
             // Keep API port/scheme, but align loopback hostnames so cookies and XSRF token are readable.
-            if (isLoopbackHost(url.hostname) && isLoopbackHost(browserHost) && browserHost !== url.hostname) {
+            if (
+                isLoopbackHost(url.hostname) &&
+                isLoopbackHost(browserHost) &&
+                browserHost !== url.hostname
+            ) {
                 url.hostname = browserHost;
             }
         }
@@ -46,6 +52,27 @@ const getXsrfToken = () => {
     return cookie ? decodeURIComponent(cookie) : null;
 };
 
+const getAdminBearerToken = () => {
+    if (typeof window === 'undefined') {
+        return null;
+    }
+
+    try {
+        const raw = window.localStorage.getItem(ADMIN_SESSION_KEY);
+
+        if (!raw) {
+            return null;
+        }
+
+        const parsed = JSON.parse(raw) as { token?: unknown };
+        return typeof parsed?.token === 'string' && parsed.token.trim() !== ''
+            ? parsed.token
+            : null;
+    } catch {
+        return null;
+    }
+};
+
 let csrfCookiePromise: Promise<void> | null = null;
 
 const ensureCsrfCookie = async () => {
@@ -64,7 +91,9 @@ const ensureCsrfCookie = async () => {
         })
             .then((response) => {
                 if (!response.ok) {
-                    throw new Error('Unable to initialize secure admin session.');
+                    throw new Error(
+                        'Unable to initialize secure admin session.',
+                    );
                 }
             })
             .finally(() => {
@@ -75,18 +104,26 @@ const ensureCsrfCookie = async () => {
     await csrfCookiePromise;
 };
 
-const buildHeaders = async (method: string, headers?: HeadersInit, sendJson = true) => {
+const buildHeaders = async (
+    method: string,
+    headers?: HeadersInit,
+    sendJson = true,
+) => {
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
         await ensureCsrfCookie();
     }
 
     const xsrfToken = getXsrfToken();
+    const adminBearerToken = getAdminBearerToken();
 
     return {
         Accept: 'application/json',
         ...(sendJson ? { 'Content-Type': 'application/json' } : {}),
         'X-Requested-With': 'XMLHttpRequest',
         ...(xsrfToken ? { 'X-XSRF-TOKEN': xsrfToken } : {}),
+        ...(adminBearerToken
+            ? { Authorization: `Bearer ${adminBearerToken}` }
+            : {}),
         ...headers,
     };
 };
@@ -110,7 +147,8 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        const message = (data as { message?: string })?.message || 'Request failed.';
+        const message =
+            (data as { message?: string })?.message || 'Request failed.';
         throw new Error(message);
     }
 
@@ -120,6 +158,7 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
 export interface AdminLoginPayload {
     mfa_required?: boolean;
     challenge_token?: string;
+    token?: string;
     message?: string;
     user?: {
         id: number;
@@ -242,7 +281,11 @@ export const adminApi = {
         });
     },
 
-    verifyMfa: (challengeToken: string, code?: string, recoveryCode?: string) => {
+    verifyMfa: (
+        challengeToken: string,
+        code?: string,
+        recoveryCode?: string,
+    ) => {
         return request<AdminLoginPayload>('/api/admin/verify-mfa', {
             method: 'POST',
             body: JSON.stringify({
@@ -272,19 +315,32 @@ export const adminApi = {
     },
 
     getAdminHomepageConfig: (_token?: string | null) => {
-        return request<{ config: HomePageConfig }>('/api/admin/homepage-config', {
-            method: 'GET',
-        });
+        return request<{ config: HomePageConfig }>(
+            '/api/admin/homepage-config',
+            {
+                method: 'GET',
+            },
+        );
     },
 
-    updateAdminHomepageConfig: (_token: string | null | undefined, config: HomePageConfig) => {
-        return request<{ message: string; config: HomePageConfig }>('/api/admin/homepage-config', {
-            method: 'PUT',
-            body: JSON.stringify(config),
-        });
+    updateAdminHomepageConfig: (
+        _token: string | null | undefined,
+        config: HomePageConfig,
+    ) => {
+        return request<{ message: string; config: HomePageConfig }>(
+            '/api/admin/homepage-config',
+            {
+                method: 'PUT',
+                body: JSON.stringify(config),
+            },
+        );
     },
 
-    uploadHomepageMedia: async (_token: string | null | undefined, file: File, type: 'video' | 'image') => {
+    uploadHomepageMedia: async (
+        _token: string | null | undefined,
+        file: File,
+        type: 'video' | 'image',
+    ) => {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', type);
@@ -293,12 +349,15 @@ export const adminApi = {
         const headers = await buildHeaders('POST', undefined, false);
 
         try {
-            response = await fetch(`${baseUrl}/api/admin/homepage-media/upload`, {
-                method: 'POST',
-                credentials: 'include',
-                headers,
-                body: formData,
-            });
+            response = await fetch(
+                `${baseUrl}/api/admin/homepage-media/upload`,
+                {
+                    method: 'POST',
+                    credentials: 'include',
+                    headers,
+                    body: formData,
+                },
+            );
         } catch {
             throw new Error('Unable to connect to server.');
         }
@@ -306,7 +365,8 @@ export const adminApi = {
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            const message = (data as { message?: string })?.message || 'Upload failed.';
+            const message =
+                (data as { message?: string })?.message || 'Upload failed.';
             throw new Error(message);
         }
 
@@ -320,9 +380,12 @@ export const adminApi = {
     },
 
     getUserDetails: (_token: string | null | undefined, userId: number) => {
-        return request<{ user: AdminUserDetails }>(`/api/admin/users/${userId}`, {
-            method: 'GET',
-        });
+        return request<{ user: AdminUserDetails }>(
+            `/api/admin/users/${userId}`,
+            {
+                method: 'GET',
+            },
+        );
     },
 
     suspendUser: (
@@ -331,69 +394,109 @@ export const adminApi = {
         reason: string,
         duration?: { unit: 'minutes' | 'hours' | 'days'; value: number } | null,
     ) => {
-        return request<{ message: string; suspended_until?: string | null }>(`/api/admin/users/${userId}/suspend`, {
-            method: 'POST',
-            body: JSON.stringify({
-                reason,
-                duration_unit: duration?.unit,
-                duration_value: duration?.value,
-            }),
-        });
+        return request<{ message: string; suspended_until?: string | null }>(
+            `/api/admin/users/${userId}/suspend`,
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    reason,
+                    duration_unit: duration?.unit,
+                    duration_value: duration?.value,
+                }),
+            },
+        );
     },
 
-    unsuspendUser: (_token: string | null | undefined, userId: number, reason: string) => {
-        return request<{ message: string }>(`/api/admin/users/${userId}/unsuspend`, {
-            method: 'POST',
-            body: JSON.stringify({ reason }),
-        });
+    unsuspendUser: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/unsuspend`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
     },
 
-    revokeSeller: (_token: string | null | undefined, userId: number, reason: string) => {
-        return request<{ message: string }>(`/api/admin/users/${userId}/revoke-seller`, {
-            method: 'POST',
-            body: JSON.stringify({ reason }),
-        });
+    revokeSeller: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/revoke-seller`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
     },
 
-    unrevokeSeller: (_token: string | null | undefined, userId: number, reason: string) => {
-        return request<{ message: string }>(`/api/admin/users/${userId}/unrevoke-seller`, {
-            method: 'POST',
-            body: JSON.stringify({ reason }),
-        });
+    unrevokeSeller: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/unrevoke-seller`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
     },
 
-    deleteUser: (_token: string | null | undefined, userId: number, reason: string) => {
-        return request<{ message: string }>(`/api/admin/users/${userId}/delete`, {
-            method: 'POST',
-            body: JSON.stringify({ reason }),
-        });
+    deleteUser: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/delete`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
     },
 
     // ── Notifications ─────────────────────────────────────────────────────────
 
     getNotifications: (_token?: string | null) => {
-        return request<{ notifications: AdminNotificationEntry[]; unreadCount: number }>(
-            '/api/admin/notifications',
-            { method: 'GET' },
-        );
+        return request<{
+            notifications: AdminNotificationEntry[];
+            unreadCount: number;
+        }>('/api/admin/notifications', { method: 'GET' });
     },
 
     markNotificationRead: (_token: string | null | undefined, id: number) => {
-        return request<{ message: string }>(`/api/admin/notifications/${id}/read`, {
-            method: 'POST',
-        });
+        return request<{ message: string }>(
+            `/api/admin/notifications/${id}/read`,
+            {
+                method: 'POST',
+            },
+        );
     },
 
     getNotificationUnreadCount: (_token?: string | null) => {
-        return request<{ unreadCount: number }>('/api/admin/notifications/unread-count', {
-            method: 'GET',
-        });
+        return request<{ unreadCount: number }>(
+            '/api/admin/notifications/unread-count',
+            {
+                method: 'GET',
+            },
+        );
     },
 
     markAllNotificationsRead: (_token?: string | null) => {
-        return request<{ message: string }>('/api/admin/notifications/read-all', {
-            method: 'POST',
-        });
+        return request<{ message: string }>(
+            '/api/admin/notifications/read-all',
+            {
+                method: 'POST',
+            },
+        );
     },
 
     deleteNotification: (_token: string | null | undefined, id: number) => {
@@ -405,27 +508,44 @@ export const adminApi = {
     // ── Settings ──────────────────────────────────────────────────────────────
 
     getSettings: (_token?: string | null) => {
-        return request<{ settings: AdminSettingEntry[] }>('/api/admin/settings', {
-            method: 'GET',
-        });
+        return request<{ settings: AdminSettingEntry[] }>(
+            '/api/admin/settings',
+            {
+                method: 'GET',
+            },
+        );
     },
 
-    updateSettings: (_token: string | null | undefined, settings: Record<string, string>) => {
-        return request<{ message: string; settings: AdminSettingEntry[] }>('/api/admin/settings', {
-            method: 'PUT',
-            body: JSON.stringify({ settings }),
-        });
+    updateSettings: (
+        _token: string | null | undefined,
+        settings: Record<string, string>,
+    ) => {
+        return request<{ message: string; settings: AdminSettingEntry[] }>(
+            '/api/admin/settings',
+            {
+                method: 'PUT',
+                body: JSON.stringify({ settings }),
+            },
+        );
     },
 
-    changePassword: (_token: string | null | undefined, currentPassword: string, newPassword: string, newPasswordConfirmation: string) => {
-        return request<AdminLoginPayload & { message: string }>('/api/admin/change-password', {
-            method: 'POST',
-            body: JSON.stringify({
-                current_password: currentPassword,
-                new_password: newPassword,
-                new_password_confirmation: newPasswordConfirmation,
-            }),
-        });
+    changePassword: (
+        _token: string | null | undefined,
+        currentPassword: string,
+        newPassword: string,
+        newPasswordConfirmation: string,
+    ) => {
+        return request<AdminLoginPayload & { message: string }>(
+            '/api/admin/change-password',
+            {
+                method: 'POST',
+                body: JSON.stringify({
+                    current_password: currentPassword,
+                    new_password: newPassword,
+                    new_password_confirmation: newPasswordConfirmation,
+                }),
+            },
+        );
     },
 
     getMfaStatus: (_token?: string | null) => {
@@ -441,7 +561,11 @@ export const adminApi = {
         });
     },
 
-    enableMfa: (_token: string | null | undefined, secret: string, code: string) => {
+    enableMfa: (
+        _token: string | null | undefined,
+        secret: string,
+        code: string,
+    ) => {
         return request<AdminMfaEnablePayload>('/api/admin/mfa/enable', {
             method: 'POST',
             body: JSON.stringify({ secret, code }),
@@ -455,7 +579,11 @@ export const adminApi = {
         });
     },
 
-    stepUpMfa: (_token: string | null | undefined, code?: string, recoveryCode?: string) => {
+    stepUpMfa: (
+        _token: string | null | undefined,
+        code?: string,
+        recoveryCode?: string,
+    ) => {
         return request<AdminMfaStepUpPayload>('/api/admin/mfa/step-up', {
             method: 'POST',
             body: JSON.stringify({

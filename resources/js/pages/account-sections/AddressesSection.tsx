@@ -2,7 +2,12 @@ import type { FormEvent } from 'react';
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-toastify';
 import { addressService } from '../../services/api';
-import { getRegions, getProvinces, getCities, getBarangays } from '../../services/psgc';
+import {
+    getRegions,
+    getProvinces,
+    getCities,
+    getBarangays,
+} from '../../services/psgc';
 import type { Address, Region, Province, City, Barangay } from '../../types';
 
 export const AddressesSection: React.FC = () => {
@@ -12,7 +17,7 @@ export const AddressesSection: React.FC = () => {
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
-    
+
     // Form fields
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
@@ -22,13 +27,13 @@ export const AddressesSection: React.FC = () => {
     const [unitFloor, setUnitFloor] = useState('');
     const [postalCode, setPostalCode] = useState('');
     const [notes, setNotes] = useState('');
-    
+
     // PSGC data
     const [regions, setRegions] = useState<Region[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [cities, setCities] = useState<City[]>([]);
     const [barangays, setBarangays] = useState<Barangay[]>([]);
-    
+
     // Selected codes
     const [selectedRegion, setSelectedRegion] = useState('');
     const [selectedProvince, setSelectedProvince] = useState('');
@@ -37,76 +42,100 @@ export const AddressesSection: React.FC = () => {
 
     // Lookup maps for displaying human-readable location names instead of numeric codes
     const [regionNames, setRegionNames] = useState<Record<string, string>>({});
-    const [provinceNames, setProvinceNames] = useState<Record<string, string>>({});
+    const [provinceNames, setProvinceNames] = useState<Record<string, string>>(
+        {},
+    );
     const [cityNames, setCityNames] = useState<Record<string, string>>({});
-    const [barangayNames, setBarangayNames] = useState<Record<string, string>>({});
+    const [barangayNames, setBarangayNames] = useState<Record<string, string>>(
+        {},
+    );
 
     // Read-only view state
     const [viewAddress, setViewAddress] = useState<Address | null>(null);
 
-    const buildLocationNameMaps = useCallback(async (addressList: Address[]) => {
-        try {
-            const uniqueRegionCodes = Array.from(new Set(addressList.map((a) => a.region).filter(Boolean)));
-            const uniqueProvinceCodes = Array.from(new Set(addressList.map((a) => a.province).filter(Boolean)));
-            const uniqueCityCodes = Array.from(new Set(addressList.map((a) => a.city).filter(Boolean)));
-            const uniqueBarangayCodes = Array.from(new Set(addressList.map((a) => a.barangay).filter(Boolean)));
+    const buildLocationNameMaps = useCallback(
+        async (addressList: Address[]) => {
+            try {
+                const uniqueRegionCodes = Array.from(
+                    new Set(addressList.map((a) => a.region).filter(Boolean)),
+                );
+                const uniqueProvinceCodes = Array.from(
+                    new Set(addressList.map((a) => a.province).filter(Boolean)),
+                );
+                const uniqueCityCodes = Array.from(
+                    new Set(addressList.map((a) => a.city).filter(Boolean)),
+                );
+                const uniqueBarangayCodes = Array.from(
+                    new Set(addressList.map((a) => a.barangay).filter(Boolean)),
+                );
 
-            const provinceMap: Record<string, string> = {};
-            const cityMap: Record<string, string> = {};
-            const barangayMap: Record<string, string> = {};
+                const provinceMap: Record<string, string> = {};
+                const cityMap: Record<string, string> = {};
+                const barangayMap: Record<string, string> = {};
 
-            // Provinces: fetch by region, then keep only those we actually use
-            for (const regionCode of uniqueRegionCodes) {
-                if (!regionCode) continue;
-                try {
-                    const provincesData = await getProvinces(regionCode);
-                    provincesData.forEach((p) => {
-                        if (uniqueProvinceCodes.includes(p.code)) {
-                            provinceMap[p.code] = p.name;
-                        }
-                    });
-                } catch (error) {
-                    console.error('Failed to load provinces for display:', error);
+                // Provinces: fetch by region, then keep only those we actually use
+                for (const regionCode of uniqueRegionCodes) {
+                    if (!regionCode) continue;
+                    try {
+                        const provincesData = await getProvinces(regionCode);
+                        provincesData.forEach((p) => {
+                            if (uniqueProvinceCodes.includes(p.code)) {
+                                provinceMap[p.code] = p.name;
+                            }
+                        });
+                    } catch (error) {
+                        console.error(
+                            'Failed to load provinces for display:',
+                            error,
+                        );
+                    }
                 }
-            }
 
-            // Cities: fetch by province
-            for (const provinceCode of uniqueProvinceCodes) {
-                if (!provinceCode) continue;
-                try {
-                    const citiesData = await getCities(provinceCode);
-                    citiesData.forEach((c) => {
-                        if (uniqueCityCodes.includes(c.code)) {
-                            cityMap[c.code] = c.name;
-                        }
-                    });
-                } catch (error) {
-                    console.error('Failed to load cities for display:', error);
+                // Cities: fetch by province
+                for (const provinceCode of uniqueProvinceCodes) {
+                    if (!provinceCode) continue;
+                    try {
+                        const citiesData = await getCities(provinceCode);
+                        citiesData.forEach((c) => {
+                            if (uniqueCityCodes.includes(c.code)) {
+                                cityMap[c.code] = c.name;
+                            }
+                        });
+                    } catch (error) {
+                        console.error(
+                            'Failed to load cities for display:',
+                            error,
+                        );
+                    }
                 }
-            }
 
-            // Barangays: fetch by city
-            for (const cityCode of uniqueCityCodes) {
-                if (!cityCode) continue;
-                try {
-                    const barangaysData = await getBarangays(cityCode);
-                    barangaysData.forEach((b) => {
-                        if (uniqueBarangayCodes.includes(b.code)) {
-                            barangayMap[b.code] = b.name;
-                        }
-                    });
-                } catch (error) {
-                    console.error('Failed to load barangays for display:', error);
+                // Barangays: fetch by city
+                for (const cityCode of uniqueCityCodes) {
+                    if (!cityCode) continue;
+                    try {
+                        const barangaysData = await getBarangays(cityCode);
+                        barangaysData.forEach((b) => {
+                            if (uniqueBarangayCodes.includes(b.code)) {
+                                barangayMap[b.code] = b.name;
+                            }
+                        });
+                    } catch (error) {
+                        console.error(
+                            'Failed to load barangays for display:',
+                            error,
+                        );
+                    }
                 }
-            }
 
-            setProvinceNames(provinceMap);
-            setCityNames(cityMap);
-            setBarangayNames(barangayMap);
-        } catch (error) {
-            console.error('Failed to build location name maps:', error);
-        }
-    }, []);
+                setProvinceNames(provinceMap);
+                setCityNames(cityMap);
+                setBarangayNames(barangayMap);
+            } catch (error) {
+                console.error('Failed to build location name maps:', error);
+            }
+        },
+        [],
+    );
 
     const loadAddresses = useCallback(async () => {
         try {
@@ -270,7 +299,7 @@ export const AddressesSection: React.FC = () => {
             building_name: buildingName,
             unit_floor: unitFloor,
             postal_code: postalCode,
-            notes
+            notes,
         };
 
         try {
@@ -281,7 +310,7 @@ export const AddressesSection: React.FC = () => {
                 await addressService.createAddress(addressData);
                 toast.success('Address added successfully!');
             }
-            
+
             loadAddresses();
             setIsModalOpen(false);
             resetForm();
@@ -290,8 +319,10 @@ export const AddressesSection: React.FC = () => {
                 typeof err === 'object' &&
                 err !== null &&
                 'response' in err &&
-                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                typeof (err as { response?: { data?: { message?: unknown } } })
+                    .response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } })
+                          .response?.data?.message
                     : undefined;
             const errorMessage = responseMessage || 'Failed to save address';
             toast.error(errorMessage);
@@ -320,8 +351,10 @@ export const AddressesSection: React.FC = () => {
                 typeof err === 'object' &&
                 err !== null &&
                 'response' in err &&
-                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                typeof (err as { response?: { data?: { message?: unknown } } })
+                    .response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } })
+                          .response?.data?.message
                     : undefined;
             const errorMessage = responseMessage || 'Failed to delete address';
             toast.error(errorMessage);
@@ -334,24 +367,46 @@ export const AddressesSection: React.FC = () => {
         <div className="addresses-main">
             <div className="addresses-header">
                 <div className="addresses-header-icon" aria-hidden="true">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                    >
                         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
                         <polyline points="9 22 9 12 15 12 15 22" />
                     </svg>
                 </div>
-                <h2 className="addresses-header-title">Saved Addresses ({addresses.length})</h2>
+                <h2 className="addresses-header-title">
+                    Saved Addresses ({addresses.length})
+                </h2>
             </div>
 
             {addresses.length === 0 ? (
                 <div className="addresses-empty-card">
                     <div className="addresses-empty-icon" aria-hidden="true">
-                        <svg width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.2">
+                        <svg
+                            width="100"
+                            height="100"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.2"
+                        >
                             <rect x="3" y="7" width="18" height="13" rx="2" />
                             <path d="M8 7V5a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
                         </svg>
                     </div>
-                    <div className="addresses-empty-text">You don't have any saved address</div>
-                    <button type="button" className="addresses-empty-button" onClick={openAddModal}>
+                    <div className="addresses-empty-text">
+                        You don't have any saved address
+                    </div>
+                    <button
+                        type="button"
+                        className="addresses-empty-button"
+                        onClick={openAddModal}
+                    >
                         Add New Address
                     </button>
                 </div>
@@ -378,7 +433,10 @@ export const AddressesSection: React.FC = () => {
                                             }}
                                             aria-label="Edit address"
                                         >
-                                            <img src="/icons/edit.png" alt="Edit" />
+                                            <img
+                                                src="/icons/edit.png"
+                                                alt="Edit"
+                                            />
                                         </button>
                                         <button
                                             type="button"
@@ -393,19 +451,32 @@ export const AddressesSection: React.FC = () => {
                                         </button>
                                     </div>
                                 </div>
-                                <div className="address-card-phone">{address.phone}</div>
+                                <div className="address-card-phone">
+                                    {address.phone}
+                                </div>
                                 <div className="address-card-details">
                                     {address.street_address}
-                                    {address.building_name && `, ${address.building_name}`}
+                                    {address.building_name &&
+                                        `, ${address.building_name}`}
                                     <br />
-                                    {barangayNames[address.barangay] || address.barangay}, {cityNames[address.city] || address.city}
+                                    {barangayNames[address.barangay] ||
+                                        address.barangay}
+                                    , {cityNames[address.city] || address.city}
                                     <br />
-                                    {provinceNames[address.province] || address.province}, {regionNames[address.region] || address.region}
+                                    {provinceNames[address.province] ||
+                                        address.province}
+                                    ,{' '}
+                                    {regionNames[address.region] ||
+                                        address.region}
                                 </div>
                             </div>
                         ))}
                     </div>
-                    <button type="button" className="addresses-add-button" onClick={openAddModal}>
+                    <button
+                        type="button"
+                        className="addresses-add-button"
+                        onClick={openAddModal}
+                    >
                         Add New Address
                     </button>
                 </>
@@ -428,43 +499,62 @@ export const AddressesSection: React.FC = () => {
                                 type="button"
                                 className="account-edit-close"
                                 onClick={() => setIsModalOpen(false)}
-                                aria-label={editingId ? 'Close edit address' : 'Close add address'}
+                                aria-label={
+                                    editingId
+                                        ? 'Close edit address'
+                                        : 'Close add address'
+                                }
                             >
                                 ×
                             </button>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="account-edit-form">
+                        <form
+                            onSubmit={handleSubmit}
+                            className="account-edit-form"
+                        >
                             <div className="account-edit-two-col">
                                 <div className="field">
-                                    <label htmlFor="addressFirstName">First Name *</label>
+                                    <label htmlFor="addressFirstName">
+                                        First Name *
+                                    </label>
                                     <input
                                         id="addressFirstName"
                                         value={firstName}
                                         placeholder="First Name"
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setFirstName(e.target.value)}
+                                        onChange={(
+                                            e: React.ChangeEvent<HTMLInputElement>,
+                                        ) => setFirstName(e.target.value)}
                                         required
                                     />
                                 </div>
                                 <div className="field">
-                                    <label htmlFor="addressLastName">Last Name *</label>
+                                    <label htmlFor="addressLastName">
+                                        Last Name *
+                                    </label>
                                     <input
                                         id="addressLastName"
                                         value={lastName}
                                         placeholder="Last Name"
-                                        onChange={(e: React.ChangeEvent<HTMLInputElement>) => setLastName(e.target.value)}
+                                        onChange={(
+                                            e: React.ChangeEvent<HTMLInputElement>,
+                                        ) => setLastName(e.target.value)}
                                         required
                                     />
                                 </div>
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressPhone">Phone Number *</label>
+                                <label htmlFor="addressPhone">
+                                    Phone Number *
+                                </label>
                                 <input
                                     id="addressPhone"
                                     type="tel"
                                     value={phone}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPhone(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setPhone(e.target.value)}
                                     required
                                 />
                             </div>
@@ -474,7 +564,9 @@ export const AddressesSection: React.FC = () => {
                                 <select
                                     id="addressRegion"
                                     value={selectedRegion}
-                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleRegionChange(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLSelectElement>,
+                                    ) => handleRegionChange(e.target.value)}
                                     required
                                 >
                                     <option value="">Select Region</option>
@@ -487,11 +579,15 @@ export const AddressesSection: React.FC = () => {
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressProvince">Province *</label>
+                                <label htmlFor="addressProvince">
+                                    Province *
+                                </label>
                                 <select
                                     id="addressProvince"
                                     value={selectedProvince}
-                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleProvinceChange(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLSelectElement>,
+                                    ) => handleProvinceChange(e.target.value)}
                                     required
                                     disabled={!selectedRegion}
                                 >
@@ -509,7 +605,9 @@ export const AddressesSection: React.FC = () => {
                                 <select
                                     id="addressCity"
                                     value={selectedCity}
-                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => handleCityChange(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLSelectElement>,
+                                    ) => handleCityChange(e.target.value)}
                                     required
                                     disabled={!selectedProvince}
                                 >
@@ -523,11 +621,15 @@ export const AddressesSection: React.FC = () => {
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressBarangay">Barangay *</label>
+                                <label htmlFor="addressBarangay">
+                                    Barangay *
+                                </label>
                                 <select
                                     id="addressBarangay"
                                     value={selectedBarangay}
-                                    onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedBarangay(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLSelectElement>,
+                                    ) => setSelectedBarangay(e.target.value)}
                                     required
                                     disabled={!selectedCity}
                                 >
@@ -541,48 +643,68 @@ export const AddressesSection: React.FC = () => {
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressStreet">Street Address *</label>
+                                <label htmlFor="addressStreet">
+                                    Street Address *
+                                </label>
                                 <input
                                     id="addressStreet"
                                     value={streetAddress}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setStreetAddress(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setStreetAddress(e.target.value)}
                                     required
                                 />
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressBuilding">Building Name (optional)</label>
+                                <label htmlFor="addressBuilding">
+                                    Building Name (optional)
+                                </label>
                                 <input
                                     id="addressBuilding"
                                     value={buildingName}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBuildingName(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setBuildingName(e.target.value)}
                                 />
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressUnitFloor">Unit/Floor (optional)</label>
+                                <label htmlFor="addressUnitFloor">
+                                    Unit/Floor (optional)
+                                </label>
                                 <input
                                     id="addressUnitFloor"
                                     value={unitFloor}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setUnitFloor(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setUnitFloor(e.target.value)}
                                 />
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressPostalCode">Postal Code (optional)</label>
+                                <label htmlFor="addressPostalCode">
+                                    Postal Code (optional)
+                                </label>
                                 <input
                                     id="addressPostalCode"
                                     value={postalCode}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPostalCode(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setPostalCode(e.target.value)}
                                 />
                             </div>
 
                             <div className="field">
-                                <label htmlFor="addressNotes">Delivery Notes (optional)</label>
+                                <label htmlFor="addressNotes">
+                                    Delivery Notes (optional)
+                                </label>
                                 <input
                                     id="addressNotes"
                                     value={notes}
-                                    onChange={(e: React.ChangeEvent<HTMLInputElement>) => setNotes(e.target.value)}
+                                    onChange={(
+                                        e: React.ChangeEvent<HTMLInputElement>,
+                                    ) => setNotes(e.target.value)}
                                 />
                             </div>
 
@@ -594,8 +716,13 @@ export const AddressesSection: React.FC = () => {
                                 >
                                     Cancel
                                 </button>
-                                <button type="submit" className="account-edit-save">
-                                    {editingId ? 'Update Address' : 'Add Address'}
+                                <button
+                                    type="submit"
+                                    className="account-edit-save"
+                                >
+                                    {editingId
+                                        ? 'Update Address'
+                                        : 'Add Address'}
                                 </button>
                             </div>
                         </form>
@@ -604,22 +731,27 @@ export const AddressesSection: React.FC = () => {
             )}
 
             {isDeleteModalOpen && (
-                <div className="delete-modal-overlay" onClick={() => {
-                    if (deleteLoading) return;
-                    setIsDeleteModalOpen(false);
-                    setDeleteTargetId(null);
-                }}>
+                <div
+                    className="delete-modal-overlay"
+                    onClick={() => {
+                        if (deleteLoading) return;
+                        setIsDeleteModalOpen(false);
+                        setDeleteTargetId(null);
+                    }}
+                >
                     <div
                         className="delete-modal"
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="delete-modal-header">
-                            <h2 className="delete-modal-title">Delete saved address?</h2>
+                            <h2 className="delete-modal-title">
+                                Delete saved address?
+                            </h2>
                         </div>
                         <div className="delete-modal-body">
                             <p className="delete-modal-text">
-                                Are you sure you want to delete this saved address? This action cannot be
-                                undone.
+                                Are you sure you want to delete this saved
+                                address? This action cannot be undone.
                             </p>
                             <div className="delete-modal-actions">
                                 <button
@@ -657,7 +789,9 @@ export const AddressesSection: React.FC = () => {
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="address-detail-header">
-                            <h2 className="address-detail-title">Address Details</h2>
+                            <h2 className="address-detail-title">
+                                Address Details
+                            </h2>
                             <button
                                 type="button"
                                 className="address-detail-close"
@@ -671,7 +805,10 @@ export const AddressesSection: React.FC = () => {
                         <div className="account-edit-form address-view-details">
                             <div className="field">
                                 <label>Full Name</label>
-                                <div>{viewAddress.first_name} {viewAddress.last_name}</div>
+                                <div>
+                                    {viewAddress.first_name}{' '}
+                                    {viewAddress.last_name}
+                                </div>
                             </div>
 
                             <div className="field">
@@ -681,22 +818,34 @@ export const AddressesSection: React.FC = () => {
 
                             <div className="field">
                                 <label>Region</label>
-                                <div>{regionNames[viewAddress.region] || viewAddress.region}</div>
+                                <div>
+                                    {regionNames[viewAddress.region] ||
+                                        viewAddress.region}
+                                </div>
                             </div>
 
                             <div className="field">
                                 <label>Province</label>
-                                <div>{provinceNames[viewAddress.province] || viewAddress.province}</div>
+                                <div>
+                                    {provinceNames[viewAddress.province] ||
+                                        viewAddress.province}
+                                </div>
                             </div>
 
                             <div className="field">
                                 <label>City</label>
-                                <div>{cityNames[viewAddress.city] || viewAddress.city}</div>
+                                <div>
+                                    {cityNames[viewAddress.city] ||
+                                        viewAddress.city}
+                                </div>
                             </div>
 
                             <div className="field">
                                 <label>Barangay</label>
-                                <div>{barangayNames[viewAddress.barangay] || viewAddress.barangay}</div>
+                                <div>
+                                    {barangayNames[viewAddress.barangay] ||
+                                        viewAddress.barangay}
+                                </div>
                             </div>
 
                             <div className="field address-detail-span">

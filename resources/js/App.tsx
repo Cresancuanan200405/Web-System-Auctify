@@ -17,9 +17,24 @@ import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
 import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
 import { SellerProfilePage } from './pages/seller/SellerProfilePage';
 import { SellerStorePage } from './pages/SellerStorePage';
-import { getAdminSession, logoutAdmin, syncAdminSession } from './lib/adminAuth';
-import { HOME_CATEGORY_OPTIONS, getCategoryValue, getSubcategoryValue } from './lib/homeCategories';
-import { authService, bidNotificationService, directMessageService, platformService, sellerService, type PublicPlatformSettings } from './services/api';
+import {
+    getAdminSession,
+    logoutAdmin,
+    syncAdminSession,
+} from './lib/adminAuth';
+import {
+    HOME_CATEGORY_OPTIONS,
+    getCategoryValue,
+    getSubcategoryValue,
+} from './lib/homeCategories';
+import {
+    authService,
+    bidNotificationService,
+    directMessageService,
+    platformService,
+    sellerService,
+    type PublicPlatformSettings,
+} from './services/api';
 import type { ViewMode, AccountSection } from './types';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -50,7 +65,8 @@ type AccountStatusDialog = {
 const defaultPlatformSettings: PublicPlatformSettings = {
     allow_registrations: true,
     maintenance_mode: false,
-    maintenance_message: 'Auctify is currently under maintenance. Please check back soon.',
+    maintenance_message:
+        'Auctify is currently under maintenance. Please check back soon.',
     enable_video_ads: true,
     enable_carousel: true,
     enable_promo_circles: true,
@@ -65,19 +81,20 @@ const defaultPlatformSettings: PublicPlatformSettings = {
 
 const AppContent: React.FC = () => {
     const { authUser, authToken, logout, updateUser } = useAuth();
+    const authUserId = authUser?.id ?? null;
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const savedViewMode = localStorage.getItem('ui_view_mode');
         if (
-            savedViewMode === 'home'
-            || savedViewMode === 'category'
-            || savedViewMode === 'auth'
-            || savedViewMode === 'account'
-            || savedViewMode === 'bag'
-            || savedViewMode === 'auction'
-            || savedViewMode === 'seller-store'
-            || savedViewMode === 'seller-profile'
-            || savedViewMode === 'admin-login'
-            || savedViewMode === 'admin-dashboard'
+            savedViewMode === 'home' ||
+            savedViewMode === 'category' ||
+            savedViewMode === 'auth' ||
+            savedViewMode === 'account' ||
+            savedViewMode === 'bag' ||
+            savedViewMode === 'auction' ||
+            savedViewMode === 'seller-store' ||
+            savedViewMode === 'seller-profile' ||
+            savedViewMode === 'admin-login' ||
+            savedViewMode === 'admin-dashboard'
         ) {
             return savedViewMode as ViewMode;
         }
@@ -97,49 +114,89 @@ const AppContent: React.FC = () => {
     const [accountSection, setAccountSection] = useState<AccountSection>(() => {
         const savedAccountSection = localStorage.getItem('account_section');
 
-        return VALID_ACCOUNT_SECTIONS.includes(savedAccountSection as AccountSection)
+        return VALID_ACCOUNT_SECTIONS.includes(
+            savedAccountSection as AccountSection,
+        )
             ? (savedAccountSection as AccountSection)
             : 'details';
     });
 
-    const [sellerSubView, setSellerSubView] = useState<'dashboard' | 'add-product'>('dashboard');
-    const [sellerDashboardSection, setSellerDashboardSection] = useState<'products' | 'shipping' | 'orders'>('products');
-    const [canAccessSellerDashboard, setCanAccessSellerDashboard] = useState(false);
+    const [sellerSubView, setSellerSubView] = useState<
+        'dashboard' | 'add-product'
+    >('dashboard');
+    const [sellerDashboardSection, setSellerDashboardSection] = useState<
+        'products' | 'shipping' | 'orders'
+    >('products');
+    const [canAccessSellerDashboard, setCanAccessSellerDashboard] =
+        useState(false);
     const [isSellerChatOpen, setIsSellerChatOpen] = useState(false);
     const [activeAuctionId, setActiveAuctionId] = useState<number | null>(null);
-    const [activeSellerStoreId, setActiveSellerStoreId] = useState<number | null>(null);
-    const [activeSellerStoreName, setActiveSellerStoreName] = useState<string>('');
-    const [activeSellerChatName, setActiveSellerChatName] = useState<string>('');
-    const [activeSellerChatUserId, setActiveSellerChatUserId] = useState<number | null>(null);
+    const [activeSellerStoreId, setActiveSellerStoreId] = useState<
+        number | null
+    >(null);
+    const [activeSellerStoreName, setActiveSellerStoreName] =
+        useState<string>('');
+    const [activeSellerChatName, setActiveSellerChatName] =
+        useState<string>('');
+    const [activeSellerChatUserId, setActiveSellerChatUserId] = useState<
+        number | null
+    >(null);
     const [chatUnreadCount, setChatUnreadCount] = useState(0);
     const [, setChatUnreadUsersCount] = useState(0);
     const [bidUnreadCount, setBidUnreadCount] = useState(0);
-    const [selectedHomeCategory, setSelectedHomeCategory] = useState<string | null>(null);
-    const [selectedHomeSubcategory, setSelectedHomeSubcategory] = useState<string | null>(null);
-    const [auctionOrigin, setAuctionOrigin] = useState<'home' | 'seller-store' | 'account-orders' | 'account-reviews' | null>(null);
-    const [sellerStoreOrigin, setSellerStoreOrigin] = useState<'home' | 'seller-dashboard' | 'account-orders' | null>(null);
-    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(() => Boolean(getAdminSession()));
-    const [accountStatusDialog, setAccountStatusDialog] = useState<AccountStatusDialog | null>(null);
-    const [platformSettings, setPlatformSettings] = useState<PublicPlatformSettings>(defaultPlatformSettings);
+    const [selectedHomeCategory, setSelectedHomeCategory] = useState<
+        string | null
+    >(null);
+    const [selectedHomeSubcategory, setSelectedHomeSubcategory] = useState<
+        string | null
+    >(null);
+    const [auctionOrigin, setAuctionOrigin] = useState<
+        'home' | 'seller-store' | 'account-orders' | 'account-reviews' | null
+    >(null);
+    const [sellerStoreOrigin, setSellerStoreOrigin] = useState<
+        'home' | 'seller-dashboard' | 'account-orders' | null
+    >(null);
+    const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(
+        () => Boolean(getAdminSession()),
+    );
+    const [accountStatusDialog, setAccountStatusDialog] =
+        useState<AccountStatusDialog | null>(null);
+    const [platformSettings, setPlatformSettings] =
+        useState<PublicPlatformSettings>(defaultPlatformSettings);
     const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
 
     const resolveHomeCategoryFromLocation = useCallback(() => {
         const path = window.location.pathname;
         const segments = path.split('/').filter(Boolean);
-        const categorySegment = segments[0] === 'category' ? segments[1]?.trim().toLowerCase() : null;
-        const queryCategory = new URLSearchParams(window.location.search).get('category')?.trim().toLowerCase();
+        const categorySegment =
+            segments[0] === 'category'
+                ? segments[1]?.trim().toLowerCase()
+                : null;
+        const queryCategory = new URLSearchParams(window.location.search)
+            .get('category')
+            ?.trim()
+            .toLowerCase();
         const rawCategory = categorySegment || queryCategory;
 
         if (!rawCategory) {
             return null;
         }
 
-        const matchedOption = HOME_CATEGORY_OPTIONS.find((option) => option.value === rawCategory || option.label.toLowerCase() === rawCategory);
+        const matchedOption = HOME_CATEGORY_OPTIONS.find(
+            (option) =>
+                option.value === rawCategory ||
+                option.label.toLowerCase() === rawCategory,
+        );
         return matchedOption?.label ?? null;
     }, []);
 
     const resolveHomeSubcategoryFromLocation = useCallback(() => {
-        return new URLSearchParams(window.location.search).get('subcategory')?.trim().toLowerCase() || null;
+        return (
+            new URLSearchParams(window.location.search)
+                .get('subcategory')
+                ?.trim()
+                .toLowerCase() || null
+        );
     }, []);
 
     useEffect(() => {
@@ -166,10 +223,14 @@ const AppContent: React.FC = () => {
         ].join(', ');
 
         const updateScrollLock = () => {
-            const hasOpenDialog = Boolean(document.querySelector(modalSelectors));
+            const hasOpenDialog = Boolean(
+                document.querySelector(modalSelectors),
+            );
             document.body.style.overflow = hasOpenDialog ? 'hidden' : '';
             document.body.style.touchAction = hasOpenDialog ? 'none' : '';
-            document.documentElement.style.overflow = hasOpenDialog ? 'hidden' : '';
+            document.documentElement.style.overflow = hasOpenDialog
+                ? 'hidden'
+                : '';
         };
 
         updateScrollLock();
@@ -234,7 +295,11 @@ const AppContent: React.FC = () => {
     }, []);
 
     useEffect(() => {
-        if (platformSettings.maintenance_mode && viewMode !== 'admin-login' && viewMode !== 'admin-dashboard') {
+        if (
+            platformSettings.maintenance_mode &&
+            viewMode !== 'admin-login' &&
+            viewMode !== 'admin-dashboard'
+        ) {
             setShowMaintenanceDialog(true);
         }
     }, [platformSettings.maintenance_mode, viewMode]);
@@ -244,7 +309,9 @@ const AppContent: React.FC = () => {
             return;
         }
 
-        const pendingToastRaw = sessionStorage.getItem('post_auth_success_toast');
+        const pendingToastRaw = sessionStorage.getItem(
+            'post_auth_success_toast',
+        );
 
         if (!pendingToastRaw) {
             return;
@@ -253,11 +320,17 @@ const AppContent: React.FC = () => {
         sessionStorage.removeItem('post_auth_success_toast');
 
         try {
-            const pendingToast = JSON.parse(pendingToastRaw) as { message?: string; autoClose?: number };
+            const pendingToast = JSON.parse(pendingToastRaw) as {
+                message?: string;
+                autoClose?: number;
+            };
 
             if (pendingToast.message) {
                 toast.success(pendingToast.message, {
-                    autoClose: typeof pendingToast.autoClose === 'number' ? pendingToast.autoClose : 3500,
+                    autoClose:
+                        typeof pendingToast.autoClose === 'number'
+                            ? pendingToast.autoClose
+                            : 3500,
                 });
             }
         } catch {
@@ -305,14 +378,21 @@ const AppContent: React.FC = () => {
 
     useEffect(() => {
         const handleAuctifyToast = (event: Event) => {
-            const customEvent = event as CustomEvent<{ type?: string; message?: string; autoClose?: number }>;
+            const customEvent = event as CustomEvent<{
+                type?: string;
+                message?: string;
+                autoClose?: number;
+            }>;
             const detail = customEvent.detail;
 
             if (!detail?.message) {
                 return;
             }
 
-            const options = typeof detail.autoClose === 'number' ? { autoClose: detail.autoClose } : undefined;
+            const options =
+                typeof detail.autoClose === 'number'
+                    ? { autoClose: detail.autoClose }
+                    : undefined;
 
             if (detail.type === 'error') {
                 toast.error(detail.message, options);
@@ -332,9 +412,15 @@ const AppContent: React.FC = () => {
             toast.success(detail.message, options);
         };
 
-        window.addEventListener('auctify-toast', handleAuctifyToast as EventListener);
+        window.addEventListener(
+            'auctify-toast',
+            handleAuctifyToast as EventListener,
+        );
         return () => {
-            window.removeEventListener('auctify-toast', handleAuctifyToast as EventListener);
+            window.removeEventListener(
+                'auctify-toast',
+                handleAuctifyToast as EventListener,
+            );
         };
     }, []);
 
@@ -355,12 +441,16 @@ const AppContent: React.FC = () => {
                     return;
                 }
 
-                const status = (response.registration?.status ?? '').toLowerCase();
-                const hasAccess = status === 'submitted' || status === 'approved';
+                const status = (
+                    response.registration?.status ?? ''
+                ).toLowerCase();
+                const hasAccess =
+                    status === 'submitted' || status === 'approved';
                 setCanAccessSellerDashboard(hasAccess);
 
                 if (status === 'revoked') {
-                    const reason = response.registration?.revoked_reason?.trim();
+                    const reason =
+                        response.registration?.revoked_reason?.trim();
                     setAccountStatusDialog({
                         title: 'Seller Access Revoked',
                         message: reason
@@ -384,7 +474,12 @@ const AppContent: React.FC = () => {
 
     useEffect(() => {
         const handleAccountStatus = (event: Event) => {
-            const customEvent = event as CustomEvent<{ status?: string; message?: string; reason?: string | null; target?: 'account' | 'contact' }>;
+            const customEvent = event as CustomEvent<{
+                status?: string;
+                message?: string;
+                reason?: string | null;
+                target?: 'account' | 'contact';
+            }>;
             const detail = customEvent.detail;
             const status = detail?.status;
             const reason = detail?.reason?.trim();
@@ -408,7 +503,8 @@ const AppContent: React.FC = () => {
                     title: 'Seller Access Revoked',
                     message: reason
                         ? `Seller privileges were revoked. Reason: ${reason}`
-                        : (detail.message || 'Seller privileges were revoked by admin.'),
+                        : detail.message ||
+                          'Seller privileges were revoked by admin.',
                     status: 'seller-revoked',
                 });
 
@@ -421,13 +517,17 @@ const AppContent: React.FC = () => {
                 return;
             }
 
-            if (status === 'suspended' || status === 'deleted' || status === 'session-ended') {
+            if (
+                status === 'suspended' ||
+                status === 'deleted' ||
+                status === 'session-ended'
+            ) {
                 if (target === 'contact' && status !== 'session-ended') {
                     const message = reason
                         ? `This conversation is unavailable right now. Reason: ${reason}`
                         : status === 'suspended'
-                            ? 'This contact is suspended and cannot receive messages right now.'
-                            : 'This contact is no longer available for messaging.';
+                          ? 'This contact is suspended and cannot receive messages right now.'
+                          : 'This contact is no longer available for messaging.';
 
                     setActiveSellerChatUserId(null);
                     setActiveSellerChatName('');
@@ -435,27 +535,33 @@ const AppContent: React.FC = () => {
                         title: 'Conversation Unavailable',
                         message,
                         variant: 'conversation',
-                        badge: status === 'suspended' ? 'Contact Suspended' : 'Contact Deleted',
+                        badge:
+                            status === 'suspended'
+                                ? 'Contact Suspended'
+                                : 'Contact Deleted',
                         status,
                     });
                     return;
                 }
 
-                const title = status === 'suspended'
-                    ? 'Account Suspended'
-                    : status === 'deleted'
-                        ? 'Account Deleted'
-                        : 'Session Ended';
+                const title =
+                    status === 'suspended'
+                        ? 'Account Suspended'
+                        : status === 'deleted'
+                          ? 'Account Deleted'
+                          : 'Session Ended';
 
-                const fallbackMessage = status === 'suspended'
-                    ? 'Your account is currently suspended. Please contact support.'
-                    : status === 'deleted'
-                        ? 'This account is no longer available. Please contact support if this is unexpected.'
-                        : 'Your session is no longer valid. Please sign in again.';
+                const fallbackMessage =
+                    status === 'suspended'
+                        ? 'Your account is currently suspended. Please contact support.'
+                        : status === 'deleted'
+                          ? 'This account is no longer available. Please contact support if this is unexpected.'
+                          : 'Your session is no longer valid. Please sign in again.';
 
-                const message = reason && status !== 'session-ended'
-                    ? `${detail.message || fallbackMessage} Reason: ${reason}`
-                    : (detail.message || fallbackMessage);
+                const message =
+                    reason && status !== 'session-ended'
+                        ? `${detail.message || fallbackMessage} Reason: ${reason}`
+                        : detail.message || fallbackMessage;
 
                 logout();
                 setAuctionOrigin(null);
@@ -477,10 +583,16 @@ const AppContent: React.FC = () => {
             }
         };
 
-        window.addEventListener('auctify-account-status', handleAccountStatus as EventListener);
+        window.addEventListener(
+            'auctify-account-status',
+            handleAccountStatus as EventListener,
+        );
 
         return () => {
-            window.removeEventListener('auctify-account-status', handleAccountStatus as EventListener);
+            window.removeEventListener(
+                'auctify-account-status',
+                handleAccountStatus as EventListener,
+            );
         };
     }, [authUser, logout, updateUser, viewMode]);
 
@@ -504,12 +616,21 @@ const AppContent: React.FC = () => {
                     return;
                 }
 
-                const totalUnread = data.threads.reduce((sum, thread) => sum + Math.max(0, Number(thread.unread_count || 0)), 0);
-                const unreadUsers = data.threads.filter((thread) => Number(thread.unread_count || 0) > 0).length;
+                const totalUnread = data.threads.reduce(
+                    (sum, thread) =>
+                        sum + Math.max(0, Number(thread.unread_count || 0)),
+                    0,
+                );
+                const unreadUsers = data.threads.filter(
+                    (thread) => Number(thread.unread_count || 0) > 0,
+                ).length;
                 setChatUnreadCount(totalUnread);
                 setChatUnreadUsersCount(unreadUsers);
             } catch {
-                // Keep UI stable when unread count cannot be fetched.
+                if (isActive) {
+                    setChatUnreadCount(0);
+                    setChatUnreadUsersCount(0);
+                }
             }
         };
 
@@ -524,7 +645,7 @@ const AppContent: React.FC = () => {
             isActive = false;
             window.clearInterval(interval);
         };
-    }, [authUser, platformSettings.enable_live_chat]);
+    }, [authUserId, platformSettings.enable_live_chat]);
 
     useEffect(() => {
         if (!authUser) {
@@ -542,7 +663,9 @@ const AppContent: React.FC = () => {
         const getSeenKeys = (): Set<string> => {
             try {
                 const stored = localStorage.getItem(seenStorageKey);
-                return stored ? new Set<string>(JSON.parse(stored) as string[]) : new Set<string>();
+                return stored
+                    ? new Set<string>(JSON.parse(stored) as string[])
+                    : new Set<string>();
             } catch {
                 return new Set<string>();
             }
@@ -556,10 +679,14 @@ const AppContent: React.FC = () => {
                 }
 
                 const seenKeys = getSeenKeys();
-                const unread = (data.items ?? []).filter((item) => !seenKeys.has(item.key)).length;
+                const unread = (data.items ?? []).filter(
+                    (item) => !seenKeys.has(item.key),
+                ).length;
                 setBidUnreadCount(unread);
             } catch {
-                // Keep UI stable when bid unread count cannot be fetched.
+                if (isActive) {
+                    setBidUnreadCount(0);
+                }
             }
         };
 
@@ -575,14 +702,20 @@ const AppContent: React.FC = () => {
             }
         }, 20000);
 
-        window.addEventListener('bid-notifications-seen-updated', handleSeenUpdated);
+        window.addEventListener(
+            'bid-notifications-seen-updated',
+            handleSeenUpdated,
+        );
 
         return () => {
             isActive = false;
             window.clearInterval(interval);
-            window.removeEventListener('bid-notifications-seen-updated', handleSeenUpdated);
+            window.removeEventListener(
+                'bid-notifications-seen-updated',
+                handleSeenUpdated,
+            );
         };
-    }, [authUser, platformSettings.enable_live_chat]);
+    }, [authUserId, platformSettings.enable_live_chat]);
 
     const combinedChatBadgeCount = chatUnreadCount + bidUnreadCount;
 
@@ -593,7 +726,9 @@ const AppContent: React.FC = () => {
         if (segments.length === 0) {
             const resolvedCategory = resolveHomeCategoryFromLocation();
             setSelectedHomeCategory(resolvedCategory);
-            setSelectedHomeSubcategory(resolvedCategory ? resolveHomeSubcategoryFromLocation() : null);
+            setSelectedHomeSubcategory(
+                resolvedCategory ? resolveHomeSubcategoryFromLocation() : null,
+            );
             setViewMode(resolvedCategory ? 'category' : 'home');
             return;
         }
@@ -601,7 +736,9 @@ const AppContent: React.FC = () => {
         if (segments[0] === 'category') {
             const resolvedCategory = resolveHomeCategoryFromLocation();
             setSelectedHomeCategory(resolvedCategory);
-            setSelectedHomeSubcategory(resolvedCategory ? resolveHomeSubcategoryFromLocation() : null);
+            setSelectedHomeSubcategory(
+                resolvedCategory ? resolveHomeSubcategoryFromLocation() : null,
+            );
             setViewMode(resolvedCategory ? 'category' : 'home');
             return;
         }
@@ -647,9 +784,11 @@ const AppContent: React.FC = () => {
             setSelectedHomeSubcategory(null);
             setViewMode('account');
             const sectionFromPath = segments[1] as AccountSection | undefined;
-            const section = sectionFromPath && VALID_ACCOUNT_SECTIONS.includes(sectionFromPath)
-                ? sectionFromPath
-                : 'details';
+            const section =
+                sectionFromPath &&
+                VALID_ACCOUNT_SECTIONS.includes(sectionFromPath)
+                    ? sectionFromPath
+                    : 'details';
             setAccountSection(section);
             return;
         }
@@ -691,7 +830,9 @@ const AppContent: React.FC = () => {
             setSellerStoreOrigin(null);
             const sellerId = Number(segments[1]);
             if (Number.isInteger(sellerId) && sellerId > 0) {
-                const sellerName = new URLSearchParams(window.location.search).get('name') || '';
+                const sellerName =
+                    new URLSearchParams(window.location.search).get('name') ||
+                    '';
                 setActiveSellerStoreId(sellerId);
                 setActiveSellerStoreName(sellerName);
                 setViewMode('seller-store');
@@ -734,7 +875,11 @@ const AppContent: React.FC = () => {
         setSelectedHomeCategory(null);
         setSelectedHomeSubcategory(null);
         setViewMode('home');
-    }, [platformSettings.enable_seller_store, resolveHomeCategoryFromLocation, resolveHomeSubcategoryFromLocation]);
+    }, [
+        platformSettings.enable_seller_store,
+        resolveHomeCategoryFromLocation,
+        resolveHomeSubcategoryFromLocation,
+    ]);
 
     const handleNavigateHome = () => {
         setViewMode('home');
@@ -751,10 +896,18 @@ const AppContent: React.FC = () => {
         window.history.pushState({}, '', '/');
     };
 
-    const handleNavigateHomeCategory = (categoryLabel: string, subcategoryValue?: string) => {
+    const handleNavigateHomeCategory = (
+        categoryLabel: string,
+        subcategoryValue?: string,
+    ) => {
         const normalized = categoryLabel.trim().toLowerCase();
-        const matchedOption = HOME_CATEGORY_OPTIONS.find((option) => option.label.toLowerCase() === normalized || option.value === normalized);
-        const normalizedSubcategory = subcategoryValue?.trim().toLowerCase() || null;
+        const matchedOption = HOME_CATEGORY_OPTIONS.find(
+            (option) =>
+                option.label.toLowerCase() === normalized ||
+                option.value === normalized,
+        );
+        const normalizedSubcategory =
+            subcategoryValue?.trim().toLowerCase() || null;
 
         setViewMode('category');
         setSelectedHomeCategory(matchedOption?.label ?? categoryLabel);
@@ -770,14 +923,20 @@ const AppContent: React.FC = () => {
             queryParams.set('subcategory', normalizedSubcategory);
         }
 
-        const path = matchedOption ? `/category/${matchedOption.value}` : '/category';
+        const path = matchedOption
+            ? `/category/${matchedOption.value}`
+            : '/category';
         const query = queryParams.toString();
         window.history.pushState({}, '', `${path}${query ? `?${query}` : ''}`);
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateAuction = (auctionId: number, source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews') => {
-        const nextOrigin = source ?? (viewMode === 'seller-store' ? 'seller-store' : 'home');
+    const handleNavigateAuction = (
+        auctionId: number,
+        source?: 'home' | 'seller-store' | 'account-orders' | 'account-reviews',
+    ) => {
+        const nextOrigin =
+            source ?? (viewMode === 'seller-store' ? 'seller-store' : 'home');
         setAuctionOrigin(nextOrigin);
         setActiveAuctionId(auctionId);
         setViewMode('auction');
@@ -785,7 +944,11 @@ const AppContent: React.FC = () => {
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateSellerStore = (sellerId: number, sellerName?: string, source: 'home' | 'seller-dashboard' | 'account-orders' | null = 'home') => {
+    const handleNavigateSellerStore = (
+        sellerId: number,
+        sellerName?: string,
+        source: 'home' | 'seller-dashboard' | 'account-orders' | null = 'home',
+    ) => {
         if (!platformSettings.enable_seller_store) {
             toast.info('Seller stores are temporarily unavailable.');
             return;
@@ -801,7 +964,11 @@ const AppContent: React.FC = () => {
             params.set('name', sellerName.trim());
         }
         const query = params.toString();
-        window.history.pushState({}, '', `/seller-store/${sellerId}${query ? `?${query}` : ''}`);
+        window.history.pushState(
+            {},
+            '',
+            `/seller-store/${sellerId}${query ? `?${query}` : ''}`,
+        );
         window.scrollTo(0, 0);
     };
 
@@ -892,12 +1059,19 @@ const AppContent: React.FC = () => {
     };
 
     const handleOpenAdminLoginInNewTab = () => {
-        const popup = window.open('/admin/login', '_blank', 'noopener,noreferrer');
+        const popup = window.open(
+            '/admin/login',
+            '_blank',
+            'noopener,noreferrer',
+        );
 
         if (!popup) {
-            toast.info('Please allow pop-ups to open Admin Login in a new tab.', {
-                autoClose: 2800,
-            });
+            toast.info(
+                'Please allow pop-ups to open Admin Login in a new tab.',
+                {
+                    autoClose: 2800,
+                },
+            );
         }
     };
 
@@ -909,7 +1083,10 @@ const AppContent: React.FC = () => {
 
         localStorage.setItem(
             'post_login_target',
-            JSON.stringify({ viewMode: 'account', section: 'wishlist' as AccountSection }),
+            JSON.stringify({
+                viewMode: 'account',
+                section: 'wishlist' as AccountSection,
+            }),
         );
         setAuthMode('login');
         setViewMode('auth');
@@ -922,18 +1099,28 @@ const AppContent: React.FC = () => {
         setSellerStoreOrigin(null);
         setAccountSection(section);
         setViewMode('account');
-        const path = section && section !== 'details' ? `/account/${section}` : '/account';
+        const path =
+            section && section !== 'details'
+                ? `/account/${section}`
+                : '/account';
         window.history.pushState({}, '', path);
         window.scrollTo(0, 0);
     };
 
-    const handleNavigateSellerDashboard = (section: 'products' | 'shipping' | 'orders' = 'products') => {
+    const handleNavigateSellerDashboard = (
+        section: 'products' | 'shipping' | 'orders' = 'products',
+    ) => {
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
         setSellerSubView('dashboard');
         setSellerDashboardSection(section);
         setViewMode('seller');
-        const nextPath = section === 'shipping' ? '/seller/shipping-settings' : section === 'orders' ? '/seller/orders' : '/seller/dashboard';
+        const nextPath =
+            section === 'shipping'
+                ? '/seller/shipping-settings'
+                : section === 'orders'
+                  ? '/seller/orders'
+                  : '/seller/dashboard';
         window.history.pushState({}, '', nextPath);
         window.scrollTo(0, 0);
     };
@@ -947,12 +1134,19 @@ const AppContent: React.FC = () => {
     };
 
     const handleOpenSellerDashboardInNewTab = () => {
-        const popup = window.open('/seller/dashboard', '_blank', 'noopener,noreferrer');
+        const popup = window.open(
+            '/seller/dashboard',
+            '_blank',
+            'noopener,noreferrer',
+        );
 
         if (!popup) {
-            toast.info('Please allow pop-ups to open Seller Dashboard in a new tab.', {
-                autoClose: 2800,
-            });
+            toast.info(
+                'Please allow pop-ups to open Seller Dashboard in a new tab.',
+                {
+                    autoClose: 2800,
+                },
+            );
         }
     };
 
@@ -1005,7 +1199,10 @@ const AppContent: React.FC = () => {
         setSellerStoreOrigin(null);
         localStorage.setItem(
             'post_login_target',
-            JSON.stringify({ viewMode: 'account', section: 'orders' as AccountSection })
+            JSON.stringify({
+                viewMode: 'account',
+                section: 'orders' as AccountSection,
+            }),
         );
         setAuthMode('login');
         setViewMode('auth');
@@ -1031,22 +1228,33 @@ const AppContent: React.FC = () => {
                 localStorage.removeItem('post_login_target');
 
                 if (parsed.viewMode === 'account') {
-                    const section = parsed.section && VALID_ACCOUNT_SECTIONS.includes(parsed.section)
-                        ? parsed.section
-                        : 'details';
+                    const section =
+                        parsed.section &&
+                        VALID_ACCOUNT_SECTIONS.includes(parsed.section)
+                            ? parsed.section
+                            : 'details';
                     setAccountSection(section);
                     setViewMode('account');
-                    const path = section && section !== 'details' ? `/account/${section}` : '/account';
+                    const path =
+                        section && section !== 'details'
+                            ? `/account/${section}`
+                            : '/account';
                     window.history.pushState({}, '', path);
                     window.scrollTo(0, 0);
 
                     if (parsed.openSellerChat && parsed.sellerStoreId) {
-                        openSellerChatForUser(parsed.sellerStoreId, parsed.sellerStoreName);
+                        openSellerChatForUser(
+                            parsed.sellerStoreId,
+                            parsed.sellerStoreName,
+                        );
                     }
                     return;
                 }
 
-                if (parsed.viewMode === 'seller-store' && parsed.sellerStoreId) {
+                if (
+                    parsed.viewMode === 'seller-store' &&
+                    parsed.sellerStoreId
+                ) {
                     setActiveSellerStoreId(parsed.sellerStoreId);
                     setActiveSellerStoreName(parsed.sellerStoreName ?? '');
                     setViewMode('seller-store');
@@ -1057,12 +1265,19 @@ const AppContent: React.FC = () => {
                     }
 
                     const query = params.toString();
-                    window.history.pushState({}, '', `/seller-store/${parsed.sellerStoreId}${query ? `?${query}` : ''}`);
+                    window.history.pushState(
+                        {},
+                        '',
+                        `/seller-store/${parsed.sellerStoreId}${query ? `?${query}` : ''}`,
+                    );
                     window.scrollTo(0, 0);
 
                     if (parsed.openSellerChat) {
                         setActiveSellerChatUserId(parsed.sellerStoreId);
-                        setActiveSellerChatName(parsed.sellerStoreName?.trim() || `Shop #${parsed.sellerStoreId}`);
+                        setActiveSellerChatName(
+                            parsed.sellerStoreName?.trim() ||
+                                `Shop #${parsed.sellerStoreId}`,
+                        );
                         setIsSellerChatOpen(true);
                     }
                     return;
@@ -1133,7 +1348,10 @@ const AppContent: React.FC = () => {
 
     useEffect(() => {
         const handleOpenAuctifyChat = (event: Event) => {
-            const customEvent = event as CustomEvent<{ sellerUserId?: number; sellerName?: string }>;
+            const customEvent = event as CustomEvent<{
+                sellerUserId?: number;
+                sellerName?: string;
+            }>;
             const sellerUserId = customEvent.detail?.sellerUserId;
             const sellerName = customEvent.detail?.sellerName;
 
@@ -1142,9 +1360,15 @@ const AppContent: React.FC = () => {
             }
 
             if (!platformSettings.enable_live_chat) {
-                window.dispatchEvent(new CustomEvent('auctify-toast', {
-                    detail: { type: 'info', message: 'Live chat is currently disabled by admin settings.' },
-                }));
+                window.dispatchEvent(
+                    new CustomEvent('auctify-toast', {
+                        detail: {
+                            type: 'info',
+                            message:
+                                'Live chat is currently disabled by admin settings.',
+                        },
+                    }),
+                );
                 return;
             }
 
@@ -1169,38 +1393,41 @@ const AppContent: React.FC = () => {
             openSellerChatForUser(sellerUserId, sellerName);
         };
 
-        window.addEventListener('open-auctify-chat', handleOpenAuctifyChat as EventListener);
+        window.addEventListener(
+            'open-auctify-chat',
+            handleOpenAuctifyChat as EventListener,
+        );
 
         return () => {
-            window.removeEventListener('open-auctify-chat', handleOpenAuctifyChat as EventListener);
+            window.removeEventListener(
+                'open-auctify-chat',
+                handleOpenAuctifyChat as EventListener,
+            );
         };
     }, [authUser, platformSettings.enable_live_chat]);
 
     const shouldReturnToSellerStoreFromAuction =
-        auctionOrigin === 'seller-store' &&
-        activeSellerStoreId !== null;
+        auctionOrigin === 'seller-store' && activeSellerStoreId !== null;
 
     const shouldReturnToOrdersFromAuction = auctionOrigin === 'account-orders';
-    const shouldReturnToReviewsFromAuction = auctionOrigin === 'account-reviews';
-    const isAdminView = viewMode === 'admin-login' || viewMode === 'admin-dashboard';
+    const shouldReturnToReviewsFromAuction =
+        auctionOrigin === 'account-reviews';
+    const isAdminView =
+        viewMode === 'admin-login' || viewMode === 'admin-dashboard';
 
     const isSellerContextView =
         viewMode === 'seller' ||
         viewMode === 'seller-profile' ||
-        (
-            viewMode === 'seller-store' &&
+        (viewMode === 'seller-store' &&
             sellerStoreOrigin === 'seller-dashboard' &&
             Boolean(authUser) &&
             activeSellerStoreId !== null &&
-            authUser?.id === activeSellerStoreId
-        ) ||
-        (
-            viewMode === 'auction' &&
+            authUser?.id === activeSellerStoreId) ||
+        (viewMode === 'auction' &&
             auctionOrigin === 'seller-store' &&
             Boolean(authUser) &&
             activeSellerStoreId !== null &&
-            authUser?.id === activeSellerStoreId
-        );
+            authUser?.id === activeSellerStoreId);
 
     useEffect(() => {
         if (viewMode === 'admin-login') {
@@ -1237,7 +1464,8 @@ const AppContent: React.FC = () => {
                         ⭐ Become an AUCTIFY VIP today!
                     </div>
                     <div className="promo-item">
-                        📱 Save more on the AUCTIFY App! 25% Off + ₱150 Off + Free Shipping
+                        📱 Save more on the AUCTIFY App! 25% Off + ₱150 Off +
+                        Free Shipping
                     </div>
                 </div>
             )}
@@ -1253,31 +1481,54 @@ const AppContent: React.FC = () => {
                     onNavigateAdminLogin={handleOpenAdminLoginInNewTab}
                     onNavigateAccount={handleNavigateAccount}
                     onNavigateSellerProfile={handleNavigateSellerProfile}
-                    onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
-                    onNavigateSellerStore={(sellerId, sellerName) => handleNavigateSellerStore(sellerId, sellerName, isSellerContextView ? 'seller-dashboard' : 'home')}
+                    onNavigateSellerDashboard={
+                        handleOpenSellerDashboardInNewTab
+                    }
+                    onNavigateSellerStore={(sellerId, sellerName) =>
+                        handleNavigateSellerStore(
+                            sellerId,
+                            sellerName,
+                            isSellerContextView ? 'seller-dashboard' : 'home',
+                        )
+                    }
                     showSellerDashboardButton={canAccessSellerDashboard}
                     onNavigateOrdersLogin={handleNavigateOrdersLogin}
                     onNavigateBag={handleNavigateBag}
-                    enableHomeSearchSuggestions={platformSettings.enable_home_search_suggestions}
-                    maxHomeSearchResults={platformSettings.max_home_search_results}
+                    enableHomeSearchSuggestions={
+                        platformSettings.enable_home_search_suggestions
+                    }
+                    maxHomeSearchResults={
+                        platformSettings.max_home_search_results
+                    }
                     onLogout={handleLogout}
                 />
             )}
 
             {!isSellerContextView && !isAdminView && (
                 <Navigation
-                    activeCategory={(viewMode === 'home' || viewMode === 'category') ? selectedHomeCategory : null}
+                    activeCategory={
+                        viewMode === 'home' || viewMode === 'category'
+                            ? selectedHomeCategory
+                            : null
+                    }
                     onSelectCategory={handleNavigateHomeCategory}
                     onSelectSubcategory={(category, subcategory) => {
                         const categoryValue = getCategoryValue(category);
-                        const subcategoryValue = getSubcategoryValue(categoryValue, subcategory);
+                        const subcategoryValue = getSubcategoryValue(
+                            categoryValue,
+                            subcategory,
+                        );
                         handleNavigateHomeCategory(category, subcategoryValue);
                     }}
-                    onNavigateAuction={(auctionId) => handleNavigateAuction(auctionId, 'home')}
+                    onNavigateAuction={(auctionId) =>
+                        handleNavigateAuction(auctionId, 'home')
+                    }
                 />
             )}
 
-            {viewMode === 'admin-login' && <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} />}
+            {viewMode === 'admin-login' && (
+                <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} />
+            )}
 
             {viewMode === 'admin-dashboard' && isAdminAuthenticated && (
                 <AdminDashboardPage onLogout={handleAdminLogout} />
@@ -1287,29 +1538,39 @@ const AppContent: React.FC = () => {
                 <AdminLoginPage onLoginSuccess={handleAdminLoginSuccess} />
             )}
 
-            {(viewMode === 'home' || viewMode === 'category') && !isAdminView && (
-                <HomePage
-                    selectedCategory={selectedHomeCategory}
-                    selectedSubcategory={selectedHomeSubcategory}
-                    featureFlags={{
-                        enableVideoAds: platformSettings.enable_video_ads,
-                        enableCarousel: platformSettings.enable_carousel,
-                        enablePromoCircles: platformSettings.enable_promo_circles,
-                    }}
-                    isCategoryPage={viewMode === 'category'}
-                    onNavigateHome={handleNavigateHome}
-                    onNavigateCategory={handleNavigateHomeCategory}
-                    onNavigateToRegister={handleNavigateRegister}
-                    onNavigateToBrowse={handleNavigateHome}
-                    onNavigateToWishlist={handleNavigateWishlistFromHome}
-                    onNavigateToAuction={handleNavigateAuction}
-                />
-            )}
+            {(viewMode === 'home' || viewMode === 'category') &&
+                !isAdminView && (
+                    <HomePage
+                        selectedCategory={selectedHomeCategory}
+                        selectedSubcategory={selectedHomeSubcategory}
+                        featureFlags={{
+                            enableVideoAds: platformSettings.enable_video_ads,
+                            enableCarousel: platformSettings.enable_carousel,
+                            enablePromoCircles:
+                                platformSettings.enable_promo_circles,
+                        }}
+                        isCategoryPage={viewMode === 'category'}
+                        onNavigateHome={handleNavigateHome}
+                        onNavigateCategory={handleNavigateHomeCategory}
+                        onNavigateToRegister={handleNavigateRegister}
+                        onNavigateToBrowse={handleNavigateHome}
+                        onNavigateToWishlist={handleNavigateWishlistFromHome}
+                        onNavigateToAuction={handleNavigateAuction}
+                    />
+                )}
 
             {viewMode === 'auction' && activeAuctionId && !isAdminView && (
                 <AuctionDetailPage
                     auctionId={activeAuctionId}
-                    backBreadcrumbLabel={shouldReturnToReviewsFromAuction ? 'My Reviews' : shouldReturnToOrdersFromAuction ? 'Orders & Tracking' : shouldReturnToSellerStoreFromAuction ? 'Seller Store' : 'Home'}
+                    backBreadcrumbLabel={
+                        shouldReturnToReviewsFromAuction
+                            ? 'My Reviews'
+                            : shouldReturnToOrdersFromAuction
+                              ? 'Orders & Tracking'
+                              : shouldReturnToSellerStoreFromAuction
+                                ? 'Seller Store'
+                                : 'Home'
+                    }
                     disableSellerStoreLink={isSellerContextView}
                     onNavigateHome={() => {
                         if (shouldReturnToReviewsFromAuction) {
@@ -1323,53 +1584,89 @@ const AppContent: React.FC = () => {
                         }
 
                         if (shouldReturnToSellerStoreFromAuction) {
-                            handleNavigateSellerStore(activeSellerStoreId, activeSellerStoreName, sellerStoreOrigin);
+                            handleNavigateSellerStore(
+                                activeSellerStoreId,
+                                activeSellerStoreName,
+                                sellerStoreOrigin,
+                            );
                             return;
                         }
 
                         handleNavigateHome();
                     }}
-                    onNavigateSellerDashboard={handleOpenSellerDashboardInNewTab}
+                    onNavigateSellerDashboard={
+                        handleOpenSellerDashboardInNewTab
+                    }
                     onNavigateToRegister={handleNavigateRegister}
                     onNavigateToWishlist={handleNavigateWishlistFromHome}
                     onNavigateToSellerStore={handleNavigateSellerStore}
                 />
             )}
 
-            {viewMode === 'seller-store' && activeSellerStoreId && !isAdminView && (
-                <SellerStorePage
-                    sellerId={activeSellerStoreId}
-                    sellerName={activeSellerStoreName}
-                    onNavigateSellerDashboard={() => handleNavigateSellerDashboard('products')}
-                    onNavigateBack={() => {
-                        if (sellerStoreOrigin === 'account-orders') {
-                            handleNavigateAccount('orders');
-                            return;
+            {viewMode === 'seller-store' &&
+                activeSellerStoreId &&
+                !isAdminView && (
+                    <SellerStorePage
+                        sellerId={activeSellerStoreId}
+                        sellerName={activeSellerStoreName}
+                        onNavigateSellerDashboard={() =>
+                            handleNavigateSellerDashboard('products')
                         }
+                        onNavigateBack={() => {
+                            if (sellerStoreOrigin === 'account-orders') {
+                                handleNavigateAccount('orders');
+                                return;
+                            }
 
-                        if (sellerStoreOrigin === 'seller-dashboard') {
-                            handleNavigateSellerDashboard('products');
-                            return;
+                            if (sellerStoreOrigin === 'seller-dashboard') {
+                                handleNavigateSellerDashboard('products');
+                                return;
+                            }
+
+                            handleNavigateHome();
+                        }}
+                        backBreadcrumbLabel={
+                            sellerStoreOrigin === 'account-orders'
+                                ? 'Orders & Tracking'
+                                : sellerStoreOrigin === 'seller-dashboard'
+                                  ? 'Seller Dashboard'
+                                  : 'Home'
                         }
+                        onNavigateToAuction={handleNavigateAuction}
+                        onMessageSeller={handleOpenSellerChat}
+                        canMessageSeller={
+                            platformSettings.enable_live_chat &&
+                            (!authUser || authUser.id !== activeSellerStoreId)
+                        }
+                    />
+                )}
 
-                        handleNavigateHome();
-                    }}
-                    backBreadcrumbLabel={sellerStoreOrigin === 'account-orders' ? 'Orders & Tracking' : sellerStoreOrigin === 'seller-dashboard' ? 'Seller Dashboard' : 'Home'}
+            {viewMode === 'bag' && !isAdminView && (
+                <BagPage
+                    onNavigateHome={handleNavigateHome}
                     onNavigateToAuction={handleNavigateAuction}
-                    onMessageSeller={handleOpenSellerChat}
-                    canMessageSeller={platformSettings.enable_live_chat && (!authUser || authUser.id !== activeSellerStoreId)}
                 />
             )}
 
-            {viewMode === 'bag' && !isAdminView && <BagPage onNavigateHome={handleNavigateHome} onNavigateToAuction={handleNavigateAuction} />}
-
-            {(viewMode === 'auth' || ((viewMode === 'account' || viewMode === 'seller' || viewMode === 'seller-profile') && !authUser)) && !isAdminView && (
-                <AuthPage
-                    mode={(viewMode === 'account' || viewMode === 'seller' || viewMode === 'seller-profile') && !authUser ? 'login' : authMode}
-                    onModeChange={setAuthMode}
-                    onAuthSuccess={handleAuthSuccess}
-                />
-            )}
+            {(viewMode === 'auth' ||
+                ((viewMode === 'account' ||
+                    viewMode === 'seller' ||
+                    viewMode === 'seller-profile') &&
+                    !authUser)) &&
+                !isAdminView && (
+                    <AuthPage
+                        mode={
+                            (viewMode === 'account' ||
+                                viewMode === 'seller' ||
+                                viewMode === 'seller-profile') &&
+                            !authUser
+                                ? 'login'
+                                : authMode
+                        }
+                        onModeChange={setAuthMode}
+                        onAuthSuccess={handleAuthSuccess}
+                    />
+                )}
 
             {viewMode === 'account' && authUser && !isAdminView && (
                 <AccountPage
@@ -1381,54 +1678,89 @@ const AppContent: React.FC = () => {
                 />
             )}
 
-            {viewMode === 'seller' && authUser && sellerSubView === 'dashboard' && !isAdminView && (
-                <SellerDashboardPage
-                    onNavigateAddProduct={handleNavigateSellerAddProduct}
-                    onNavigateSellerStore={(shopName) => handleNavigateSellerStore(authUser.id, shopName, 'seller-dashboard')}
-                    activeSection={sellerDashboardSection}
-                    onSectionChange={(section) => handleNavigateSellerDashboard(section)}
-                />
-            )}
+            {viewMode === 'seller' &&
+                authUser &&
+                sellerSubView === 'dashboard' &&
+                !isAdminView && (
+                    <SellerDashboardPage
+                        onNavigateAddProduct={handleNavigateSellerAddProduct}
+                        onNavigateSellerStore={(shopName) =>
+                            handleNavigateSellerStore(
+                                authUser.id,
+                                shopName,
+                                'seller-dashboard',
+                            )
+                        }
+                        activeSection={sellerDashboardSection}
+                        onSectionChange={(section) =>
+                            handleNavigateSellerDashboard(section)
+                        }
+                    />
+                )}
 
-            {viewMode === 'seller' && authUser && sellerSubView === 'add-product' && !isAdminView && (
-                <SellerAddProductPage onNavigateDashboard={() => handleNavigateSellerDashboard('products')} />
-            )}
+            {viewMode === 'seller' &&
+                authUser &&
+                sellerSubView === 'add-product' &&
+                !isAdminView && (
+                    <SellerAddProductPage
+                        onNavigateDashboard={() =>
+                            handleNavigateSellerDashboard('products')
+                        }
+                    />
+                )}
 
             {viewMode === 'seller-profile' && authUser && !isAdminView && (
                 <SellerProfilePage
                     onNavigateSellerDashboard={handleNavigateSellerDashboard}
-                    onNavigateSellerStore={(shopName) => handleNavigateSellerStore(authUser.id, shopName, 'seller-dashboard')}
+                    onNavigateSellerStore={(shopName) =>
+                        handleNavigateSellerStore(
+                            authUser.id,
+                            shopName,
+                            'seller-dashboard',
+                        )
+                    }
                 />
             )}
 
             {!isSellerContextView && !isAdminView && <Footer />}
 
-            {viewMode === 'seller' && !isAdminView && platformSettings.enable_live_chat && (
-                <button
-                    className="seller-chat-button"
-                    aria-label="Seller chat support"
-                    onClick={() => {
-                        setActiveSellerChatUserId(null);
-                        setActiveSellerChatName('');
-                        setIsSellerChatOpen(true);
-                    }}
-                >
-                    <span className="seller-chat-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" role="img" focusable="false">
-                            <path
-                                fill="currentColor"
-                                d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H10l-4.25 3.4A.75.75 0 0 1 4.5 18.8V16.8A2.5 2.5 0 0 1 4 16V5.5Zm2.5-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1.25a.75.75 0 0 1 .75.75v1.99l3.34-2.67a.75.75 0 0 1 .47-.17h8.18a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-11Z"
-                            />
-                        </svg>
-                    </span>
-                    <span className="seller-chat-label">Chat</span>
-                    {combinedChatBadgeCount > 0 && (
-                        <span className="chat-button-badge" aria-label={`${combinedChatBadgeCount} unread chat updates`}>
-                            {combinedChatBadgeCount > 99 ? '99+' : combinedChatBadgeCount}
+            {viewMode === 'seller' &&
+                !isAdminView &&
+                platformSettings.enable_live_chat && (
+                    <button
+                        className="seller-chat-button"
+                        aria-label="Seller chat support"
+                        onClick={() => {
+                            setActiveSellerChatUserId(null);
+                            setActiveSellerChatName('');
+                            setIsSellerChatOpen(true);
+                        }}
+                    >
+                        <span className="seller-chat-icon" aria-hidden="true">
+                            <svg
+                                viewBox="0 0 24 24"
+                                role="img"
+                                focusable="false"
+                            >
+                                <path
+                                    fill="currentColor"
+                                    d="M4 5.5A2.5 2.5 0 0 1 6.5 3h11A2.5 2.5 0 0 1 20 5.5v8A2.5 2.5 0 0 1 17.5 16H10l-4.25 3.4A.75.75 0 0 1 4.5 18.8V16.8A2.5 2.5 0 0 1 4 16V5.5Zm2.5-1a1 1 0 0 0-1 1v8a1 1 0 0 0 1 1h1.25a.75.75 0 0 1 .75.75v1.99l3.34-2.67a.75.75 0 0 1 .47-.17h8.18a1 1 0 0 0 1-1v-8a1 1 0 0 0-1-1h-11Z"
+                                />
+                            </svg>
                         </span>
-                    )}
-                </button>
-            )}
+                        <span className="seller-chat-label">Chat</span>
+                        {combinedChatBadgeCount > 0 && (
+                            <span
+                                className="chat-button-badge"
+                                aria-label={`${combinedChatBadgeCount} unread chat updates`}
+                            >
+                                {combinedChatBadgeCount > 99
+                                    ? '99+'
+                                    : combinedChatBadgeCount}
+                            </span>
+                        )}
+                    </button>
+                )}
 
             {authUser && !isAdminView && platformSettings.enable_live_chat && (
                 <SellerChatDialog
@@ -1436,21 +1768,40 @@ const AppContent: React.FC = () => {
                     onClose={() => setIsSellerChatOpen(false)}
                     preferredUserId={activeSellerChatUserId}
                     preferredUserName={activeSellerChatName}
-                    onNavigateSellerStore={(sellerId, sellerName) => handleNavigateSellerStore(sellerId, sellerName, isSellerContextView ? 'seller-dashboard' : 'home')}
-                    onNavigateAuction={(auctionId) => handleNavigateAuction(auctionId, 'home')}
+                    onNavigateSellerStore={(sellerId, sellerName) =>
+                        handleNavigateSellerStore(
+                            sellerId,
+                            sellerName,
+                            isSellerContextView ? 'seller-dashboard' : 'home',
+                        )
+                    }
+                    onNavigateAuction={(auctionId) =>
+                        handleNavigateAuction(auctionId, 'home')
+                    }
                 />
             )}
 
-            {!isSellerContextView && !isAdminView && platformSettings.enable_live_chat && (
-                <button className="chat-button" aria-label="Open messages" onClick={handleOpenUserMessages}>
-                    <span>A</span>
-                    {combinedChatBadgeCount > 0 && (
-                        <span className="chat-button-badge" aria-label={`${combinedChatBadgeCount} unread messages and bid alerts`}>
-                            {combinedChatBadgeCount > 99 ? '99+' : combinedChatBadgeCount}
-                        </span>
-                    )}
-                </button>
-            )}
+            {!isSellerContextView &&
+                !isAdminView &&
+                platformSettings.enable_live_chat && (
+                    <button
+                        className="chat-button"
+                        aria-label="Open messages"
+                        onClick={handleOpenUserMessages}
+                    >
+                        <span>A</span>
+                        {combinedChatBadgeCount > 0 && (
+                            <span
+                                className="chat-button-badge"
+                                aria-label={`${combinedChatBadgeCount} unread messages and bid alerts`}
+                            >
+                                {combinedChatBadgeCount > 99
+                                    ? '99+'
+                                    : combinedChatBadgeCount}
+                            </span>
+                        )}
+                    </button>
+                )}
 
             <ToastContainer
                 position="top-center"
@@ -1462,25 +1813,62 @@ const AppContent: React.FC = () => {
             />
 
             {accountStatusDialog && !isAdminView && (
-                <div className="delete-modal-overlay" role="presentation" onClick={() => setAccountStatusDialog(null)}>
-                    <div className="delete-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                <div
+                    className="delete-modal-overlay"
+                    role="presentation"
+                    onClick={() => setAccountStatusDialog(null)}
+                >
+                    <div
+                        className="delete-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={(event) => event.stopPropagation()}
+                    >
                         <div className="delete-modal-header">
-                            <div className={`status-dialog-heading${accountStatusDialog.variant === 'conversation' ? ' is-conversation' : ''}`}>
-                                {accountStatusDialog.variant === 'conversation' && (
-                                    <div className={`status-dialog-icon${accountStatusDialog.status ? ` is-${accountStatusDialog.status}` : ''}`} aria-hidden="true">
-                                        <svg viewBox="0 0 24 24" role="img" focusable="false">
-                                            <path fill="currentColor" d={accountStatusDialog.status === 'deleted' ? 'M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm3.53 11.47-1.06 1.06L12 13.06l-2.47 2.47-1.06-1.06L10.94 12 8.47 9.53l1.06-1.06L12 10.94l2.47-2.47 1.06 1.06L13.06 12Z' : 'M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 12.25a1.25 1.25 0 1 1 1.25-1.25A1.25 1.25 0 0 1 12 15.25Zm1.1-4.83-.29.2a1.53 1.53 0 0 0-.68 1.28v.35h-1.5v-.35a3.01 3.01 0 0 1 1.33-2.52l.29-.2a1.43 1.43 0 0 0 .65-1.18 1.5 1.5 0 0 0-3 0H8.4a3 3 0 1 1 6 0 2.93 2.93 0 0 1-1.3 2.42Z'} />
+                            <div
+                                className={`status-dialog-heading${accountStatusDialog.variant === 'conversation' ? 'is-conversation' : ''}`}
+                            >
+                                {accountStatusDialog.variant ===
+                                    'conversation' && (
+                                    <div
+                                        className={`status-dialog-icon${accountStatusDialog.status ? ` is-${accountStatusDialog.status}` : ''}`}
+                                        aria-hidden="true"
+                                    >
+                                        <svg
+                                            viewBox="0 0 24 24"
+                                            role="img"
+                                            focusable="false"
+                                        >
+                                            <path
+                                                fill="currentColor"
+                                                d={
+                                                    accountStatusDialog.status ===
+                                                    'deleted'
+                                                        ? 'M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm3.53 11.47-1.06 1.06L12 13.06l-2.47 2.47-1.06-1.06L10.94 12 8.47 9.53l1.06-1.06L12 10.94l2.47-2.47 1.06 1.06L13.06 12Z'
+                                                        : 'M12 3a9 9 0 1 0 9 9 9 9 0 0 0-9-9Zm0 12.25a1.25 1.25 0 1 1 1.25-1.25A1.25 1.25 0 0 1 12 15.25Zm1.1-4.83-.29.2a1.53 1.53 0 0 0-.68 1.28v.35h-1.5v-.35a3.01 3.01 0 0 1 1.33-2.52l.29-.2a1.43 1.43 0 0 0 .65-1.18 1.5 1.5 0 0 0-3 0H8.4a3 3 0 1 1 6 0 2.93 2.93 0 0 1-1.3 2.42Z'
+                                                }
+                                            />
                                         </svg>
                                     </div>
                                 )}
                                 <div>
-                                    {accountStatusDialog.badge && <p className={`status-dialog-badge${accountStatusDialog.status ? ` is-${accountStatusDialog.status}` : ''}`}>{accountStatusDialog.badge}</p>}
-                                    <h3 className="delete-modal-title">{accountStatusDialog.title}</h3>
+                                    {accountStatusDialog.badge && (
+                                        <p
+                                            className={`status-dialog-badge${accountStatusDialog.status ? ` is-${accountStatusDialog.status}` : ''}`}
+                                        >
+                                            {accountStatusDialog.badge}
+                                        </p>
+                                    )}
+                                    <h3 className="delete-modal-title">
+                                        {accountStatusDialog.title}
+                                    </h3>
                                 </div>
                             </div>
                         </div>
                         <div className="delete-modal-body">
-                            <p className="delete-modal-text">{accountStatusDialog.message}</p>
+                            <p className="delete-modal-text">
+                                {accountStatusDialog.message}
+                            </p>
                             <div className="delete-modal-actions">
                                 <button
                                     type="button"
@@ -1496,13 +1884,26 @@ const AppContent: React.FC = () => {
             )}
 
             {showMaintenanceDialog && !isAdminView && (
-                <div className="delete-modal-overlay" role="presentation" onClick={() => setShowMaintenanceDialog(false)}>
-                    <div className="delete-modal" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+                <div
+                    className="delete-modal-overlay"
+                    role="presentation"
+                    onClick={() => setShowMaintenanceDialog(false)}
+                >
+                    <div
+                        className="delete-modal"
+                        role="dialog"
+                        aria-modal="true"
+                        onClick={(event) => event.stopPropagation()}
+                    >
                         <div className="delete-modal-header">
-                            <h3 className="delete-modal-title">Maintenance Notice</h3>
+                            <h3 className="delete-modal-title">
+                                Maintenance Notice
+                            </h3>
                         </div>
                         <div className="delete-modal-body">
-                            <p className="delete-modal-text">{platformSettings.maintenance_message}</p>
+                            <p className="delete-modal-text">
+                                {platformSettings.maintenance_message}
+                            </p>
                             <div className="delete-modal-actions">
                                 <button
                                     type="button"
@@ -1519,7 +1920,11 @@ const AppContent: React.FC = () => {
                                             setActiveSellerChatName('');
                                             setAuthMode('login');
                                             setViewMode('auth');
-                                            window.history.pushState({}, '', '/login');
+                                            window.history.pushState(
+                                                {},
+                                                '',
+                                                '/login',
+                                            );
                                             window.scrollTo(0, 0);
                                         }
                                     }}

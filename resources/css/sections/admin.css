@@ -6,9 +6,23 @@
     min-width: 1280px;
     zoom: 0.9;
     background:
-        radial-gradient(ellipse 80% 60% at 15% 20%, rgba(13, 110, 98, 0.25) 0%, transparent 60%),
-        radial-gradient(ellipse 60% 50% at 85% 80%, rgba(42, 28, 100, 0.45) 0%, transparent 55%),
-        linear-gradient(150deg, #050e1f 0%, #0d1832 35%, #140d34 65%, #060c1c 100%);
+        radial-gradient(
+            ellipse 80% 60% at 15% 20%,
+            rgba(13, 110, 98, 0.25) 0%,
+            transparent 60%
+        ),
+        radial-gradient(
+            ellipse 60% 50% at 85% 80%,
+            rgba(42, 28, 100, 0.45) 0%,
+            transparent 55%
+        ),
+        linear-gradient(
+            150deg,
+            #050e1f 0%,
+            #0d1832 35%,
+            #140d34 65%,
+            #060c1c 100%
+        );
     display: flex;
     align-items: center;
     justify-content: center;
@@ -177,7 +191,9 @@
     text-decoration: none;
     letter-spacing: 0.03em;
     box-shadow: 0 8px 24px rgba(13, 192, 162, 0.3);
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease;
 }
 
 .admin-login-learn-more:hover {
@@ -248,7 +264,9 @@
     color: #f0f8ff;
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .admin-login-field input::placeholder {
@@ -273,7 +291,9 @@
     cursor: pointer;
     letter-spacing: 0.04em;
     box-shadow: 0 10px 24px rgba(214, 50, 89, 0.4);
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    transition:
+        transform 0.15s ease,
+        box-shadow 0.15s ease;
 }
 
 .admin-login-submit:hover:not(:disabled) {
@@ -322,7 +342,6 @@
         border-top: 1px solid rgba(255, 255, 255, 0.08);
     }
 }
-
 
 /* Admin dashboard */
 .admin-dashboard-shell {
@@ -511,7 +530,11 @@
     border: 1px solid #d6e0ec;
     border-radius: 14px;
     background:
-        radial-gradient(circle at 100% 0%, rgba(29, 78, 216, 0.08), transparent 36%),
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(29, 78, 216, 0.08),
+            transparent 36%
+        ),
         linear-gradient(180deg, #ffffff 0%, #f6fbff 100%);
     padding: 14px 16px;
     display: flex;
@@ -633,12 +656,20 @@
 
 .admin-home-save-bar.is-warning {
     border-color: #f3d089;
-    background: linear-gradient(180deg, rgba(255, 253, 245, 0.98) 0%, rgba(255, 248, 231, 0.98) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(255, 253, 245, 0.98) 0%,
+        rgba(255, 248, 231, 0.98) 100%
+    );
 }
 
 .admin-home-save-bar.is-success {
     border-color: #b8e0ca;
-    background: linear-gradient(180deg, rgba(247, 255, 249, 0.98) 0%, rgba(238, 252, 243, 0.98) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(247, 255, 249, 0.98) 0%,
+        rgba(238, 252, 243, 0.98) 100%
+    );
 }
 
 .admin-home-dialog-overlay {
@@ -850,7 +881,9 @@
     transition: opacity 0.15s;
 }
 
-.admin-home-section-add-btn:hover { opacity: 0.88; }
+.admin-home-section-add-btn:hover {
+    opacity: 0.88;
+}
 
 .admin-home-section-add-btn span {
     font-size: 16px;
@@ -869,7 +902,7 @@
 }
 
 .admin-editor-card-modern:hover {
-    box-shadow: 0 6px 24px rgba(15, 40, 75, 0.10);
+    box-shadow: 0 6px 24px rgba(15, 40, 75, 0.1);
 }
 
 .admin-editor-card-modern-head {
@@ -912,7 +945,9 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
 }
 
 .admin-editor-reorder-btn:hover:not(:disabled) {
@@ -935,7 +970,9 @@
     font-weight: 700;
     padding: 0 12px;
     cursor: pointer;
-    transition: background 0.15s, border-color 0.15s;
+    transition:
+        background 0.15s,
+        border-color 0.15s;
 }
 
 .admin-editor-delete-btn:hover {
@@ -1035,7 +1072,9 @@
     padding: 8px 11px;
     font-size: 12.5px;
     color: #14304d;
-    transition: border-color 0.15s, box-shadow 0.15s;
+    transition:
+        border-color 0.15s,
+        box-shadow 0.15s;
 }
 
 .admin-editor-field-label input:focus,
@@ -1062,7 +1101,7 @@
     font-size: 11px;
     font-weight: 700;
     letter-spacing: 0.05em;
-    background: rgba(255,255,255,0.18);
+    background: rgba(255, 255, 255, 0.18);
     color: rgba(255, 255, 255, 0.8);
     margin-top: 6px;
 }
@@ -1104,7 +1143,9 @@
     background: #1a3d64;
     box-shadow: 0 6px 20px rgba(15, 40, 80, 0.35);
     overflow: hidden;
-    transition: box-shadow 0.3s ease, background 0.3s ease;
+    transition:
+        box-shadow 0.3s ease,
+        background 0.3s ease;
 }
 
 .admin-save-fab-shell.is-dirty {
@@ -1113,7 +1154,10 @@
 }
 
 @keyframes fab-pulse {
-    0%, 100% { box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45); }
+    0%,
+    100% {
+        box-shadow: 0 6px 20px rgba(217, 119, 6, 0.45);
+    }
     50% {
         box-shadow:
             0 6px 28px rgba(217, 119, 6, 0.65),
@@ -1135,7 +1179,9 @@
     transition: opacity 0.15s;
 }
 
-.admin-save-fab-trigger:hover { opacity: 0.85; }
+.admin-save-fab-trigger:hover {
+    opacity: 0.85;
+}
 
 .admin-save-fab-trigger svg {
     width: 20px;
@@ -1151,7 +1197,10 @@
     opacity: 0;
     padding: 0;
     white-space: nowrap;
-    transition: max-width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.25s ease, padding 0.3s ease;
+    transition:
+        max-width 0.35s cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 0.25s ease,
+        padding 0.3s ease;
     pointer-events: none;
 }
 
@@ -1190,8 +1239,13 @@
     transition: background 0.15s;
 }
 
-.admin-save-fab-discard:hover:not(:disabled) { background: rgba(255, 255, 255, 0.2); }
-.admin-save-fab-discard:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin-save-fab-discard:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.2);
+}
+.admin-save-fab-discard:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
 .admin-save-fab-save {
     height: 34px;
@@ -1206,8 +1260,13 @@
     transition: background 0.15s;
 }
 
-.admin-save-fab-save:hover:not(:disabled) { background: rgba(255, 255, 255, 0.32); }
-.admin-save-fab-save:disabled { opacity: 0.4; cursor: not-allowed; }
+.admin-save-fab-save:hover:not(:disabled) {
+    background: rgba(255, 255, 255, 0.32);
+}
+.admin-save-fab-save:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
 
 /* ── Notification panel ───────────────────────────────────────────────────── */
 .admin-tool-btn-wrap {
@@ -1258,8 +1317,14 @@
 }
 
 @keyframes dropdown-appear {
-    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
-    to   { opacity: 1; transform: translateY(0) scale(1); }
+    from {
+        opacity: 0;
+        transform: translateY(-6px) scale(0.97);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
 }
 
 .admin-panel-dropdown-header {
@@ -1353,21 +1418,42 @@
     transition: background 0.12s;
 }
 
-.admin-notif-item:hover { background: #f7faff; }
+.admin-notif-item:hover {
+    background: #f7faff;
+}
 
 .admin-notif-item.is-unread {
     background: #f0f7ff;
     border-left: 3px solid #3b82f6;
 }
 
-.admin-notif-item.admin-notif-type-kyc { border-left-color: #f59e0b; }
-.admin-notif-item.admin-notif-type-kyc.is-unread { background: #fffbeb; }
-.admin-notif-item.admin-notif-type-user.is-unread { background: #f0fdf4; border-left-color: #22c55e; }
-.admin-notif-item.admin-notif-type-seller.is-unread { background: #eff6ff; border-left-color: #3b82f6; }
-.admin-notif-item.admin-notif-type-bid.is-unread { background: #fefce8; border-left-color: #ca8a04; }
-.admin-notif-item.admin-notif-type-analytics.is-unread { background: #eef2ff; border-left-color: #6366f1; }
+.admin-notif-item.admin-notif-type-kyc {
+    border-left-color: #f59e0b;
+}
+.admin-notif-item.admin-notif-type-kyc.is-unread {
+    background: #fffbeb;
+}
+.admin-notif-item.admin-notif-type-user.is-unread {
+    background: #f0fdf4;
+    border-left-color: #22c55e;
+}
+.admin-notif-item.admin-notif-type-seller.is-unread {
+    background: #eff6ff;
+    border-left-color: #3b82f6;
+}
+.admin-notif-item.admin-notif-type-bid.is-unread {
+    background: #fefce8;
+    border-left-color: #ca8a04;
+}
+.admin-notif-item.admin-notif-type-analytics.is-unread {
+    background: #eef2ff;
+    border-left-color: #6366f1;
+}
 
-.admin-notif-item-body { flex: 1 1 0; min-width: 0; }
+.admin-notif-item-body {
+    flex: 1 1 0;
+    min-width: 0;
+}
 
 .admin-notif-type-chip {
     display: inline-block;
@@ -1382,22 +1468,55 @@
     margin-bottom: 5px;
 }
 .admin-notif-chip-bid,
-.admin-notif-chip-bid_placed { background: #fef9c3; color: #854d0e; }
-.admin-notif-chip-outbid { background: #fee2e2; color: #b91c1c; }
+.admin-notif-chip-bid_placed {
+    background: #fef9c3;
+    color: #854d0e;
+}
+.admin-notif-chip-outbid {
+    background: #fee2e2;
+    color: #b91c1c;
+}
 .admin-notif-chip-won,
-.admin-notif-chip-auction_won { background: #dcfce7; color: #15803d; }
-.admin-notif-chip-kyc { background: #fef3c7; color: #b45309; }
-.admin-notif-chip-user { background: #d1fae5; color: #065f46; }
-.admin-notif-chip-seller { background: #dbeafe; color: #1e40af; }
-.admin-notif-chip-analytics { background: #ede9fe; color: #5b21b6; }
+.admin-notif-chip-auction_won {
+    background: #dcfce7;
+    color: #15803d;
+}
+.admin-notif-chip-kyc {
+    background: #fef3c7;
+    color: #b45309;
+}
+.admin-notif-chip-user {
+    background: #d1fae5;
+    color: #065f46;
+}
+.admin-notif-chip-seller {
+    background: #dbeafe;
+    color: #1e40af;
+}
+.admin-notif-chip-analytics {
+    background: #ede9fe;
+    color: #5b21b6;
+}
 .admin-notif-chip-comment,
-.admin-notif-chip-seller_comment { background: #fce7f3; color: #9d174d; }
+.admin-notif-chip-seller_comment {
+    background: #fce7f3;
+    color: #9d174d;
+}
 .admin-notif-chip-system,
-.admin-notif-chip-info { background: #f3f4f6; color: #374151; }
+.admin-notif-chip-info {
+    background: #f3f4f6;
+    color: #374151;
+}
 .admin-notif-chip-payment,
-.admin-notif-chip-payment_due { background: #fef2f2; color: #991b1b; }
+.admin-notif-chip-payment_due {
+    background: #fef2f2;
+    color: #991b1b;
+}
 .admin-notif-chip-ended,
-.admin-notif-chip-auction_ended { background: #f3f4f6; color: #374151; }
+.admin-notif-chip-auction_ended {
+    background: #f3f4f6;
+    color: #374151;
+}
 
 .admin-notif-item-body strong {
     display: block;
@@ -1537,7 +1656,9 @@
     cursor: pointer;
 }
 
-.admin-settings-row:last-child { border-bottom: none; }
+.admin-settings-row:last-child {
+    border-bottom: none;
+}
 
 .admin-settings-row-copy {
     flex: 1 1 0;
@@ -1592,7 +1713,7 @@
     height: 18px;
     border-radius: 50%;
     background: #fff;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.22);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.22);
     transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
@@ -1788,7 +1909,10 @@
     font-weight: 700;
     letter-spacing: 0.01em;
     cursor: pointer;
-    transition: border-color 0.2s ease, background-color 0.2s ease, transform 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        background-color 0.2s ease,
+        transform 0.2s ease;
 }
 
 .admin-upload-control:hover {
@@ -1825,7 +1949,9 @@
     background-position: center;
     position: relative;
     overflow: hidden;
-    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16), 0 2px 6px rgba(0, 0, 0, 0.08);
+    box-shadow:
+        0 12px 30px rgba(0, 0, 0, 0.16),
+        0 2px 6px rgba(0, 0, 0, 0.08);
 }
 
 .admin-home-video-preview-media {
@@ -1842,7 +1968,11 @@
 .admin-home-video-preview-overlay {
     position: absolute;
     inset: 0;
-    background: linear-gradient(135deg, rgba(244, 208, 63, 0.24) 0%, rgba(26, 26, 26, 0.6) 100%);
+    background: linear-gradient(
+        135deg,
+        rgba(244, 208, 63, 0.24) 0%,
+        rgba(26, 26, 26, 0.6) 100%
+    );
     pointer-events: none;
     z-index: 1;
 }
@@ -2096,7 +2226,11 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        background-color 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
 }
 
 .admin-user-review-tab:hover {
@@ -2565,7 +2699,11 @@
     max-height: 0;
     opacity: 0;
     overflow: hidden;
-    transition: max-height 0.32s ease, opacity 0.2s ease, padding-top 0.2s ease, padding-bottom 0.2s ease;
+    transition:
+        max-height 0.32s ease,
+        opacity 0.2s ease,
+        padding-top 0.2s ease,
+        padding-bottom 0.2s ease;
 }
 
 .admin-user-action-body.open {
@@ -2605,7 +2743,11 @@
     gap: 20px;
     background:
         linear-gradient(180deg, #ffffff 0%, #f7fbff 100%),
-        radial-gradient(circle at top right, rgba(30, 58, 90, 0.06), transparent 40%);
+        radial-gradient(
+            circle at top right,
+            rgba(30, 58, 90, 0.06),
+            transparent 40%
+        );
 }
 
 .admin-user-advanced-intro-copy {
@@ -2642,8 +2784,16 @@
     position: relative;
     border: 1px solid #f0b9b9;
     background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.96) 0%, rgba(255, 245, 245, 0.98) 100%),
-        radial-gradient(circle at top right, rgba(220, 38, 38, 0.09), transparent 48%);
+        linear-gradient(
+            180deg,
+            rgba(255, 255, 255, 0.96) 0%,
+            rgba(255, 245, 245, 0.98) 100%
+        ),
+        radial-gradient(
+            circle at top right,
+            rgba(220, 38, 38, 0.09),
+            transparent 48%
+        );
     border-radius: 24px;
     padding: 24px;
     box-shadow: 0 18px 38px rgba(127, 29, 29, 0.08);
@@ -2723,7 +2873,10 @@
     padding: 0 18px;
     font-weight: 700;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .admin-user-danger-toggle:hover {
@@ -2810,8 +2963,16 @@
     padding: 22px 28px 18px;
     border-bottom: 1px solid #e4edf5;
     background:
-        linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%),
-        radial-gradient(circle at top right, rgba(30, 58, 90, 0.08), transparent 32%);
+        linear-gradient(
+            180deg,
+            rgba(248, 251, 255, 0.96) 0%,
+            rgba(255, 255, 255, 0.98) 100%
+        ),
+        radial-gradient(
+            circle at top right,
+            rgba(30, 58, 90, 0.08),
+            transparent 32%
+        );
 }
 
 .admin-user-modal-kicker {
@@ -2832,7 +2993,11 @@
 .admin-user-modal-body {
     padding: 22px 28px 28px;
     max-height: calc(96vh - 104px);
-    background: linear-gradient(180deg, rgba(249, 252, 255, 0.82) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(249, 252, 255, 0.82) 0%,
+        rgba(255, 255, 255, 0.98) 100%
+    );
     overflow: auto;
 }
 
@@ -2883,7 +3048,10 @@
     font-size: 13px;
     color: #153250;
     resize: vertical;
-    transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
+    transition:
+        border-color 0.2s ease,
+        box-shadow 0.2s ease,
+        background-color 0.2s ease;
 }
 
 .admin-user-reason-input:focus {
@@ -3088,7 +3256,12 @@
 .admin-neo-shell {
     min-height: calc(100vh - 48px);
     padding: 10px;
-    background: radial-gradient(circle at 0% 0%, #0b5b57 0%, #044743 52%, #0d3636 100%);
+    background: radial-gradient(
+        circle at 0% 0%,
+        #0b5b57 0%,
+        #044743 52%,
+        #0d3636 100%
+    );
     display: block;
     font-family: 'Montserrat', 'Segoe UI', sans-serif;
 }
@@ -3169,7 +3342,9 @@
     gap: 4px;
     padding: 8px 4px;
     cursor: pointer;
-    transition: background-color 0.18s ease, color 0.18s ease;
+    transition:
+        background-color 0.18s ease,
+        color 0.18s ease;
     text-align: center;
 }
 
@@ -3595,7 +3770,10 @@
 
 .admin-monitor-summary-card.is-clickable {
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease;
+    transition:
+        transform 0.16s ease,
+        box-shadow 0.16s ease,
+        border-color 0.16s ease;
 }
 
 .admin-monitor-summary-card.is-clickable:hover {
@@ -3738,7 +3916,11 @@
     height: 210px;
     border-radius: 16px;
     border: 1px solid #dce4e8;
-    background: linear-gradient(180deg, rgba(59, 127, 120, 0.12) 0%, rgba(59, 127, 120, 0.01) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(59, 127, 120, 0.12) 0%,
+        rgba(59, 127, 120, 0.01) 100%
+    );
     display: grid;
     grid-template-columns: repeat(7, minmax(0, 1fr));
     gap: 10px;
@@ -3902,7 +4084,11 @@
     margin-top: 20px;
     height: 170px;
     border-radius: 16px;
-    background: linear-gradient(180deg, rgba(59, 127, 120, 0.2) 0%, rgba(59, 127, 120, 0.02) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(59, 127, 120, 0.2) 0%,
+        rgba(59, 127, 120, 0.02) 100%
+    );
     border: 1px solid #dce4e8;
     display: flex;
     align-items: flex-end;
@@ -4170,7 +4356,10 @@
     font-size: 12px;
     font-weight: 700;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease,
+        color 0.14s ease;
 }
 
 .admin-settings-panel-tab.is-active {
@@ -4272,7 +4461,9 @@
     font-weight: 700;
     padding: 0 14px;
     cursor: pointer;
-    transition: background 0.14s ease, border-color 0.14s ease;
+    transition:
+        background 0.14s ease,
+        border-color 0.14s ease;
     white-space: nowrap;
 }
 
@@ -4693,8 +4884,16 @@
     border: 1px solid #d8e2ee;
     border-radius: 18px;
     background:
-        radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.12), transparent 42%),
-        radial-gradient(circle at 100% 100%, rgba(14, 165, 233, 0.12), transparent 46%),
+        radial-gradient(
+            circle at 0% 0%,
+            rgba(37, 99, 235, 0.12),
+            transparent 42%
+        ),
+        radial-gradient(
+            circle at 100% 100%,
+            rgba(14, 165, 233, 0.12),
+            transparent 46%
+        ),
         linear-gradient(145deg, #ffffff 0%, #f7faff 100%);
     box-shadow: 0 16px 34px rgba(15, 23, 42, 0.1);
     padding: 18px 20px;
@@ -4822,7 +5021,11 @@
     border: 1px solid #d8e1eb;
     border-radius: 16px;
     background:
-        radial-gradient(circle at 100% 0%, rgba(37, 99, 235, 0.08), transparent 35%),
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(37, 99, 235, 0.08),
+            transparent 35%
+        ),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     padding: 16px;
     box-shadow: 0 14px 28px rgba(15, 23, 42, 0.08);
@@ -4895,11 +5098,18 @@
     border: 1px solid #d5e0ec;
     border-radius: 16px;
     background:
-        radial-gradient(circle at right top, rgba(59, 130, 246, 0.08), transparent 36%),
+        radial-gradient(
+            circle at right top,
+            rgba(59, 130, 246, 0.08),
+            transparent 36%
+        ),
         linear-gradient(165deg, #ffffff 0%, #f8fbff 100%);
     overflow: hidden;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+    transition:
+        transform 0.2s ease,
+        box-shadow 0.2s ease,
+        border-color 0.2s ease;
 }
 
 .seller-store-card:hover {
@@ -5055,7 +5265,11 @@
     border: 1px solid #d8e1eb;
     border-radius: 16px;
     background:
-        radial-gradient(circle at 100% 0%, rgba(14, 165, 233, 0.08), transparent 36%),
+        radial-gradient(
+            circle at 100% 0%,
+            rgba(14, 165, 233, 0.08),
+            transparent 36%
+        ),
         linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
     padding: 16px;
     box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
@@ -5479,8 +5693,16 @@
     padding: 22px 28px 18px;
     border-bottom: 1px solid #e4edf5;
     background:
-        linear-gradient(180deg, rgba(248, 251, 255, 0.96) 0%, rgba(255, 255, 255, 0.98) 100%),
-        radial-gradient(circle at top right, rgba(30, 58, 90, 0.08), transparent 32%);
+        linear-gradient(
+            180deg,
+            rgba(248, 251, 255, 0.96) 0%,
+            rgba(255, 255, 255, 0.98) 100%
+        ),
+        radial-gradient(
+            circle at top right,
+            rgba(30, 58, 90, 0.08),
+            transparent 32%
+        );
 }
 
 .delete-modal-title {
@@ -5498,7 +5720,11 @@
 .delete-modal-body.admin-user-modal-body {
     padding: 22px 28px 28px;
     max-height: calc(96vh - 104px);
-    background: linear-gradient(180deg, rgba(249, 252, 255, 0.82) 0%, rgba(255, 255, 255, 0.98) 100%);
+    background: linear-gradient(
+        180deg,
+        rgba(249, 252, 255, 0.82) 0%,
+        rgba(255, 255, 255, 0.98) 100%
+    );
 }
 
 @media (max-width: 1180px) {
@@ -6095,7 +6321,10 @@
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
 }
 
 .account-edit-panel .field select {
@@ -6106,7 +6335,10 @@
     border: 1px solid #e5e7eb;
     background: #f9fafb;
     box-shadow: 0 1px 2px rgba(15, 23, 42, 0.03);
-    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+    transition:
+        border-color 0.15s ease,
+        box-shadow 0.15s ease,
+        background-color 0.15s ease;
     cursor: pointer;
 }
 
@@ -6202,7 +6434,7 @@
     margin: -4px;
 }
 
-.radio-label input[type="radio"] {
+.radio-label input[type='radio'] {
     cursor: pointer;
     width: 16px;
     height: 16px;
@@ -6225,7 +6457,7 @@
     color: var(--muted);
 }
 
-.checkbox-label input[type="checkbox"] {
+.checkbox-label input[type='checkbox'] {
     margin-top: 2px;
     cursor: pointer;
     width: 16px;
@@ -6603,7 +6835,7 @@
     opacity: 0;
     transition: opacity 0.14s ease;
     z-index: 100;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 [data-tip]:hover::after {
@@ -6628,7 +6860,7 @@
     max-height: 90vh;
     border-radius: 16px;
     overflow: hidden;
-    box-shadow: 0 40px 100px rgba(0,0,0,0.5);
+    box-shadow: 0 40px 100px rgba(0, 0, 0, 0.5);
     background: #fff;
 }
 
@@ -6648,7 +6880,7 @@
     height: 36px;
     border-radius: 50%;
     border: none;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0, 0, 0, 0.55);
     color: #fff;
     font-size: 22px;
     line-height: 1;
@@ -6661,18 +6893,35 @@
 }
 
 .admin-lightbox-close:hover {
-    background: rgba(0,0,0,0.8);
+    background: rgba(0, 0, 0, 0.8);
 }
 
 /* ── Promo circle preview colours ─────────────────────────────────────────── */
-.admin-home-circle-preview.is-green  { background: #166534; color: #fff; }
-.admin-home-circle-preview.is-blue   { background: #1d4ed8; color: #fff; }
-.admin-home-circle-preview.is-red    { background: #be123c; color: #fff; }
-.admin-home-circle-preview.is-purple { background: #6b21a8; color: #fff; }
-.admin-home-circle-preview.is-teal   { background: #0f766e; color: #fff; }
-.admin-home-circle-preview.is-navy   { background: #1e3a5f; color: #fff; }
-.admin-home-circle-preview.is-silver { background: #64748b; color: #fff; }
-
-
-
-
+.admin-home-circle-preview.is-green {
+    background: #166534;
+    color: #fff;
+}
+.admin-home-circle-preview.is-blue {
+    background: #1d4ed8;
+    color: #fff;
+}
+.admin-home-circle-preview.is-red {
+    background: #be123c;
+    color: #fff;
+}
+.admin-home-circle-preview.is-purple {
+    background: #6b21a8;
+    color: #fff;
+}
+.admin-home-circle-preview.is-teal {
+    background: #0f766e;
+    color: #fff;
+}
+.admin-home-circle-preview.is-navy {
+    background: #1e3a5f;
+    color: #fff;
+}
+.admin-home-circle-preview.is-silver {
+    background: #64748b;
+    color: #fff;
+}

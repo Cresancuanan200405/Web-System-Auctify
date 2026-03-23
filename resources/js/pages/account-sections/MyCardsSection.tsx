@@ -17,7 +17,8 @@ export const MyCardsSection: React.FC = () => {
     const [expiry, setExpiry] = useState('');
     const [cvc, setCvc] = useState('');
     const [name, setName] = useState('');
-    const [cardActionModal, setCardActionModal] = useState<CardActionModal | null>(null);
+    const [cardActionModal, setCardActionModal] =
+        useState<CardActionModal | null>(null);
 
     const resetForm = () => {
         setCardType('visa');
@@ -37,7 +38,7 @@ export const MyCardsSection: React.FC = () => {
             expiry,
             cvc,
             name,
-            balance: 10000
+            balance: 10000,
         };
 
         addCard(newCard);
@@ -64,7 +65,9 @@ export const MyCardsSection: React.FC = () => {
             return;
         }
 
-        const targetCard = savedCards.find((card) => card.id === cardActionModal.cardId);
+        const targetCard = savedCards.find(
+            (card) => card.id === cardActionModal.cardId,
+        );
         if (!targetCard) {
             setCardActionModal(null);
             return;
@@ -84,29 +87,43 @@ export const MyCardsSection: React.FC = () => {
             <div className="cards-main">
                 <div className="cards-header">
                     <div className="cards-header-icon" aria-hidden="true">
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                        <svg
+                            width="20"
+                            height="20"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.6"
+                        >
                             <rect x="2" y="5" width="20" height="14" rx="2" />
                             <line x1="2" y1="10" x2="22" y2="10" />
                         </svg>
                     </div>
-                    <h2 className="cards-header-title">My Cards ({savedCards.length})</h2>
+                    <h2 className="cards-header-title">
+                        My Cards ({savedCards.length})
+                    </h2>
                 </div>
 
                 {savedCards.length === 0 ? (
                     <div className="cards-empty-card">
-                        <div className="cards-empty-illustration" aria-hidden="true">
+                        <div
+                            className="cards-empty-illustration"
+                            aria-hidden="true"
+                        >
                             <div className="cards-empty-face">
                                 <div className="cards-empty-eyes" />
                                 <div className="cards-empty-smile" />
                             </div>
                         </div>
-                        <div className="cards-empty-title">Simplify Shopping</div>
+                        <div className="cards-empty-title">
+                            Simplify Shopping
+                        </div>
                         <div className="cards-empty-subtitle">
                             Save Your Credit/Debit Cards Today!
                         </div>
                         <div className="cards-empty-text">
-                            Trust in us to deliver not only fashion but also the utmost
-                            security and convenience.
+                            Trust in us to deliver not only fashion but also the
+                            utmost security and convenience.
                         </div>
                         <button
                             type="button"
@@ -122,8 +139,16 @@ export const MyCardsSection: React.FC = () => {
                             <div key={card.id} className="saved-card">
                                 <div className="saved-card-header">
                                     <img
-                                        src={card.type === 'mastercard' ? '/icons/landbank.jpg' : `/icons/${card.type}.png`}
-                                        alt={card.type === 'mastercard' ? 'Landbank' : card.type}
+                                        src={
+                                            card.type === 'mastercard'
+                                                ? '/icons/landbank.jpg'
+                                                : `/icons/${card.type}.png`
+                                        }
+                                        alt={
+                                            card.type === 'mastercard'
+                                                ? 'Landbank'
+                                                : card.type
+                                        }
                                         className="saved-card-logo"
                                     />
                                     <button
@@ -139,11 +164,19 @@ export const MyCardsSection: React.FC = () => {
                                     •••• •••• •••• {card.number.slice(-4)}
                                 </div>
                                 <div className="saved-card-details">
-                                    <div className="saved-card-name">{card.name}</div>
-                                    <div className="saved-card-expiry">{card.expiry}</div>
+                                    <div className="saved-card-name">
+                                        {card.name}
+                                    </div>
+                                    <div className="saved-card-expiry">
+                                        {card.expiry}
+                                    </div>
                                 </div>
                                 <div className="saved-card-balance">
-                                    Balance: ₱{card.balance.toLocaleString('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    Balance: ₱
+                                    {card.balance.toLocaleString('en-PH', {
+                                        minimumFractionDigits: 2,
+                                        maximumFractionDigits: 2,
+                                    })}
                                 </div>
                             </div>
                         ))}
@@ -169,20 +202,34 @@ export const MyCardsSection: React.FC = () => {
                                 >
                                     ×
                                 </button>
-                                <h2 className="card-drawer-title">Add New Card</h2>
+                                <h2 className="card-drawer-title">
+                                    Add New Card
+                                </h2>
                             </div>
 
-                            <form className="card-drawer-form" onSubmit={handleSubmit}>
+                            <form
+                                className="card-drawer-form"
+                                onSubmit={handleSubmit}
+                            >
                                 <div className="card-drawer-field">
-                                    <label htmlFor="cardType">Payment Method *</label>
+                                    <label htmlFor="cardType">
+                                        Payment Method *
+                                    </label>
                                     <select
                                         id="cardType"
                                         value={cardType}
-                                        onChange={(event) => setCardType(event.target.value as Card['type'])}
+                                        onChange={(event) =>
+                                            setCardType(
+                                                event.target
+                                                    .value as Card['type'],
+                                            )
+                                        }
                                         required
                                     >
                                         <option value="visa">Visa</option>
-                                        <option value="mastercard">Landbank</option>
+                                        <option value="mastercard">
+                                            Landbank
+                                        </option>
                                         <option value="jcb">JCB</option>
                                         <option value="gcash">GCash</option>
                                         <option value="maya">Maya</option>
@@ -190,26 +237,34 @@ export const MyCardsSection: React.FC = () => {
                                 </div>
 
                                 <div className="card-drawer-field">
-                                    <label htmlFor="cardNumber">Card Number</label>
+                                    <label htmlFor="cardNumber">
+                                        Card Number
+                                    </label>
                                     <input
                                         id="cardNumber"
                                         type="text"
                                         placeholder="Card Number"
                                         value={number}
-                                        onChange={(event) => setNumber(event.target.value)}
+                                        onChange={(event) =>
+                                            setNumber(event.target.value)
+                                        }
                                         required
                                     />
                                 </div>
 
                                 <div className="card-drawer-row">
                                     <div className="card-drawer-field">
-                                        <label htmlFor="cardExpiry">Valid Thru (MM/YY)</label>
+                                        <label htmlFor="cardExpiry">
+                                            Valid Thru (MM/YY)
+                                        </label>
                                         <input
                                             id="cardExpiry"
                                             type="text"
                                             placeholder="MM/YY"
                                             value={expiry}
-                                            onChange={(event) => setExpiry(event.target.value)}
+                                            onChange={(event) =>
+                                                setExpiry(event.target.value)
+                                            }
                                             required
                                         />
                                     </div>
@@ -220,34 +275,66 @@ export const MyCardsSection: React.FC = () => {
                                             type="text"
                                             placeholder="CVC/CVV"
                                             value={cvc}
-                                            onChange={(event) => setCvc(event.target.value)}
+                                            onChange={(event) =>
+                                                setCvc(event.target.value)
+                                            }
                                             required
                                         />
                                     </div>
                                 </div>
 
                                 <div className="card-drawer-field">
-                                    <label htmlFor="cardName">Name on Card</label>
+                                    <label htmlFor="cardName">
+                                        Name on Card
+                                    </label>
                                     <input
                                         id="cardName"
                                         type="text"
                                         placeholder="Name on Card"
                                         value={name}
-                                        onChange={(event) => setName(event.target.value)}
+                                        onChange={(event) =>
+                                            setName(event.target.value)
+                                        }
                                         required
                                     />
                                 </div>
 
-                                <button type="submit" className="card-drawer-submit">
+                                <button
+                                    type="submit"
+                                    className="card-drawer-submit"
+                                >
                                     Add Card
                                 </button>
 
-                                <div className="card-drawer-logos" aria-hidden="true">
-                                    <img src="/icons/visa.png" alt="Visa" className="card-logo" />
-                                    <img src="/icons/landbank.jpg" alt="Landbank" className="card-logo" />
-                                    <img src="/icons/jcb.png" alt="JCB" className="card-logo" />
-                                    <img src="/icons/gcash.png" alt="GCash" className="card-logo" />
-                                    <img src="/icons/maya.png" alt="Maya" className="card-logo" />
+                                <div
+                                    className="card-drawer-logos"
+                                    aria-hidden="true"
+                                >
+                                    <img
+                                        src="/icons/visa.png"
+                                        alt="Visa"
+                                        className="card-logo"
+                                    />
+                                    <img
+                                        src="/icons/landbank.jpg"
+                                        alt="Landbank"
+                                        className="card-logo"
+                                    />
+                                    <img
+                                        src="/icons/jcb.png"
+                                        alt="JCB"
+                                        className="card-logo"
+                                    />
+                                    <img
+                                        src="/icons/gcash.png"
+                                        alt="GCash"
+                                        className="card-logo"
+                                    />
+                                    <img
+                                        src="/icons/maya.png"
+                                        alt="Maya"
+                                        className="card-logo"
+                                    />
                                 </div>
                             </form>
                         </div>
@@ -255,46 +342,57 @@ export const MyCardsSection: React.FC = () => {
                 )}
             </div>
 
-            {cardActionModal && (() => {
-                const targetCard = savedCards.find((card) => card.id === cardActionModal.cardId);
+            {cardActionModal &&
+                (() => {
+                    const targetCard = savedCards.find(
+                        (card) => card.id === cardActionModal.cardId,
+                    );
 
-                if (!targetCard) {
-                    return null;
-                }
+                    if (!targetCard) {
+                        return null;
+                    }
 
-                const displayName = getCardDisplayName(targetCard.type);
+                    const displayName = getCardDisplayName(targetCard.type);
 
-                return (
-                    <div className="delete-modal-overlay" onClick={closeCardActionModal}>
-                        <div className="delete-modal" onClick={(event) => event.stopPropagation()}>
-                            <div className="delete-modal-header">
-                                <h2 className="delete-modal-title">Remove this card?</h2>
-                            </div>
-                            <div className="delete-modal-body">
-                                <p className="delete-modal-text">
-                                    {`Are you sure you want to remove your ${displayName} card ending in ${targetCard.number.slice(-4)}?`}
-                                </p>
-                                <div className="delete-modal-actions">
-                                    <button
-                                        type="button"
-                                        className="delete-modal-cancel"
-                                        onClick={closeCardActionModal}
-                                    >
-                                        Cancel
-                                    </button>
-                                    <button
-                                        type="button"
-                                        className="delete-modal-confirm"
-                                        onClick={confirmCardAction}
-                                    >
-                                        Remove card
-                                    </button>
+                    return (
+                        <div
+                            className="delete-modal-overlay"
+                            onClick={closeCardActionModal}
+                        >
+                            <div
+                                className="delete-modal"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <div className="delete-modal-header">
+                                    <h2 className="delete-modal-title">
+                                        Remove this card?
+                                    </h2>
+                                </div>
+                                <div className="delete-modal-body">
+                                    <p className="delete-modal-text">
+                                        {`Are you sure you want to remove your ${displayName} card ending in ${targetCard.number.slice(-4)}?`}
+                                    </p>
+                                    <div className="delete-modal-actions">
+                                        <button
+                                            type="button"
+                                            className="delete-modal-cancel"
+                                            onClick={closeCardActionModal}
+                                        >
+                                            Cancel
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className="delete-modal-confirm"
+                                            onClick={confirmCardAction}
+                                        >
+                                            Remove card
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                );
-            })()}
+                    );
+                })()}
         </>
     );
 };

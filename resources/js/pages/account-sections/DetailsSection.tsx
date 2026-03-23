@@ -1,4 +1,4 @@
-import type { FormEvent} from 'react';
+import type { FormEvent } from 'react';
 import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import * as apiClient from '../../api/client';
@@ -43,7 +43,9 @@ const formatBirthdayForDisplay = (dateString: string): string => {
     }
 };
 
-export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSection }) => {
+export const DetailsSection: React.FC<DetailsSectionProps> = ({
+    onNavigateSection,
+}) => {
     const { authUser, updateUser, logout } = useAuth();
     const passwordCooldownMs = 10 * 60 * 1000;
     const lastPasswordChangeKey = 'last_password_change_at';
@@ -58,9 +60,13 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
     const [editConfirmPassword, setEditConfirmPassword] = useState('');
     const [accountEditError, setAccountEditError] = useState('');
     const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
-    const [provinceNames, setProvinceNames] = useState<Record<string, string>>({});
+    const [provinceNames, setProvinceNames] = useState<Record<string, string>>(
+        {},
+    );
     const [cityNames, setCityNames] = useState<Record<string, string>>({});
-    const [barangayNames, setBarangayNames] = useState<Record<string, string>>({});
+    const [barangayNames, setBarangayNames] = useState<Record<string, string>>(
+        {},
+    );
     const [birthday, setBirthday] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | ''>('');
 
@@ -82,8 +88,13 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 setGender('');
             }, 0);
         } else {
-            const savedBirthday = localStorage.getItem(birthdayStorageKey) || '';
-            const savedGender = (localStorage.getItem(genderStorageKey) as 'female' | 'male' | null) || '';
+            const savedBirthday =
+                localStorage.getItem(birthdayStorageKey) || '';
+            const savedGender =
+                (localStorage.getItem(genderStorageKey) as
+                    | 'female'
+                    | 'male'
+                    | null) || '';
 
             timeoutId = window.setTimeout(() => {
                 setBirthday(savedBirthday);
@@ -138,9 +149,27 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         let isActive = true;
 
         const buildLocationMaps = async () => {
-            const provinceCodes = Array.from(new Set(savedAddresses.map((address) => address.province).filter(Boolean)));
-            const cityCodes = Array.from(new Set(savedAddresses.map((address) => address.city).filter(Boolean)));
-            const barangayCodes = Array.from(new Set(savedAddresses.map((address) => address.barangay).filter(Boolean)));
+            const provinceCodes = Array.from(
+                new Set(
+                    savedAddresses
+                        .map((address) => address.province)
+                        .filter(Boolean),
+                ),
+            );
+            const cityCodes = Array.from(
+                new Set(
+                    savedAddresses
+                        .map((address) => address.city)
+                        .filter(Boolean),
+                ),
+            );
+            const barangayCodes = Array.from(
+                new Set(
+                    savedAddresses
+                        .map((address) => address.barangay)
+                        .filter(Boolean),
+                ),
+            );
             const nextProvinceNames: Record<string, string> = {};
             const nextCityNames: Record<string, string> = {};
             const nextBarangayNames: Record<string, string> = {};
@@ -223,7 +252,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         setEditFirstName(first);
         setEditLastName(last);
         setEditEmail(authUser.email);
-        setEditGender((gender === 'female' || gender === 'male') ? gender : 'female');
+        setEditGender(
+            gender === 'female' || gender === 'male' ? gender : 'female',
+        );
         setEditBirthday(formatBirthdayForInput(birthday));
         setEditPassword('');
         setEditNewPassword('');
@@ -248,15 +279,23 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
         if (editPassword || editNewPassword || editConfirmPassword) {
             const lastChangedRaw = localStorage.getItem(lastPasswordChangeKey);
             const lastChangedAt = lastChangedRaw ? Number(lastChangedRaw) : 0;
-            if (lastChangedAt && Date.now() - lastChangedAt < passwordCooldownMs) {
-                const remainingMs = passwordCooldownMs - (Date.now() - lastChangedAt);
+            if (
+                lastChangedAt &&
+                Date.now() - lastChangedAt < passwordCooldownMs
+            ) {
+                const remainingMs =
+                    passwordCooldownMs - (Date.now() - lastChangedAt);
                 const remainingMinutes = Math.ceil(remainingMs / 60000);
-                setAccountEditError(`Password was changed recently. Please wait ${remainingMinutes} minute(s) before changing it again.`);
+                setAccountEditError(
+                    `Password was changed recently. Please wait ${remainingMinutes} minute(s) before changing it again.`,
+                );
                 return;
             }
 
             if (!editPassword) {
-                setAccountEditError('Current password is required to change password.');
+                setAccountEditError(
+                    'Current password is required to change password.',
+                );
                 return;
             }
             if (!editNewPassword) {
@@ -264,11 +303,15 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 return;
             }
             if (editNewPassword.length < 8) {
-                setAccountEditError('New password must be at least 8 characters long.');
+                setAccountEditError(
+                    'New password must be at least 8 characters long.',
+                );
                 return;
             }
             if (editNewPassword !== editConfirmPassword) {
-                setAccountEditError('New password and confirmation do not match.');
+                setAccountEditError(
+                    'New password and confirmation do not match.',
+                );
                 return;
             }
         }
@@ -288,10 +331,10 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 updateData.password_confirmation = editConfirmPassword;
             }
 
-            const response = await apiClient.apiPost<{ user: User; token?: string }>(
-                '/api/auth/update-profile',
-                updateData
-            );
+            const response = await apiClient.apiPost<{
+                user: User;
+                token?: string;
+            }>('/api/auth/update-profile', updateData);
 
             const updatedUser = {
                 ...authUser,
@@ -335,7 +378,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
             }
         } catch (error: unknown) {
             const err = error as { message?: string };
-            setAccountEditError(err.message || 'Failed to update profile. Please try again.');
+            setAccountEditError(
+                err.message || 'Failed to update profile. Please try again.',
+            );
             toast.error(err.message || 'Failed to update profile.', {
                 autoClose: 3500,
             });
@@ -365,20 +410,29 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 <div className="account-card-body">
                     <div className="account-field-group">
                         <div className="account-field-label">Email Address</div>
-                        <div className="account-field-value">{authUser.email}</div>
+                        <div className="account-field-value">
+                            {authUser.email}
+                        </div>
                     </div>
                     <div className="account-field-group">
                         <div className="account-field-label">Name</div>
-                        <div className="account-field-value">{authUser.name}</div>
+                        <div className="account-field-value">
+                            {authUser.name}
+                        </div>
                     </div>
                     <div className="account-field-group">
                         <div className="account-field-label">Birthday</div>
-                        <div className="account-field-value">{formatBirthdayForDisplay(birthday) || '-'}</div>
+                        <div className="account-field-value">
+                            {formatBirthdayForDisplay(birthday) || '-'}
+                        </div>
                     </div>
                     <div className="account-field-group">
                         <div className="account-field-label">Gender</div>
                         <div className="account-field-value">
-                            {gender ? gender.charAt(0).toUpperCase() + gender.slice(1) : '-'}
+                            {gender
+                                ? gender.charAt(0).toUpperCase() +
+                                  gender.slice(1)
+                                : '-'}
                         </div>
                     </div>
                     <div className="account-field-group">
@@ -406,8 +460,12 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 </div>
                 {savedAddresses.length === 0 ? (
                     <div className="account-card-body account-card-body--centered">
-                        <div className="account-empty-icon" aria-hidden="true">📦</div>
-                        <p className="account-empty-text">You don&apos;t have any saved address</p>
+                        <div className="account-empty-icon" aria-hidden="true">
+                            📦
+                        </div>
+                        <p className="account-empty-text">
+                            You don&apos;t have any saved address
+                        </p>
                         <button
                             type="button"
                             className="account-primary-button"
@@ -420,25 +478,40 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                     <div className="account-card-body">
                         {savedAddresses.slice(0, 2).map((address) => {
                             const houseNo = address.building_name || '';
-                            const barangay = barangayNames[address.barangay] || address.barangay;
-                            const city = cityNames[address.city] || address.city;
-                            const province = provinceNames[address.province] || address.province;
+                            const barangay =
+                                barangayNames[address.barangay] ||
+                                address.barangay;
+                            const city =
+                                cityNames[address.city] || address.city;
+                            const province =
+                                provinceNames[address.province] ||
+                                address.province;
                             return (
-                                <div key={address.id} className="account-field-group">
+                                <div
+                                    key={address.id}
+                                    className="account-field-group"
+                                >
                                     <div className="account-field-label">
                                         {address.first_name} {address.last_name}
                                     </div>
                                     <div className="account-field-value">
                                         {address.street_address}
-                                        {houseNo && `, ${houseNo}`}, {barangay}, {city}, {province}
+                                        {houseNo && `, ${houseNo}`}, {barangay},{' '}
+                                        {city}, {province}
                                     </div>
                                 </div>
                             );
                         })}
                         {savedAddresses.length > 2 && (
                             <div className="account-field-group">
-                                <div className="account-field-value" style={{ color: '#999', fontSize: '13px' }}>
-                                    +{savedAddresses.length - 2} more {savedAddresses.length - 2 === 1 ? 'address' : 'addresses'}
+                                <div
+                                    className="account-field-value"
+                                    style={{ color: '#999', fontSize: '13px' }}
+                                >
+                                    +{savedAddresses.length - 2} more{' '}
+                                    {savedAddresses.length - 2 === 1
+                                        ? 'address'
+                                        : 'addresses'}
                                 </div>
                             </div>
                         )}
@@ -450,7 +523,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                 <div className="account-edit-overlay">
                     <div className="account-edit-panel">
                         <div className="account-edit-header">
-                            <h2 className="account-edit-title">Personal details</h2>
+                            <h2 className="account-edit-title">
+                                Personal details
+                            </h2>
                             <button
                                 type="button"
                                 className="account-edit-close"
@@ -461,10 +536,17 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                             </button>
                         </div>
 
-                        <form className="account-edit-form" onSubmit={handleAccountEditSave}>
+                        <form
+                            className="account-edit-form"
+                            onSubmit={handleAccountEditSave}
+                        >
                             <div className="account-edit-email-row">
-                                <div className="account-edit-email-label">Email Address</div>
-                                <div className="account-edit-email-value">{authUser.email}</div>
+                                <div className="account-edit-email-label">
+                                    Email Address
+                                </div>
+                                <div className="account-edit-email-value">
+                                    {authUser.email}
+                                </div>
                             </div>
 
                             <div className="field">
@@ -476,7 +558,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                                             name="edit-gender"
                                             value="female"
                                             checked={editGender === 'female'}
-                                            onChange={() => setEditGender('female')}
+                                            onChange={() =>
+                                                setEditGender('female')
+                                            }
                                         />
                                         <span>Female</span>
                                     </label>
@@ -486,7 +570,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                                             name="edit-gender"
                                             value="male"
                                             checked={editGender === 'male'}
-                                            onChange={() => setEditGender('male')}
+                                            onChange={() =>
+                                                setEditGender('male')
+                                            }
                                         />
                                         <span>Male</span>
                                     </label>
@@ -495,19 +581,27 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
 
                             <div className="account-edit-two-col">
                                 <div className="field">
-                                    <label htmlFor="editFirstName">First Name</label>
+                                    <label htmlFor="editFirstName">
+                                        First Name
+                                    </label>
                                     <input
                                         id="editFirstName"
                                         value={editFirstName}
-                                        onChange={(event) => setEditFirstName(event.target.value)}
+                                        onChange={(event) =>
+                                            setEditFirstName(event.target.value)
+                                        }
                                     />
                                 </div>
                                 <div className="field">
-                                    <label htmlFor="editLastName">Last Name</label>
+                                    <label htmlFor="editLastName">
+                                        Last Name
+                                    </label>
                                     <input
                                         id="editLastName"
                                         value={editLastName}
-                                        onChange={(event) => setEditLastName(event.target.value)}
+                                        onChange={(event) =>
+                                            setEditLastName(event.target.value)
+                                        }
                                     />
                                 </div>
                             </div>
@@ -519,51 +613,72 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                                     type="date"
                                     className="date-input"
                                     value={editBirthday}
-                                    onChange={(event) => setEditBirthday(event.target.value)}
+                                    onChange={(event) =>
+                                        setEditBirthday(event.target.value)
+                                    }
                                 />
                             </div>
 
                             <div className="account-edit-two-col">
                                 <div className="field">
-                                    <label htmlFor="editPassword">Password</label>
+                                    <label htmlFor="editPassword">
+                                        Password
+                                    </label>
                                     <input
                                         id="editPassword"
                                         type="password"
                                         placeholder="Password"
                                         value={editPassword}
-                                        onChange={(event) => setEditPassword(event.target.value)}
+                                        onChange={(event) =>
+                                            setEditPassword(event.target.value)
+                                        }
                                     />
                                 </div>
                                 <div className="field">
-                                    <label htmlFor="editNewPassword">New Password</label>
+                                    <label htmlFor="editNewPassword">
+                                        New Password
+                                    </label>
                                     <input
                                         id="editNewPassword"
                                         type="password"
                                         placeholder="New Password"
                                         value={editNewPassword}
-                                        onChange={(event) => setEditNewPassword(event.target.value)}
+                                        onChange={(event) =>
+                                            setEditNewPassword(
+                                                event.target.value,
+                                            )
+                                        }
                                     />
                                 </div>
                             </div>
 
                             <div className="field">
-                                <label htmlFor="editConfirmPassword">Confirm New Password</label>
+                                <label htmlFor="editConfirmPassword">
+                                    Confirm New Password
+                                </label>
                                 <input
                                     id="editConfirmPassword"
                                     type="password"
                                     placeholder="Confirm New Password"
                                     value={editConfirmPassword}
-                                    onChange={(event) => setEditConfirmPassword(event.target.value)}
+                                    onChange={(event) =>
+                                        setEditConfirmPassword(
+                                            event.target.value,
+                                        )
+                                    }
                                 />
                             </div>
 
                             <p className="account-edit-note">
-                                When updating your password, all active sessions will be logged out. Please log in
-                                again with your new password to continue.
+                                When updating your password, all active sessions
+                                will be logged out. Please log in again with
+                                your new password to continue.
                             </p>
 
                             {accountEditError && (
-                                <div className="message error account-edit-error">{accountEditError}</div>
+                                <div className="message error account-edit-error">
+                                    {accountEditError}
+                                </div>
                             )}
 
                             <div className="account-edit-footer">
@@ -574,7 +689,12 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({ onNavigateSectio
                                 >
                                     Cancel
                                 </button>
-                                <button type="submit" className="account-edit-save">Save</button>
+                                <button
+                                    type="submit"
+                                    className="account-edit-save"
+                                >
+                                    Save
+                                </button>
                             </div>
                         </form>
                     </div>

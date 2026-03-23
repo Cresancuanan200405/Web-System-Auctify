@@ -1,6 +1,7 @@
 const envBaseUrl = import.meta.env.VITE_API_BASE_URL?.trim();
 
-const isLoopbackHost = (host: string) => host === 'localhost' || host === '127.0.0.1';
+const isLoopbackHost = (host: string) =>
+    host === 'localhost' || host === '127.0.0.1';
 
 const resolveBaseUrl = () => {
     if (!envBaseUrl) {
@@ -14,7 +15,11 @@ const resolveBaseUrl = () => {
             const browserHost = window.location.hostname;
 
             // Keep API scheme/port, but align loopback hostnames so XSRF cookie is readable.
-            if (isLoopbackHost(url.hostname) && isLoopbackHost(browserHost) && browserHost !== url.hostname) {
+            if (
+                isLoopbackHost(url.hostname) &&
+                isLoopbackHost(browserHost) &&
+                browserHost !== url.hostname
+            ) {
                 url.hostname = browserHost;
             }
         }
@@ -26,6 +31,7 @@ const resolveBaseUrl = () => {
 };
 
 const baseUrl = resolveBaseUrl();
+const REQUEST_TIMEOUT_MS = 20000;
 
 const readCookie = (name: string) => {
     if (typeof document === 'undefined') {
@@ -73,7 +79,11 @@ const ensureCsrfCookie = async () => {
     await csrfCookiePromise;
 };
 
-const buildHeaders = async (method: string, headers?: HeadersInit, sendJson = true) => {
+const buildHeaders = async (
+    method: string,
+    headers?: HeadersInit,
+    sendJson = true,
+) => {
     if (!['GET', 'HEAD', 'OPTIONS'].includes(method.toUpperCase())) {
         await ensureCsrfCookie();
     }
@@ -112,6 +122,11 @@ async function request<T>(path: string, options: RequestInit) {
     let response: Response;
     const method = options.method ?? 'GET';
     const headers = await buildHeaders(method, options.headers, true);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS,
+    );
 
     try {
         response = await fetch(`${baseUrl}${path}`, {
@@ -119,29 +134,38 @@ async function request<T>(path: string, options: RequestInit) {
             method,
             credentials: 'include',
             headers,
+            signal: controller.signal,
         });
     } catch {
-        const message = 'Unable to connect to the server. Please refresh and try again.';
+        const message =
+            'Unable to connect to the server. Please refresh and try again.';
         throw {
             message,
             response: {
                 data: { message },
             },
         };
+    } finally {
+        window.clearTimeout(timeoutId);
     }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        const message = data?.message || `Request failed with status ${response.status}.`;
+        const message =
+            data?.message || `Request failed with status ${response.status}.`;
 
         if (response.status === 403) {
             if (data?.account_status === 'suspended') {
                 dispatchAccountStatus({
                     status: 'suspended',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
-                    target: data?.status_target === 'contact' ? 'contact' : 'account',
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
+                    target:
+                        data?.status_target === 'contact'
+                            ? 'contact'
+                            : 'account',
                 });
             }
 
@@ -149,8 +173,12 @@ async function request<T>(path: string, options: RequestInit) {
                 dispatchAccountStatus({
                     status: 'deleted',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
-                    target: data?.status_target === 'contact' ? 'contact' : 'account',
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
+                    target:
+                        data?.status_target === 'contact'
+                            ? 'contact'
+                            : 'account',
                 });
             }
 
@@ -158,7 +186,8 @@ async function request<T>(path: string, options: RequestInit) {
                 dispatchAccountStatus({
                     status: 'seller-revoked',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
                 });
             }
         }
@@ -166,7 +195,8 @@ async function request<T>(path: string, options: RequestInit) {
         if (response.status === 401 && token) {
             dispatchAccountStatus({
                 status: 'session-ended',
-                message: 'Your session is no longer valid. Please sign in again.',
+                message:
+                    'Your session is no longer valid. Please sign in again.',
             });
         }
 
@@ -217,6 +247,11 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
 
     let response: Response;
     const headers = await buildHeaders('POST', undefined, false);
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS,
+    );
 
     try {
         response = await fetch(`${baseUrl}${path}`, {
@@ -224,28 +259,34 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
             credentials: 'include',
             headers,
             body: formData,
+            signal: controller.signal,
         });
     } catch {
-        const message = 'Unable to connect to the server. Please refresh and try again.';
+        const message =
+            'Unable to connect to the server. Please refresh and try again.';
         throw {
             message,
             response: {
                 data: { message },
             },
         };
+    } finally {
+        window.clearTimeout(timeoutId);
     }
 
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok) {
-        const message = data?.message || `Request failed with status ${response.status}.`;
+        const message =
+            data?.message || `Request failed with status ${response.status}.`;
 
         if (response.status === 403) {
             if (data?.account_status === 'suspended') {
                 dispatchAccountStatus({
                     status: 'suspended',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
                 });
             }
 
@@ -253,7 +294,8 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
                 dispatchAccountStatus({
                     status: 'deleted',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
                 });
             }
 
@@ -261,7 +303,8 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
                 dispatchAccountStatus({
                     status: 'seller-revoked',
                     message,
-                    reason: typeof data?.reason === 'string' ? data.reason : null,
+                    reason:
+                        typeof data?.reason === 'string' ? data.reason : null,
                 });
             }
         }
@@ -269,7 +312,8 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
         if (response.status === 401 && token) {
             dispatchAccountStatus({
                 status: 'session-ended',
-                message: 'Your session is no longer valid. Please sign in again.',
+                message:
+                    'Your session is no longer valid. Please sign in again.',
             });
         }
 

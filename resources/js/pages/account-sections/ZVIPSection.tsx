@@ -20,8 +20,11 @@ export const ZVIPSection: React.FC = () => {
                         Enjoy 1-year of Unlimited Free Shipping
                     </div>
                     <div className="zvip-banner-subtext">
-                        to all Sold by AUCTIFY and Havaianas items for Php 500.00{' '}
-                        <span className="zvip-banner-strikethrough">750.00!</span>
+                        to all Sold by AUCTIFY and Havaianas items for Php
+                        500.00{' '}
+                        <span className="zvip-banner-strikethrough">
+                            750.00!
+                        </span>
                     </div>
                 </div>
                 <div className="zvip-banner-arrow" aria-hidden="true">
@@ -35,34 +38,61 @@ export const ZVIPSection: React.FC = () => {
                 <div className="zvip-benefit-card">
                     <div
                         className="zvip-benefit-image"
-                        style={{ background: 'linear-gradient(135deg, #ff6b6b, #ff8e8e)' }}
+                        style={{
+                            background:
+                                'linear-gradient(135deg, #ff6b6b, #ff8e8e)',
+                        }}
                     />
-                    <h4 className="zvip-benefit-title">Unlimited Free Shipping with no min spend</h4>
-                    <p className="zvip-benefit-desc">For products sold by AUCTIFY and participating sellers.</p>
+                    <h4 className="zvip-benefit-title">
+                        Unlimited Free Shipping with no min spend
+                    </h4>
+                    <p className="zvip-benefit-desc">
+                        For products sold by AUCTIFY and participating sellers.
+                    </p>
                 </div>
                 <div className="zvip-benefit-card">
                     <div
                         className="zvip-benefit-image"
-                        style={{ background: 'linear-gradient(135deg, #a78bfa, #c4b5fd)' }}
+                        style={{
+                            background:
+                                'linear-gradient(135deg, #a78bfa, #c4b5fd)',
+                        }}
                     />
                     <h4 className="zvip-benefit-title">Full Rebate</h4>
-                    <p className="zvip-benefit-desc">Get Php 600 worth of vouchers</p>
+                    <p className="zvip-benefit-desc">
+                        Get Php 600 worth of vouchers
+                    </p>
                 </div>
                 <div className="zvip-benefit-card">
                     <div
                         className="zvip-benefit-image"
-                        style={{ background: 'linear-gradient(135deg, #fb7185, #fda4af)' }}
+                        style={{
+                            background:
+                                'linear-gradient(135deg, #fb7185, #fda4af)',
+                        }}
                     />
-                    <h4 className="zvip-benefit-title">Priority Access to Exclusive Sales</h4>
-                    <p className="zvip-benefit-desc">Get the best deals before everyone else.</p>
+                    <h4 className="zvip-benefit-title">
+                        Priority Access to Exclusive Sales
+                    </h4>
+                    <p className="zvip-benefit-desc">
+                        Get the best deals before everyone else.
+                    </p>
                 </div>
                 <div className="zvip-benefit-card">
                     <div
                         className="zvip-benefit-image"
-                        style={{ background: 'linear-gradient(135deg, #fb923c, #fdba74)' }}
+                        style={{
+                            background:
+                                'linear-gradient(135deg, #fb923c, #fdba74)',
+                        }}
                     />
-                    <h4 className="zvip-benefit-title">Exclusive Rewards from Partners</h4>
-                    <p className="zvip-benefit-desc">Enjoy specially curated deals from Klook, Parlon, and many more.</p>
+                    <h4 className="zvip-benefit-title">
+                        Exclusive Rewards from Partners
+                    </h4>
+                    <p className="zvip-benefit-desc">
+                        Enjoy specially curated deals from Klook, Parlon, and
+                        many more.
+                    </p>
                 </div>
             </div>
 
@@ -71,7 +101,9 @@ export const ZVIPSection: React.FC = () => {
                     type="button"
                     className="zvip-nav-button"
                     disabled={zvipCarouselPage === 0}
-                    onClick={() => setZvipCarouselPage((prev) => Math.max(0, prev - 1))}
+                    onClick={() =>
+                        setZvipCarouselPage((prev) => Math.max(0, prev - 1))
+                    }
                 >
                     ‹ Back
                 </button>
@@ -95,7 +127,9 @@ export const ZVIPSection: React.FC = () => {
                     type="button"
                     className="zvip-nav-button"
                     disabled={zvipCarouselPage === 1}
-                    onClick={() => setZvipCarouselPage((prev) => Math.min(1, prev + 1))}
+                    onClick={() =>
+                        setZvipCarouselPage((prev) => Math.min(1, prev + 1))
+                    }
                 >
                     Next ›
                 </button>

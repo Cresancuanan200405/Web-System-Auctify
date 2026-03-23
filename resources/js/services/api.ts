@@ -1,4 +1,11 @@
-import { apiGet, apiPost, apiPatch, apiPut, apiDelete, apiPostForm } from '../api/client';
+import {
+    apiGet,
+    apiPost,
+    apiPatch,
+    apiPut,
+    apiDelete,
+    apiPostForm,
+} from '../api/client';
 import type {
     User,
     Address,
@@ -31,7 +38,13 @@ export interface PublicPlatformSettings {
 
 export interface BidNotificationItem {
     key: string;
-    type: 'new-bid' | 'outbid' | 'ended' | 'won' | 'seller-comment' | 'watching';
+    type:
+        | 'new-bid'
+        | 'outbid'
+        | 'ended'
+        | 'won'
+        | 'seller-comment'
+        | 'watching';
     auction_id: number;
     auction_title: string;
     message: string;
@@ -102,11 +115,17 @@ export interface VerificationStatusResponse {
 // Authentication Services
 export const authService = {
     login: async (credentials: LoginCredentials) => {
-        return apiPost<{ token: string; user: User }>('/api/auth/login', credentials);
+        return apiPost<{ token: string; user: User }>(
+            '/api/auth/login',
+            credentials,
+        );
     },
 
     register: async (data: RegisterData) => {
-        return apiPost<{ token: string; user: User }>('/api/auth/register', data);
+        return apiPost<{ token: string; user: User }>(
+            '/api/auth/register',
+            data,
+        );
     },
 
     logout: async () => {
@@ -115,12 +134,14 @@ export const authService = {
 
     me: async () => {
         return apiGet<{ user: User }>('/api/auth/me');
-    }
+    },
 };
 
 export const platformService = {
     getPublicSettings: async () => {
-        return apiGet<{ settings: PublicPlatformSettings }>('/api/settings/public');
+        return apiGet<{ settings: PublicPlatformSettings }>(
+            '/api/settings/public',
+        );
     },
 };
 
@@ -133,7 +154,7 @@ export const userService = {
 
     changePassword: async (data: ChangePasswordData) => {
         return apiPut('/api/user/password', data);
-    }
+    },
 };
 
 // Address Services
@@ -146,18 +167,23 @@ export const addressService = {
         return apiPost<Address>('/api/addresses', address);
     },
 
-    updateAddress: async (id: string, address: Omit<Address, 'id' | 'user_id'>) => {
+    updateAddress: async (
+        id: string,
+        address: Omit<Address, 'id' | 'user_id'>,
+    ) => {
         return apiPatch<Address>(`/api/addresses/${id}`, address);
     },
 
     deleteAddress: async (id: string) => {
         return apiDelete(`/api/addresses/${id}`);
-    }
+    },
 };
 
 export const verificationService = {
     getStatus: async () => {
-        return apiGet<VerificationStatusResponse>('/api/auth/verification/status');
+        return apiGet<VerificationStatusResponse>(
+            '/api/auth/verification/status',
+        );
     },
 
     sendOtp: async (data: {
@@ -177,26 +203,30 @@ export const verificationService = {
     confirmOtp: async (data: { phone: string; otp: string }) => {
         return apiPost<{ message: string; verification: VerificationStatus }>(
             '/api/auth/verification/confirm-otp',
-            data
+            data,
         );
     },
 
     uploadDocuments: async (formData: FormData) => {
-        return apiPostForm<{ message: string; verification: VerificationStatus }>(
-            '/api/auth/verification/upload-documents',
-            formData
-        );
+        return apiPostForm<{
+            message: string;
+            verification: VerificationStatus;
+        }>('/api/auth/verification/upload-documents', formData);
     },
 
     finalize: async (verification_terms_accepted: boolean) => {
-        return apiPost<{ message: string; user: User; verification: VerificationStatus }>(
-            '/api/auth/verification/finalize',
-            { verification_terms_accepted }
-        );
+        return apiPost<{
+            message: string;
+            user: User;
+            verification: VerificationStatus;
+        }>('/api/auth/verification/finalize', { verification_terms_accepted });
     },
 
     revoke: async () => {
-        return apiPost<{ message: string; user: User }>('/api/auth/verification/revoke', {});
+        return apiPost<{ message: string; user: User }>(
+            '/api/auth/verification/revoke',
+            {},
+        );
     },
 };
 
@@ -206,7 +236,9 @@ export const sellerService = {
     },
 
     getRegistration: async () => {
-        return apiGet<{ registration: SellerRegistration | null }>('/api/seller/registration');
+        return apiGet<{ registration: SellerRegistration | null }>(
+            '/api/seller/registration',
+        );
     },
 
     updateShippingSettings: async (data: {
@@ -254,7 +286,7 @@ export const sellerService = {
     }) => {
         return apiPost<{ message: string; registration: SellerRegistration }>(
             '/api/seller/registration',
-            data
+            data,
         );
     },
 
@@ -264,7 +296,10 @@ export const sellerService = {
 
     updateProduct: async (productId: number, formData: FormData) => {
         formData.append('_method', 'PATCH');
-        return apiPostForm<AuctionProduct>(`/api/auctions/${productId}`, formData);
+        return apiPostForm<AuctionProduct>(
+            `/api/auctions/${productId}`,
+            formData,
+        );
     },
 
     deleteProduct: async (productId: number) => {
@@ -278,7 +313,9 @@ export const auctionService = {
     },
 
     getSellerStoreProducts: async (sellerId: number) => {
-        return apiGet<AuctionProduct[]>(`/api/auctions?include_closed=1&seller_id=${sellerId}`);
+        return apiGet<AuctionProduct[]>(
+            `/api/auctions?include_closed=1&seller_id=${sellerId}`,
+        );
     },
 
     getProductDetails: async (productId: number) => {
@@ -290,32 +327,49 @@ export const auctionService = {
     },
 
     placeBid: async (productId: number, amount: number) => {
-        return apiPost<{ id: number; amount: string }>(`/api/auctions/${productId}/bids`, { amount });
+        return apiPost<{ id: number; amount: string }>(
+            `/api/auctions/${productId}/bids`,
+            { amount },
+        );
     },
 
     getMessages: async (productId: number) => {
-        return apiGet<AuctionMessageListResponse>(`/api/auctions/${productId}/messages`);
+        return apiGet<AuctionMessageListResponse>(
+            `/api/auctions/${productId}/messages`,
+        );
     },
 
     postMessage: async (productId: number, message: string) => {
-        return apiPost<AuctionMessage>(`/api/auctions/${productId}/messages`, { message });
+        return apiPost<AuctionMessage>(`/api/auctions/${productId}/messages`, {
+            message,
+        });
     },
 
     markMessagesRead: async (productId: number) => {
-        return apiPost<{ message: string }>(`/api/auctions/${productId}/messages/read`, {});
+        return apiPost<{ message: string }>(
+            `/api/auctions/${productId}/messages/read`,
+            {},
+        );
     },
 };
 
 export const directMessageService = {
     getThreads: async () => {
-        return apiGet<DirectMessageThreadListResponse>('/api/direct-messages/threads');
+        return apiGet<DirectMessageThreadListResponse>(
+            '/api/direct-messages/threads',
+        );
     },
 
     getThread: async (userId: number) => {
-        return apiGet<DirectMessageThreadResponse>(`/api/direct-messages/threads/${userId}`);
+        return apiGet<DirectMessageThreadResponse>(
+            `/api/direct-messages/threads/${userId}`,
+        );
     },
 
-    sendMessage: async (userId: number, payload: { message?: string; attachments?: File[] }) => {
+    sendMessage: async (
+        userId: number,
+        payload: { message?: string; attachments?: File[] },
+    ) => {
         const formData = new FormData();
 
         if (payload.message) {
@@ -326,11 +380,16 @@ export const directMessageService = {
             formData.append('attachments[]', file);
         });
 
-        return apiPostForm<DirectMessage>(`/api/direct-messages/threads/${userId}`, formData);
+        return apiPostForm<DirectMessage>(
+            `/api/direct-messages/threads/${userId}`,
+            formData,
+        );
     },
 
     deleteThread: async (userId: number) => {
-        return apiDelete<{ message: string }>(`/api/direct-messages/threads/${userId}`);
+        return apiDelete<{ message: string }>(
+            `/api/direct-messages/threads/${userId}`,
+        );
     },
 };
 

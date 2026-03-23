@@ -18,7 +18,8 @@ export const parseAuctionTimestamp = (value?: string | null): number | null => {
     );
 
     if (!hasExplicitTimezone && localDateTimeMatch) {
-        const [, year, month, day, hours, minutes, seconds, milliseconds] = localDateTimeMatch;
+        const [, year, month, day, hours, minutes, seconds, milliseconds] =
+            localDateTimeMatch;
         const millisecondsValue = milliseconds
             ? milliseconds.slice(0, 3).padEnd(3, '0')
             : '0';
@@ -79,6 +80,9 @@ export const isAuctionVisibleOnDashboard = (
         return true;
     }
 
-    const disappearanceTime = getAuctionDashboardDisappearanceTime(product, gracePeriodMs);
+    const disappearanceTime = getAuctionDashboardDisappearanceTime(
+        product,
+        gracePeriodMs,
+    );
     return disappearanceTime !== null && disappearanceTime > referenceTime;
 };

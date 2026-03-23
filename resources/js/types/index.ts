@@ -172,7 +172,10 @@ export interface AuctionMessageListResponse {
     unread_count: number;
 }
 
-export interface DirectMessageParticipant extends Pick<User, 'id' | 'name' | 'email'> {
+export interface DirectMessageParticipant extends Pick<
+    User,
+    'id' | 'name' | 'email'
+> {
     seller_registration?: Pick<SellerRegistration, 'shop_name'> | null;
 }
 
@@ -265,16 +268,16 @@ export interface WishlistItem {
     mediaType?: 'image' | 'video';
 }
 
-export type AccountSection = 
-    | 'details' 
-    | 'addresses' 
-    | 'preferences' 
-    | 'cashback' 
-    | 'wallet' 
-    | 'wishlist' 
-    | 'orders' 
-    | 'reviews' 
-    | 'cards' 
+export type AccountSection =
+    | 'details'
+    | 'addresses'
+    | 'preferences'
+    | 'cashback'
+    | 'wallet'
+    | 'wishlist'
+    | 'orders'
+    | 'reviews'
+    | 'cards'
     | 'zvip'
     | 'verification'
     | 'seller'

@@ -10,16 +10,30 @@ interface RegisterPageProps {
     onRegisterSuccess: () => void;
 }
 
-type PreferredContent = 'electronics' | 'collectibles' | 'art' | 'luxury' | 'antiques' | 'vehicles' | 'fashion' | 'property' | 'niche' | 'school';
+type PreferredContent =
+    | 'electronics'
+    | 'collectibles'
+    | 'art'
+    | 'luxury'
+    | 'antiques'
+    | 'vehicles'
+    | 'fashion'
+    | 'property'
+    | 'niche'
+    | 'school';
 
-export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onRegisterSuccess }) => {
+export const RegisterPage: React.FC<RegisterPageProps> = ({
+    onNavigateLogin,
+    onRegisterSuccess,
+}) => {
     const { login } = useAuth();
     const [name, setName] = useState('');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [birthday, setBirthday] = useState('');
-    const [preferredContent, setPreferredContent] = useState<PreferredContent>('electronics');
+    const [preferredContent, setPreferredContent] =
+        useState<PreferredContent>('electronics');
     const [remember, setRemember] = useState(true);
     const [wantNotifications, setWantNotifications] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -53,7 +67,7 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
                 password_confirmation: confirmPassword,
                 gender: 'female',
                 preferred_content: preferredContent,
-                want_notifications: wantNotifications
+                want_notifications: wantNotifications,
             });
 
             // Store preferred content
@@ -67,11 +81,14 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
                 typeof err === 'object' &&
                 err !== null &&
                 'response' in err &&
-                typeof (err as { response?: { data?: { message?: unknown } } }).response?.data?.message === 'string'
-                    ? (err as { response?: { data?: { message?: string } } }).response?.data?.message
+                typeof (err as { response?: { data?: { message?: unknown } } })
+                    .response?.data?.message === 'string'
+                    ? (err as { response?: { data?: { message?: string } } })
+                          .response?.data?.message
                     : undefined;
 
-            const errorMessage = responseMessage || 'Registration failed. Please try again.';
+            const errorMessage =
+                responseMessage || 'Registration failed. Please try again.';
             setError(errorMessage);
             toast.error(errorMessage);
         } finally {
@@ -82,13 +99,23 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
     return (
         <section className="auth-card" id="auth">
             <div className="tabs">
-                <div className="tab" onClick={onNavigateLogin}>Login</div>
+                <div className="tab" onClick={onNavigateLogin}>
+                    Login
+                </div>
                 <div className="tab active">Sign up</div>
             </div>
 
             <div className="social-row">
-                <img src="/icons/facebook.png" alt="Facebook" className="social-btn" />
-                <img src="/icons/google.png" alt="Google" className="social-btn" />
+                <img
+                    src="/icons/facebook.png"
+                    alt="Facebook"
+                    className="social-btn"
+                />
+                <img
+                    src="/icons/google.png"
+                    alt="Google"
+                    className="social-btn"
+                />
             </div>
 
             <div className="divider">Or continue with</div>
@@ -116,7 +143,9 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
                 <SelectField
                     label="Preferred auction category *"
                     value={preferredContent}
-                    onChange={(e) => setPreferredContent(e.target.value as PreferredContent)}
+                    onChange={(e) =>
+                        setPreferredContent(e.target.value as PreferredContent)
+                    }
                     required
                 >
                     <option value="electronics">Electronics</option>
@@ -171,13 +200,21 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
                         <input
                             type="checkbox"
                             checked={wantNotifications}
-                            onChange={(e) => setWantNotifications(e.target.checked)}
+                            onChange={(e) =>
+                                setWantNotifications(e.target.checked)
+                            }
                         />
-                        I want auction alerts, new listings and bidding updates sent to my inbox!
+                        I want auction alerts, new listings and bidding updates
+                        sent to my inbox!
                     </label>
                 </div>
 
-                <Button type="submit" variant="primary" isLoading={loading} className="primary-btn">
+                <Button
+                    type="submit"
+                    variant="primary"
+                    isLoading={loading}
+                    className="primary-btn"
+                >
                     {loading ? 'Please wait...' : 'Create Account'}
                 </Button>
             </form>
@@ -185,7 +222,8 @@ export const RegisterPage: React.FC<RegisterPageProps> = ({ onNavigateLogin, onR
             {error && <div className="message error">{error}</div>}
 
             <div className="hint">
-                By continuing you agree to our Terms and Conditions and Privacy Policy.
+                By continuing you agree to our Terms and Conditions and Privacy
+                Policy.
             </div>
         </section>
     );

@@ -17,9 +17,9 @@ export const Button: React.FC<ButtonProps> = ({
     const variantClasses = {
         primary: 'btn-primary',
         secondary: 'btn-secondary',
-        danger: 'btn-danger'
+        danger: 'btn-danger',
     };
-    
+
     return (
         <button
             className={`btn ${variantClasses[variant]} ${className}`}
@@ -32,7 +32,9 @@ export const Button: React.FC<ButtonProps> = ({
     );
 };
 
-export const Spinner: React.FC<{ size?: 'small' | 'medium' | 'large' }> = ({ size = 'medium' }) => {
+export const Spinner: React.FC<{ size?: 'small' | 'medium' | 'large' }> = ({
+    size = 'medium',
+}) => {
     return <div className={`spinner spinner-${size}`} />;
 };
 
@@ -93,7 +95,12 @@ interface ModalProps {
     children: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }) => {
+export const Modal: React.FC<ModalProps> = ({
+    isOpen,
+    onClose,
+    title,
+    children,
+}) => {
     if (!isOpen) return null;
 
     return (
@@ -102,15 +109,20 @@ export const Modal: React.FC<ModalProps> = ({ isOpen, onClose, title, children }
                 <div className="modal-header">
                     <h2>{title}</h2>
                     <button className="modal-close" onClick={onClose}>
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <svg
+                            width="24"
+                            height="24"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2"
+                        >
                             <line x1="18" y1="6" x2="6" y2="18" />
                             <line x1="6" y1="6" x2="18" y2="18" />
                         </svg>
                     </button>
                 </div>
-                <div className="modal-body">
-                    {children}
-                </div>
+                <div className="modal-body">{children}</div>
             </div>
         </div>
     );

@@ -5,13 +5,14 @@ import type { BagAuctionItem } from '../types';
 
 export const useWonAuctions = () => {
     const { authUser } = useAuth();
+    const authUserId = authUser?.id ?? null;
     const [wonAuctions, setWonAuctions] = useState<BagAuctionItem[]>([]);
     const [isLoadingWonAuctions, setIsLoadingWonAuctions] = useState(false);
 
     useEffect(() => {
         let isActive = true;
 
-        if (!authUser) {
+        if (!authUserId) {
             setWonAuctions([]);
             setIsLoadingWonAuctions(false);
             return () => {
@@ -20,6 +21,11 @@ export const useWonAuctions = () => {
         }
 
         setIsLoadingWonAuctions(true);
+        const failSafeTimeout = window.setTimeout(() => {
+            if (isActive) {
+                setIsLoadingWonAuctions(false);
+            }
+        }, 12000);
 
         void (async () => {
             try {
@@ -34,6 +40,7 @@ export const useWonAuctions = () => {
                     setWonAuctions([]);
                 }
             } finally {
+                window.clearTimeout(failSafeTimeout);
                 if (isActive) {
                     setIsLoadingWonAuctions(false);
                 }
@@ -42,8 +49,9 @@ export const useWonAuctions = () => {
 
         return () => {
             isActive = false;
+            window.clearTimeout(failSafeTimeout);
         };
-    }, [authUser]);
+    }, [authUserId]);
 
     return {
         wonAuctions,

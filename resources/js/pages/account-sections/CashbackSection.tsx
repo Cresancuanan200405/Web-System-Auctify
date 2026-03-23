@@ -10,7 +10,14 @@ export const CashbackSection: React.FC = () => {
         <div className="cashback-main">
             <div className="cashback-header">
                 <div className="cashback-header-icon" aria-hidden="true">
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                    <svg
+                        width="20"
+                        height="20"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="1.6"
+                    >
                         <circle cx="12" cy="12" r="9" />
                         <path d="M12 7v10M9 9h3.5a2.5 2.5 0 0 1 0 5H10" />
                     </svg>
@@ -18,7 +25,10 @@ export const CashbackSection: React.FC = () => {
                 <h2 className="cashback-header-title">Cashback</h2>
             </div>
             <div className="cashback-balance-card">
-                <div className="cashback-balance-illustration" aria-hidden="true">
+                <div
+                    className="cashback-balance-illustration"
+                    aria-hidden="true"
+                >
                     <div className="cashback-coin">
                         <div className="cashback-coin-inner">₱</div>
                     </div>
@@ -27,7 +37,9 @@ export const CashbackSection: React.FC = () => {
                 <div className="cashback-balance-content">
                     <div className="cashback-balance-label">You have</div>
                     <div className="cashback-balance-amount">Php 0.00</div>
-                    <div className="cashback-balance-subtext">available cashback to spend!</div>
+                    <div className="cashback-balance-subtext">
+                        available cashback to spend!
+                    </div>
                 </div>
             </div>
 
@@ -46,8 +58,14 @@ export const CashbackSection: React.FC = () => {
                         <path d="M10 13h4" />
                     </svg>
                 </div>
-                <div className="cashback-empty-text">Start shopping now to earn cashback!</div>
-                <button type="button" className="cashback-empty-button" onClick={handleGoShopping}>
+                <div className="cashback-empty-text">
+                    Start shopping now to earn cashback!
+                </div>
+                <button
+                    type="button"
+                    className="cashback-empty-button"
+                    onClick={handleGoShopping}
+                >
                     Let&apos;s go Shopping!
                 </button>
             </div>
