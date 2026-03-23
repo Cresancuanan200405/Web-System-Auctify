@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { auctionService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { useCards } from '../hooks/useCards';
 import { useOrderHistory } from '../hooks/useOrderHistory';
 import { useWonAuctions } from '../hooks/useWonAuctions';
-import { useCards } from '../hooks/useCards';
+import { auctionService } from '../services/api';
 import type { AccountSection, AuctionProduct } from '../types';
 import { formatCurrency } from '../utils/helpers';
 
@@ -64,8 +64,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
     const { authUser } = useAuth();
     const { savedCards, mainCardId } = useCards();
-    const { wonAuctions, wonAuctionCount, isLoadingWonAuctions } =
-        useWonAuctions();
+    const { wonAuctions, isLoadingWonAuctions } = useWonAuctions();
     const { orders } = useOrderHistory();
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
     const [searchQuery, setSearchQuery] = useState('');

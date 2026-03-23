@@ -227,9 +227,6 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
         };
 
         if (savedAddresses.length === 0) {
-            setProvinceNames({});
-            setCityNames({});
-            setBarangayNames({});
             return () => {
                 isActive = false;
             };

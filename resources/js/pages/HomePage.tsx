@@ -6,8 +6,8 @@ import {
     getDefaultHomePageConfig,
     normalizeHomePageConfig,
 } from '../lib/homePageConfig';
-import { auctionService } from '../services/api';
 import { adminApi } from '../services/adminApi';
+import { auctionService } from '../services/api';
 import type { AuctionProduct, WishlistItem } from '../types';
 import {
     getAuctionDashboardDisappearanceTime,
@@ -99,8 +99,6 @@ const DashboardDisappearanceCountdown: React.FC<{
             setLabel(formatRemainingCountdown(targetTime));
         }, 1000);
 
-        setLabel(formatRemainingCountdown(targetTime));
-
         return () => window.clearInterval(interval);
     }, [onExpire, targetTime]);
 
@@ -109,16 +107,20 @@ const DashboardDisappearanceCountdown: React.FC<{
 
 export const HomePage: React.FC<HomePageProps> = ({
     selectedCategory,
-    selectedSubcategory: _selectedSubcategory,
-    featureFlags: _featureFlags,
+    selectedSubcategory,
+    featureFlags,
     isCategoryPage = false,
     onNavigateHome,
     onNavigateCategory,
     onNavigateToRegister,
-    onNavigateToBrowse: _onNavigateToBrowse,
+    onNavigateToBrowse,
     onNavigateToWishlist,
     onNavigateToAuction,
 }) => {
+    void selectedSubcategory;
+    void featureFlags;
+    void onNavigateToBrowse;
+
     const { authUser } = useAuth();
     const carouselRef = useRef<HTMLDivElement>(null);
     const productsSectionRef = useRef<HTMLElement | null>(null);

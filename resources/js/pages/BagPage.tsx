@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
-import { addressService } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 import { useCards } from '../hooks/useCards';
 import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
 import { useWonAuctions } from '../hooks/useWonAuctions';
-import { formatCurrency } from '../utils/helpers';
+import { addressService } from '../services/api';
 import type { Address, BagAuctionItem, Card } from '../types';
+import { formatCurrency } from '../utils/helpers';
 
 interface BagPageProps {
     onNavigateHome: () => void;

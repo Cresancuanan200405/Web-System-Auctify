@@ -648,26 +648,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         };
     }, [rawUsers]);
 
-    const recentUsers = useMemo(() => {
-        const toTime = (value?: string | null) => {
-            if (!value) {
-                return 0;
-            }
-
-            const parsed = new Date(value).getTime();
-            return Number.isNaN(parsed) ? 0 : parsed;
-        };
-
-        return [...users]
-            .sort((a, b) => {
-                return (
-                    Math.max(toTime(b.lastSeenAt), toTime(b.createdAt)) -
-                    Math.max(toTime(a.lastSeenAt), toTime(a.createdAt))
-                );
-            })
-            .slice(0, 5);
-    }, [users]);
-
     useEffect(() => {
         let isActive = true;
 
@@ -1420,7 +1400,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
     // ── Notifications ─────────────────────────────────────────────────────────
 
-    const loadNotifications = async () => {
+    const loadNotifications = React.useCallback(async () => {
         const token = getAdminAuthToken();
         if (!token) return;
         setNotificationsLoading(true);
@@ -1433,7 +1413,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         } finally {
             setNotificationsLoading(false);
         }
-    };
+    }, []);
 
     const handleMarkNotificationRead = async (id: number) => {
         const token = getAdminAuthToken();
@@ -1531,7 +1511,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
     // ── Settings ──────────────────────────────────────────────────────────────
 
-    const loadSettings = async () => {
+    const loadSettings = React.useCallback(async () => {
         const token = getAdminAuthToken();
         if (!token) return;
         setSettingsLoading(true);
@@ -1548,11 +1528,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         } finally {
             setSettingsLoading(false);
         }
-    };
+    }, []);
 
     useEffect(() => {
         void loadSettings();
-    }, []);
+    }, [loadSettings]);
 
     const handleChangeAdminPassword = async () => {
         if (!cpCurrent.trim() || !cpNext.trim() || !cpConfirm.trim()) {
@@ -4039,7 +4019,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                             aria-label="User growth over the last 7 days"
                                         >
                                             {userGrowth7d.series.map(
-                                                (point, idx) => {
+                                                (point) => {
                                                     const height =
                                                         userGrowth7d.peak > 0
                                                             ? Math.max(

@@ -100,7 +100,6 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             return new Set<number>();
         }
     });
-    const [hiddenUserIds, setHiddenUserIds] = useState<Set<number>>(new Set());
     const [deletingUserId, setDeletingUserId] = useState<number | null>(null);
     const [isEmojiPickerOpen, setIsEmojiPickerOpen] = useState(false);
     const [isRecording, setIsRecording] = useState(false);
@@ -125,23 +124,11 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         }
     });
 
-    const selectedThread = useMemo(
-        () =>
-            threads.find((thread) => thread.user?.id === selectedUserId) ??
-            null,
-        [selectedUserId, threads],
-    );
-
     const filteredThreads = useMemo(() => {
         const normalizedSearch = searchTerm.trim().toLowerCase();
 
         return threads
             .filter((thread) => {
-                if (
-                    thread.user?.id !== undefined &&
-                    hiddenUserIds.has(thread.user.id)
-                )
-                    return false;
                 const displayName = thread.user?.name?.toLowerCase() ?? '';
                 const shopName =
                     thread.user?.seller_registration?.shop_name?.toLowerCase() ??
@@ -163,7 +150,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                 if (!aPin && bPin) return 1;
                 return 0;
             });
-    }, [searchTerm, threadFilter, threads, hiddenUserIds, pinnedUserIds]);
+    }, [searchTerm, threadFilter, threads, pinnedUserIds]);
 
     const unseenBidNotificationsCount = useMemo(() => {
         return bidNotifications.filter(
@@ -243,28 +230,31 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         }
     }, [seenBidNotificationStorageKey]);
 
-    const markBidNotificationsAsSeen = (keys: string[]) => {
-        if (keys.length === 0) {
-            return;
-        }
-
-        setSeenBidNotificationKeys((prev) => {
-            const next = new Set(prev);
-            keys.forEach((key) => next.add(key));
-            try {
-                localStorage.setItem(
-                    seenBidNotificationStorageKey,
-                    JSON.stringify([...next]),
-                );
-            } catch {
-                // Ignore storage errors.
+    const markBidNotificationsAsSeen = React.useCallback(
+        (keys: string[]) => {
+            if (keys.length === 0) {
+                return;
             }
-            window.dispatchEvent(
-                new CustomEvent('bid-notifications-seen-updated'),
-            );
-            return next;
-        });
-    };
+
+            setSeenBidNotificationKeys((prev) => {
+                const next = new Set(prev);
+                keys.forEach((key) => next.add(key));
+                try {
+                    localStorage.setItem(
+                        seenBidNotificationStorageKey,
+                        JSON.stringify([...next]),
+                    );
+                } catch {
+                    // Ignore storage errors.
+                }
+                window.dispatchEvent(
+                    new CustomEvent('bid-notifications-seen-updated'),
+                );
+                return next;
+            });
+        },
+        [seenBidNotificationStorageKey],
+    );
 
     useEffect(() => {
         if (!isOpen || !authUser) {
@@ -328,7 +318,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             isActive = false;
             window.clearInterval(interval);
         };
-    }, [authUser, isOpen]);
+    }, [authUser, isOpen, selectedBidNotificationKey]);
 
     useEffect(() => {
         if (activePane !== 'bids') {
@@ -336,7 +326,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         }
 
         markBidNotificationsAsSeen(bidNotifications.map((item) => item.key));
-    }, [activePane, bidNotifications]);
+    }, [activePane, bidNotifications, markBidNotificationsAsSeen]);
 
     useEffect(() => {
         return () => {
@@ -434,7 +424,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             isActive = false;
             window.clearInterval(interval);
         };
-    }, [authUser, isOpen, preferredUserId]);
+    }, [authUser, isOpen, preferredUserId, selectedUserId]);
 
     useEffect(() => {
         if (!isOpen || !authUser || !selectedUserId) {
@@ -533,7 +523,7 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
             window.clearInterval(interval);
             setMessagesLoading(false);
         };
-    }, [authUser, isOpen, selectedUserId]);
+    }, [authUser, isOpen, preferredUserName, selectedUserId]);
 
     const formatDate = (value?: string | null) => {
         if (!value) {

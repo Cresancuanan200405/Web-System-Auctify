@@ -73,6 +73,10 @@ const getAdminBearerToken = () => {
     }
 };
 
+const consumeToken = (token?: string | null) => {
+    void token;
+};
+
 let csrfCookiePromise: Promise<void> | null = null;
 
 const ensureCsrfCookie = async () => {
@@ -303,6 +307,7 @@ export const adminApi = {
     },
 
     logout: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ message: string }>('/api/admin/logout', {
             method: 'POST',
         });
@@ -315,6 +320,7 @@ export const adminApi = {
     },
 
     getAdminHomepageConfig: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ config: HomePageConfig }>(
             '/api/admin/homepage-config',
             {
@@ -327,6 +333,7 @@ export const adminApi = {
         _token: string | null | undefined,
         config: HomePageConfig,
     ) => {
+        consumeToken(_token);
         return request<{ message: string; config: HomePageConfig }>(
             '/api/admin/homepage-config',
             {
@@ -341,6 +348,7 @@ export const adminApi = {
         file: File,
         type: 'video' | 'image',
     ) => {
+        consumeToken(_token);
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', type);
@@ -374,12 +382,14 @@ export const adminApi = {
     },
 
     getUsers: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ users: AdminUserListItem[] }>('/api/admin/users', {
             method: 'GET',
         });
     },
 
     getUserDetails: (_token: string | null | undefined, userId: number) => {
+        consumeToken(_token);
         return request<{ user: AdminUserDetails }>(
             `/api/admin/users/${userId}`,
             {
@@ -394,6 +404,7 @@ export const adminApi = {
         reason: string,
         duration?: { unit: 'minutes' | 'hours' | 'days'; value: number } | null,
     ) => {
+        consumeToken(_token);
         return request<{ message: string; suspended_until?: string | null }>(
             `/api/admin/users/${userId}/suspend`,
             {
@@ -412,6 +423,7 @@ export const adminApi = {
         userId: number,
         reason: string,
     ) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             `/api/admin/users/${userId}/unsuspend`,
             {
@@ -426,6 +438,7 @@ export const adminApi = {
         userId: number,
         reason: string,
     ) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             `/api/admin/users/${userId}/revoke-seller`,
             {
@@ -440,6 +453,7 @@ export const adminApi = {
         userId: number,
         reason: string,
     ) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             `/api/admin/users/${userId}/unrevoke-seller`,
             {
@@ -454,6 +468,7 @@ export const adminApi = {
         userId: number,
         reason: string,
     ) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             `/api/admin/users/${userId}/delete`,
             {
@@ -466,6 +481,7 @@ export const adminApi = {
     // ── Notifications ─────────────────────────────────────────────────────────
 
     getNotifications: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{
             notifications: AdminNotificationEntry[];
             unreadCount: number;
@@ -473,6 +489,7 @@ export const adminApi = {
     },
 
     markNotificationRead: (_token: string | null | undefined, id: number) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             `/api/admin/notifications/${id}/read`,
             {
@@ -482,6 +499,7 @@ export const adminApi = {
     },
 
     getNotificationUnreadCount: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ unreadCount: number }>(
             '/api/admin/notifications/unread-count',
             {
@@ -491,6 +509,7 @@ export const adminApi = {
     },
 
     markAllNotificationsRead: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ message: string }>(
             '/api/admin/notifications/read-all',
             {
@@ -500,6 +519,7 @@ export const adminApi = {
     },
 
     deleteNotification: (_token: string | null | undefined, id: number) => {
+        consumeToken(_token);
         return request<{ message: string }>(`/api/admin/notifications/${id}`, {
             method: 'DELETE',
         });
@@ -508,6 +528,7 @@ export const adminApi = {
     // ── Settings ──────────────────────────────────────────────────────────────
 
     getSettings: (_token?: string | null) => {
+        consumeToken(_token);
         return request<{ settings: AdminSettingEntry[] }>(
             '/api/admin/settings',
             {
@@ -520,6 +541,7 @@ export const adminApi = {
         _token: string | null | undefined,
         settings: Record<string, string>,
     ) => {
+        consumeToken(_token);
         return request<{ message: string; settings: AdminSettingEntry[] }>(
             '/api/admin/settings',
             {
@@ -535,6 +557,7 @@ export const adminApi = {
         newPassword: string,
         newPasswordConfirmation: string,
     ) => {
+        consumeToken(_token);
         return request<AdminLoginPayload & { message: string }>(
             '/api/admin/change-password',
             {
@@ -549,12 +572,14 @@ export const adminApi = {
     },
 
     getMfaStatus: (_token?: string | null) => {
+        consumeToken(_token);
         return request<AdminMfaStatusPayload>('/api/admin/mfa/status', {
             method: 'GET',
         });
     },
 
     setupMfa: (_token?: string | null) => {
+        consumeToken(_token);
         return request<AdminMfaSetupPayload>('/api/admin/mfa/setup', {
             method: 'POST',
             body: JSON.stringify({}),
@@ -566,6 +591,7 @@ export const adminApi = {
         secret: string,
         code: string,
     ) => {
+        consumeToken(_token);
         return request<AdminMfaEnablePayload>('/api/admin/mfa/enable', {
             method: 'POST',
             body: JSON.stringify({ secret, code }),
@@ -573,6 +599,7 @@ export const adminApi = {
     },
 
     disableMfa: (_token: string | null | undefined, code: string) => {
+        consumeToken(_token);
         return request<{ message: string }>('/api/admin/mfa/disable', {
             method: 'POST',
             body: JSON.stringify({ code }),
@@ -584,6 +611,7 @@ export const adminApi = {
         code?: string,
         recoveryCode?: string,
     ) => {
+        consumeToken(_token);
         return request<AdminMfaStepUpPayload>('/api/admin/mfa/step-up', {
             method: 'POST',
             body: JSON.stringify({

@@ -6,17 +6,6 @@ import { Navigation } from './components/Navigation';
 import { SellerChatDialog } from './components/SellerChatDialog';
 import { AuthProvider } from './contexts/AuthContext';
 import { useAuth } from './contexts/AuthContext';
-import { AccountPage } from './pages/AccountPage';
-import { AuctionDetailPage } from './pages/AuctionDetailPage';
-import { AuthPage } from './pages/AuthPage';
-import { BagPage } from './pages/BagPage';
-import { HomePage } from './pages/HomePage';
-import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
-import { AdminLoginPage } from './pages/admin/AdminLoginPage';
-import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
-import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
-import { SellerProfilePage } from './pages/seller/SellerProfilePage';
-import { SellerStorePage } from './pages/SellerStorePage';
 import {
     getAdminSession,
     logoutAdmin,
@@ -27,6 +16,17 @@ import {
     getCategoryValue,
     getSubcategoryValue,
 } from './lib/homeCategories';
+import { AccountPage } from './pages/AccountPage';
+import { AdminDashboardPage } from './pages/admin/AdminDashboardPage';
+import { AdminLoginPage } from './pages/admin/AdminLoginPage';
+import { AuctionDetailPage } from './pages/AuctionDetailPage';
+import { AuthPage } from './pages/AuthPage';
+import { BagPage } from './pages/BagPage';
+import { HomePage } from './pages/HomePage';
+import { SellerAddProductPage } from './pages/seller/SellerAddProductPage';
+import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
+import { SellerProfilePage } from './pages/seller/SellerProfilePage';
+import { SellerStorePage } from './pages/SellerStorePage';
 import {
     authService,
     bidNotificationService,
@@ -163,7 +163,8 @@ const AppContent: React.FC = () => {
         useState<AccountStatusDialog | null>(null);
     const [platformSettings, setPlatformSettings] =
         useState<PublicPlatformSettings>(defaultPlatformSettings);
-    const [showMaintenanceDialog, setShowMaintenanceDialog] = useState(false);
+    const [maintenanceDialogDismissed, setMaintenanceDialogDismissed] =
+        useState(false);
 
     const resolveHomeCategoryFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -293,16 +294,6 @@ const AppContent: React.FC = () => {
             window.removeEventListener('focus', handleFocus);
         };
     }, []);
-
-    useEffect(() => {
-        if (
-            platformSettings.maintenance_mode &&
-            viewMode !== 'admin-login' &&
-            viewMode !== 'admin-dashboard'
-        ) {
-            setShowMaintenanceDialog(true);
-        }
-    }, [platformSettings.maintenance_mode, viewMode]);
 
     useEffect(() => {
         if (!authUser) {
@@ -597,9 +588,7 @@ const AppContent: React.FC = () => {
     }, [authUser, logout, updateUser, viewMode]);
 
     useEffect(() => {
-        if (!authUser) {
-            setChatUnreadCount(0);
-            setChatUnreadUsersCount(0);
+        if (!authUserId) {
             return;
         }
 
@@ -648,8 +637,7 @@ const AppContent: React.FC = () => {
     }, [authUserId, platformSettings.enable_live_chat]);
 
     useEffect(() => {
-        if (!authUser) {
-            setBidUnreadCount(0);
+        if (!authUserId) {
             return;
         }
 
@@ -658,7 +646,7 @@ const AppContent: React.FC = () => {
         }
 
         let isActive = true;
-        const seenStorageKey = `seen_bid_notifications_${authUser.id}`;
+        const seenStorageKey = `seen_bid_notifications_${authUserId}`;
 
         const getSeenKeys = (): Set<string> => {
             try {
@@ -717,7 +705,14 @@ const AppContent: React.FC = () => {
         };
     }, [authUserId, platformSettings.enable_live_chat]);
 
-    const combinedChatBadgeCount = chatUnreadCount + bidUnreadCount;
+    const shouldShowMaintenanceDialog =
+        platformSettings.maintenance_mode &&
+        viewMode !== 'admin-login' &&
+        viewMode !== 'admin-dashboard' &&
+        !maintenanceDialogDismissed;
+
+    const combinedChatBadgeCount =
+        authUserId !== null ? chatUnreadCount + bidUnreadCount : 0;
 
     const applyRouteFromLocation = useCallback(() => {
         const path = window.location.pathname;
@@ -1883,11 +1878,11 @@ const AppContent: React.FC = () => {
                 </div>
             )}
 
-            {showMaintenanceDialog && !isAdminView && (
+            {shouldShowMaintenanceDialog && !isAdminView && (
                 <div
                     className="delete-modal-overlay"
                     role="presentation"
-                    onClick={() => setShowMaintenanceDialog(false)}
+                    onClick={() => setMaintenanceDialogDismissed(true)}
                 >
                     <div
                         className="delete-modal"
@@ -1909,7 +1904,7 @@ const AppContent: React.FC = () => {
                                     type="button"
                                     className="delete-modal-confirm"
                                     onClick={() => {
-                                        setShowMaintenanceDialog(false);
+                                        setMaintenanceDialogDismissed(true);
 
                                         if (authUser) {
                                             logout();

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
     HOME_CATEGORY_OPTIONS,
@@ -134,7 +134,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({
         return value * 24 * 60 * 60 * 1000;
     };
 
-    const buildBidSchedule = () => {
+    const buildBidSchedule = useCallback(() => {
         const now = new Date();
         let startsAt = now;
 
@@ -168,7 +168,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({
         }
 
         return { startsAt, endsAt };
-    };
+    }, [endTimeMode, endTimeValue, scheduledStartDateTime, startMode]);
 
     const formatSchedulePreview = (date: Date) => {
         return new Intl.DateTimeFormat('en-PH', {
@@ -187,7 +187,7 @@ export const SellerAddProductPage: React.FC<SellerAddProductPageProps> = ({
         }
 
         return `Bidding will run from ${formatSchedulePreview(schedule.startsAt)} to ${formatSchedulePreview(schedule.endsAt)}.`;
-    }, [startMode, scheduledStartDateTime, endTimeMode, endTimeValue]);
+    }, [buildBidSchedule]);
 
     const durationModeMeaning = useMemo(() => {
         if (endTimeMode === 'hours') {
