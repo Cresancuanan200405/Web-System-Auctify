@@ -13,10 +13,10 @@ This repository is now prepared for Docker-based deployment on Render with a Sup
 
 1. Supabase project has been created: auctify-prod.
 2. Project reference: zakjudasfkoahkupdnju.
-3. Host to use on Render: db.zakjudasfkoahkupdnju.supabase.co.
-4. Port: 6543.
+3. Host to use on Render: aws-0-ap-southeast-1.pooler.supabase.com.
+4. Port: 5432.
 5. Database: postgres.
-6. Username: auctifyapp.
+6. Username: auctifyapp.zakjudasfkoahkupdnju.
 7. Set DB_PASSWORD in Render to the auctifyapp password you configured.
 8. Use sslmode=require.
 
