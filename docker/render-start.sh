@@ -25,6 +25,46 @@ if [ "${DB_HOST:-}" = "db.zakjudasfkoahkupdnju.supabase.co" ]; then
     fi
 fi
 
+try_db_connection() {
+    DB_HOST_TRY="$1" DB_PORT_TRY="$2" DB_USER_TRY="$3" DB_PASS_TRY="$4" DB_NAME_TRY="$5" DB_SSLMODE_TRY="$6" \
+    php -r '$host=getenv("DB_HOST_TRY");$port=getenv("DB_PORT_TRY");$user=getenv("DB_USER_TRY");$pass=getenv("DB_PASS_TRY");$db=getenv("DB_NAME_TRY");$ssl=getenv("DB_SSLMODE_TRY")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$pdo->query("select 1");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
+}
+
+# Supabase pooler can vary by mode and username format; probe a few safe combos.
+if [ "${DB_HOST:-}" = "aws-0-ap-southeast-1.pooler.supabase.com" ] && [ -n "${DB_PASSWORD:-}" ]; then
+    DB_PROJECT_REF="zakjudasfkoahkupdnju"
+    DB_NAME_CANDIDATE="${DB_DATABASE:-postgres}"
+    DB_SSLMODE_CANDIDATE="${DB_SSLMODE:-require}"
+
+    USERS_TO_TRY="postgres.${DB_PROJECT_REF} postgres auctifyapp.${DB_PROJECT_REF} auctifyapp"
+    PORTS_TO_TRY="${DB_PORT:-5432} 5432 6543"
+
+    SELECTED_USER=""
+    SELECTED_PORT=""
+
+    for port_candidate in $PORTS_TO_TRY; do
+        for user_candidate in $USERS_TO_TRY; do
+            if try_db_connection "${DB_HOST}" "${port_candidate}" "${user_candidate}" "${DB_PASSWORD}" "${DB_NAME_CANDIDATE}" "${DB_SSLMODE_CANDIDATE}" >/dev/null 2>&1; then
+                SELECTED_USER="${user_candidate}"
+                SELECTED_PORT="${port_candidate}"
+                break
+            fi
+        done
+
+        if [ -n "${SELECTED_USER}" ]; then
+            break
+        fi
+    done
+
+    if [ -n "${SELECTED_USER}" ]; then
+        export DB_USERNAME="${SELECTED_USER}"
+        export DB_PORT="${SELECTED_PORT}"
+        echo "Boot config: selected working Supabase credentials for pooler"
+    else
+        echo "Boot config: no Supabase pooler credential combination succeeded"
+    fi
+fi
+
 echo "Boot config: DB_HOST=${DB_HOST:-unset} DB_PORT=${DB_PORT:-unset} DB_USERNAME=${DB_USERNAME:-unset}"
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
