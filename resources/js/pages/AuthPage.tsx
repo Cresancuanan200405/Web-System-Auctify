@@ -75,8 +75,7 @@ export const AuthPage: React.FC<AuthPageProps> = ({
 }) => {
     const { login } = useAuth();
     const apiBaseUrl =
-        import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') ||
-        'http://127.0.0.1:8000';
+        import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '') || '';
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [passwordConfirmation, setPasswordConfirmation] = useState('');

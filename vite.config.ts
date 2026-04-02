@@ -1,9 +1,10 @@
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vite';
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
     root: 'resources',
     publicDir: '../public',
+    base: command === 'serve' ? '/' : '/build/',
     plugins: [react()],
     resolve: {
         alias: {
@@ -26,4 +27,4 @@ export default defineConfig({
             },
         },
     },
-});
+}));

@@ -4,11 +4,43 @@ use App\Http\Controllers\Admin\HomepageContentPageController;
 use App\Http\Controllers\HomepageViewController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
+Route::get('/health', function () {
     return response()->json([
         'name' => config('app.name'),
         'status' => 'API running',
     ]);
+});
+
+$serveSpa = function () {
+    $spaIndex = public_path('build/index.html');
+
+    if (file_exists($spaIndex)) {
+        $html = file_get_contents($spaIndex);
+
+        if ($html !== false) {
+            $html = str_replace('/build/favicon.svg', '/favicon.svg', $html);
+
+            return response($html, 200, [
+                'Content-Type' => 'text/html; charset=UTF-8',
+                'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            ]);
+        }
+
+        return response()->file($spaIndex, [
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+        ]);
+    }
+
+    return response()->json([
+        'name' => config('app.name'),
+        'status' => 'Frontend build not found. Run npm run build.',
+    ], 503);
+};
+
+Route::get('/', $serveSpa);
+
+Route::get('/favicon.ico', function () {
+    return response()->file(public_path('icons/Admin Logo.png'));
 });
 
 Route::get('/homepage', [HomepageViewController::class, 'index'])->name('homepage.dynamic');
@@ -28,3 +60,5 @@ Route::prefix('admin/homepage-content')->name('admin.homepage-content.')->group(
     Route::put('/video-ads/{videoAd}', [HomepageContentPageController::class, 'updateVideoAd'])->name('video-ads.update');
     Route::delete('/video-ads/{videoAd}', [HomepageContentPageController::class, 'destroyVideoAd'])->name('video-ads.destroy');
 });
+
+Route::get('/{any}', $serveSpa)->where('any', '^(?!api(?:/|$)|sanctum(?:/|$)|health$|homepage(?:/|$)|admin/homepage-content(?:/|$)).*');
