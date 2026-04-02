@@ -16,8 +16,8 @@ This repository is now prepared for Docker-based deployment on Render with a Sup
 3. Host to use on Render: aws-0-ap-southeast-1.pooler.supabase.com.
 4. Port: 5432.
 5. Database: postgres.
-6. Username: auctifyapp.zakjudasfkoahkupdnju.
-7. Set DB_PASSWORD in Render to the auctifyapp password you configured.
+6. Username: postgres.zakjudasfkoahkupdnju.
+7. Set DB_PASSWORD in Render to your Supabase database password (from Dashboard -> Project Settings -> Database).
 8. Use sslmode=require.
 
 ## Render setup

@@ -32,7 +32,7 @@ services:
       - key: DB_DATABASE
         value: postgres
       - key: DB_USERNAME
-        value: auctifyapp.zakjudasfkoahkupdnju
+        value: postgres.zakjudasfkoahkupdnju
       - key: DB_PASSWORD
         sync: false
       - key: DB_SSLMODE

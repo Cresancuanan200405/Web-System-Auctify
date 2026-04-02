@@ -20,8 +20,8 @@ if [ "${DB_HOST:-}" = "db.zakjudasfkoahkupdnju.supabase.co" ]; then
     export DB_HOST="aws-0-ap-southeast-1.pooler.supabase.com"
     export DB_PORT="5432"
 
-    if [ "${DB_USERNAME:-}" = "auctifyapp" ]; then
-        export DB_USERNAME="auctifyapp.zakjudasfkoahkupdnju"
+    if [ "${DB_USERNAME:-}" = "auctifyapp" ] || [ "${DB_USERNAME:-}" = "auctifyapp.zakjudasfkoahkupdnju" ]; then
+        export DB_USERNAME="postgres.zakjudasfkoahkupdnju"
     fi
 fi
 
