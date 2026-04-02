@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 /**
  * Custom hook for managing localStorage with state synchronization
@@ -17,20 +17,23 @@ export function useLocalStorage<T>(
         }
     });
 
-    const setValue = (value: T) => {
-        try {
-            setStoredValue(value);
-            window.localStorage.setItem(key, JSON.stringify(value));
-            // Notify other hook instances in this tab about the update
-            window.dispatchEvent(
-                new CustomEvent(`local-storage-${key}`, {
-                    detail: value as unknown as NonNullable<T>,
-                }),
-            );
-        } catch (error) {
-            console.error(`Error saving ${key} to localStorage:`, error);
-        }
-    };
+    const setValue = useCallback(
+        (value: T) => {
+            try {
+                setStoredValue(value);
+                window.localStorage.setItem(key, JSON.stringify(value));
+                // Notify other hook instances in this tab about the update
+                window.dispatchEvent(
+                    new CustomEvent(`local-storage-${key}`, {
+                        detail: value as unknown as NonNullable<T>,
+                    }),
+                );
+            } catch (error) {
+                console.error(`Error saving ${key} to localStorage:`, error);
+            }
+        },
+        [key],
+    );
 
     useEffect(() => {
         let timeoutId: number | null = null;

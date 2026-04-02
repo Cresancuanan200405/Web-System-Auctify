@@ -9,12 +9,30 @@ type WalletMutationResult = {
 };
 
 const WALLET_BALANCE_CACHE_TTL_MS = 5000;
+const WALLET_BALANCE_ERROR_BACKOFF_MS = 30000;
 let walletBalanceRequest: Promise<number | null> | null = null;
 let walletBalanceCachedAt = 0;
 let walletBalanceCachedValue: number | null = null;
+let walletBalanceErroredAt = 0;
+
+const hasAuthToken = () => {
+    const token = window.localStorage.getItem('auth_token');
+    return typeof token === 'string' && token.trim() !== '';
+};
 
 const fetchWalletBalance = async (): Promise<number | null> => {
     const now = Date.now();
+
+    if (!hasAuthToken()) {
+        walletBalanceCachedValue = 0;
+        walletBalanceCachedAt = now;
+        walletBalanceErroredAt = 0;
+        return 0;
+    }
+
+    if (walletBalanceErroredAt && now - walletBalanceErroredAt < WALLET_BALANCE_ERROR_BACKOFF_MS) {
+        return walletBalanceCachedValue;
+    }
 
     if (
         walletBalanceCachedValue !== null &&
@@ -36,9 +54,13 @@ const fetchWalletBalance = async (): Promise<number | null> => {
                 const normalized = Math.max(0, value);
                 walletBalanceCachedValue = normalized;
                 walletBalanceCachedAt = Date.now();
+                walletBalanceErroredAt = 0;
                 return normalized;
             })
-            .catch(() => null)
+            .catch(() => {
+                walletBalanceErroredAt = Date.now();
+                return walletBalanceCachedValue;
+            })
             .finally(() => {
                 walletBalanceRequest = null;
             });
@@ -115,6 +137,13 @@ export function useWallet() {
 
     useEffect(() => {
         let isActive = true;
+
+        if (!hasAuthToken()) {
+            setWalletBalanceState(0);
+            return () => {
+                isActive = false;
+            };
+        }
 
         const syncWalletBalance = async () => {
             const nextBalance = await fetchWalletBalance();
