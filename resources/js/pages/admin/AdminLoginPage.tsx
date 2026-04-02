@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { toast } from 'react-toastify';
-import { loginAdmin, verifyAdminMfa } from '../../lib/adminAuth';
+import { loginAdmin } from '../../lib/adminAuth';
 
 interface AdminLoginPageProps {
     onLoginSuccess: () => void;
@@ -11,10 +11,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
 }) => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const [mfaCode, setMfaCode] = useState('');
-    const [recoveryCode, setRecoveryCode] = useState('');
-    const [challengeToken, setChallengeToken] = useState<string | null>(null);
-    const [useRecoveryCode, setUseRecoveryCode] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     React.useEffect(() => {
@@ -45,36 +41,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
         setIsSubmitting(true);
 
         try {
-            if (challengeToken) {
-                if (useRecoveryCode) {
-                    if (!recoveryCode.trim()) {
-                        toast.error('Enter a recovery code.');
-                        setIsSubmitting(false);
-                        return;
-                    }
-
-                    const session = await verifyAdminMfa(
-                        challengeToken,
-                        undefined,
-                        recoveryCode,
-                    );
-                    toast.success(`Welcome back, ${session.name}.`);
-                    onLoginSuccess();
-                    return;
-                }
-
-                if (!mfaCode.trim()) {
-                    toast.error('Enter your 6-digit authenticator code.');
-                    setIsSubmitting(false);
-                    return;
-                }
-
-                const session = await verifyAdminMfa(challengeToken, mfaCode);
-                toast.success(`Welcome back, ${session.name}.`);
-                onLoginSuccess();
-                return;
-            }
-
             if (!email.trim() || !password.trim()) {
                 toast.error('Enter admin email and password.');
                 setIsSubmitting(false);
@@ -82,15 +48,6 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
             }
 
             const result = await loginAdmin(email, password);
-
-            if (result.status === 'mfa_required') {
-                setChallengeToken(result.challengeToken);
-                setMfaCode('');
-                setRecoveryCode('');
-                toast.info(result.message);
-                setIsSubmitting(false);
-                return;
-            }
 
             toast.success(`Welcome back, ${result.session.name}.`);
             onLoginSuccess();
@@ -192,130 +149,48 @@ export const AdminLoginPage: React.FC<AdminLoginPageProps> = ({
                     <form className="admin-login-card" onSubmit={handleSubmit}>
                         <div className="admin-login-card-header">
                             <h2>
-                                {challengeToken
-                                    ? 'Multi-factor verification'
-                                    : 'Sign in'}
+                                Sign in
                             </h2>
                             <p>
-                                {challengeToken
-                                    ? 'Enter your authenticator code to finish admin sign in.'
-                                    : 'Access the Auctify control panel using your admin credentials.'}
+                                Access the Auctify control panel using your admin credentials.
                             </p>
                         </div>
 
-                        {!challengeToken && (
-                            <>
-                                <div className="admin-login-field">
-                                    <label htmlFor="admin-email">
-                                        User Name
-                                    </label>
-                                    <input
-                                        id="admin-email"
-                                        type="email"
-                                        value={email}
-                                        onChange={(event) =>
-                                            setEmail(event.target.value)
-                                        }
-                                        placeholder="admin@auctify.com"
-                                        autoComplete="username"
-                                    />
-                                </div>
-
-                                <div className="admin-login-field">
-                                    <label htmlFor="admin-password">
-                                        Password
-                                    </label>
-                                    <input
-                                        id="admin-password"
-                                        type="password"
-                                        value={password}
-                                        onChange={(event) =>
-                                            setPassword(event.target.value)
-                                        }
-                                        placeholder="••••••••••"
-                                        autoComplete="current-password"
-                                    />
-                                </div>
-                            </>
-                        )}
-
-                        {challengeToken && !useRecoveryCode && (
-                            <div className="admin-login-field">
-                                <label htmlFor="admin-mfa-code">
-                                    Authenticator Code
-                                </label>
-                                <input
-                                    id="admin-mfa-code"
-                                    type="text"
-                                    value={mfaCode}
-                                    onChange={(event) =>
-                                        setMfaCode(event.target.value)
-                                    }
-                                    placeholder="123456"
-                                    autoComplete="one-time-code"
-                                    inputMode="numeric"
-                                />
-                            </div>
-                        )}
-
-                        {challengeToken && useRecoveryCode && (
-                            <div className="admin-login-field">
-                                <label htmlFor="admin-recovery-code">
-                                    Recovery Code
-                                </label>
-                                <input
-                                    id="admin-recovery-code"
-                                    type="text"
-                                    value={recoveryCode}
-                                    onChange={(event) =>
-                                        setRecoveryCode(event.target.value)
-                                    }
-                                    placeholder="ABCD-EFGH"
-                                    autoComplete="off"
-                                />
-                            </div>
-                        )}
-
-                        {challengeToken && (
-                            <button
-                                type="button"
-                                className="admin-login-learn-more"
-                                onClick={() =>
-                                    setUseRecoveryCode((prev) => !prev)
+                        <div className="admin-login-field">
+                            <label htmlFor="admin-email">User Name</label>
+                            <input
+                                id="admin-email"
+                                type="email"
+                                value={email}
+                                onChange={(event) =>
+                                    setEmail(event.target.value)
                                 }
-                            >
-                                {useRecoveryCode
-                                    ? 'Use authenticator code instead'
-                                    : 'Use a recovery code'}
-                            </button>
-                        )}
+                                placeholder="admin@auctify.com"
+                                autoComplete="username"
+                            />
+                        </div>
+
+                        <div className="admin-login-field">
+                            <label htmlFor="admin-password">Password</label>
+                            <input
+                                id="admin-password"
+                                type="password"
+                                value={password}
+                                onChange={(event) =>
+                                    setPassword(event.target.value)
+                                }
+                                placeholder="••••••••••"
+                                autoComplete="current-password"
+                            />
+                        </div>
 
                         <button
                             type="submit"
                             className="admin-login-submit"
                             disabled={isSubmitting}
                         >
-                            {isSubmitting
-                                ? 'Verifying…'
-                                : challengeToken
-                                  ? 'Verify MFA'
-                                  : 'Submit'}
+                            {isSubmitting ? 'Signing in…' : 'Submit'}
                         </button>
-
-                        {challengeToken && (
-                            <button
-                                type="button"
-                                className="admin-neo-ghost-btn"
-                                onClick={() => {
-                                    setChallengeToken(null);
-                                    setMfaCode('');
-                                    setRecoveryCode('');
-                                    setUseRecoveryCode(false);
-                                }}
-                            >
-                                Back to sign in
-                            </button>
-                        )}
                     </form>
                 </div>
             </section>

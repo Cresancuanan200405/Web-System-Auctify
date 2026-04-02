@@ -11,8 +11,7 @@ export interface AdminSession {
 }
 
 export type AdminLoginOutcome =
-    | { status: 'authenticated'; session: AdminSession }
-    | { status: 'mfa_required'; challengeToken: string; message: string };
+    | { status: 'authenticated'; session: AdminSession };
 
 export interface MonitoredUser {
     id: number;
@@ -78,15 +77,6 @@ export const loginAdmin = async (
 ): Promise<AdminLoginOutcome> => {
     const response = await adminApi.login(email, password);
 
-    if (response.mfa_required && response.challenge_token) {
-        return {
-            status: 'mfa_required',
-            challengeToken: response.challenge_token,
-            message:
-                response.message || 'MFA code required to complete sign in.',
-        };
-    }
-
     if (!response.user) {
         throw new Error('Admin session could not be established.');
     }
@@ -107,36 +97,6 @@ export const loginAdmin = async (
         status: 'authenticated',
         session,
     };
-};
-
-export const verifyAdminMfa = async (
-    challengeToken: string,
-    code?: string,
-    recoveryCode?: string,
-): Promise<AdminSession> => {
-    const response = await adminApi.verifyMfa(
-        challengeToken,
-        code,
-        recoveryCode,
-    );
-
-    if (!response.user) {
-        throw new Error('MFA verification failed.');
-    }
-
-    const session: AdminSession = {
-        userId: response.user.id,
-        email: response.user.email,
-        name: response.user.name,
-        token:
-            typeof response.token === 'string' && response.token.trim() !== ''
-                ? response.token
-                : null,
-        loggedInAt: new Date().toISOString(),
-    };
-
-    saveAdminSession(session);
-    return session;
 };
 
 export const getAdminSession = () => {

@@ -3,14 +3,44 @@ import { toast } from 'react-toastify';
 import { useAuth } from '../../contexts/AuthContext';
 import { verificationService } from '../../services/api';
 
+const extractExtension = (name: string): string => {
+    const normalized = name.toLowerCase();
+    const dotIndex = normalized.lastIndexOf('.');
+    return dotIndex >= 0 ? normalized.slice(dotIndex + 1) : '';
+};
+
 const isValidFile = (file: File | null, allowPdf: boolean): boolean => {
     if (!file) return false;
     const maxBytes = 5 * 1024 * 1024;
-    const allowed = allowPdf
-        ? ['application/pdf', 'image/jpeg', 'image/png']
-        : ['image/jpeg', 'image/png'];
+    const allowedMimeTypes = allowPdf
+        ? [
+              'application/pdf',
+              'image/jpeg',
+              'image/png',
+              'image/jfif',
+              'image/pjpeg',
+              'image/webp',
+              'image/bmp',
+              'image/tiff',
+          ]
+        : [
+              'image/jpeg',
+              'image/png',
+              'image/jfif',
+              'image/pjpeg',
+              'image/webp',
+              'image/bmp',
+              'image/tiff',
+          ];
+    const allowedExtensions = allowPdf
+        ? ['pdf', 'jpg', 'jpeg', 'jfif', 'png', 'webp', 'bmp', 'tif', 'tiff']
+        : ['jpg', 'jpeg', 'jfif', 'png', 'webp', 'bmp', 'tif', 'tiff'];
+    const fileExtension = extractExtension(file.name);
+    const hasAllowedMime =
+        file.type === '' || allowedMimeTypes.includes(file.type);
+    const hasAllowedExtension = allowedExtensions.includes(fileExtension);
 
-    return file.size <= maxBytes && allowed.includes(file.type);
+    return file.size <= maxBytes && hasAllowedMime && hasAllowedExtension;
 };
 
 const isImageFile = (file: File | null): boolean =>
@@ -305,7 +335,7 @@ export const AccountVerificationSection: React.FC = () => {
                         <span className="account-card-icon" aria-hidden="true">
                             <img src="/icons/user.png" alt="Verification" />
                         </span>
-                        <span>Account Verification</span>
+                        <span>Seller Verification</span>
                         {verified && (
                             <span className="verified-badge">Verified</span>
                         )}
@@ -316,13 +346,10 @@ export const AccountVerificationSection: React.FC = () => {
                     <div className="verification-success">
                         <div className="verification-success-content">
                             <p>
-                                Your account has been successfully verified.
-                                Your Auctify Trust Badge will now be displayed
-                                on your profile and alongside your participation
-                                in auctions. This badge serves as a visible
-                                symbol of authenticity and credibility within
-                                the marketplace, allowing other users to
-                                confidently engage with you.
+                                Your seller verification has been completed.
+                                You can now proceed with seller registration
+                                and continue building your seller profile on
+                                Auctify.
                             </p>
                             <p>
                                 As a verified member of Auctify, you gain
@@ -1052,7 +1079,7 @@ export const AccountVerificationSection: React.FC = () => {
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            accept=".pdf,.jpg,.jpeg,.jfif,.png,.webp,.bmp,.tif,.tiff"
                                             onChange={(e) =>
                                                 setGovernmentIdFile(
                                                     e.target.files?.[0] ?? null,
@@ -1091,7 +1118,7 @@ export const AccountVerificationSection: React.FC = () => {
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".jpg,.jpeg,.png"
+                                            accept=".jpg,.jpeg,.jfif,.png,.webp,.bmp,.tif,.tiff"
                                             onChange={(e) =>
                                                 setSelfieFile(
                                                     e.target.files?.[0] ?? null,
@@ -1124,7 +1151,7 @@ export const AccountVerificationSection: React.FC = () => {
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            accept=".pdf,.jpg,.jpeg,.jfif,.png,.webp,.bmp,.tif,.tiff"
                                             onChange={(e) =>
                                                 setUtilityBillFile(
                                                     e.target.files?.[0] ?? null,
@@ -1165,7 +1192,7 @@ export const AccountVerificationSection: React.FC = () => {
                                         </div>
                                         <input
                                             type="file"
-                                            accept=".pdf,.jpg,.jpeg,.png"
+                                            accept=".pdf,.jpg,.jpeg,.jfif,.png,.webp,.bmp,.tif,.tiff"
                                             onChange={(e) =>
                                                 setBankStatementFile(
                                                     e.target.files?.[0] ?? null,

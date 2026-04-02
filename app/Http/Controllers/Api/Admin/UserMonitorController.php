@@ -135,6 +135,7 @@ class UserMonitorController extends Controller
                             'label' => 'Selfie Verification',
                             'fileName' => $verification->selfie_path ? basename($verification->selfie_path) : null,
                             'uploaded' => (bool) $verification->selfie_path,
+                            'mimeType' => $this->resolveDocumentMimeType($verification->selfie_path),
                             'previewUrl' => $this->resolveDocumentPreview($verification->selfie_path),
                         ],
                         [
@@ -142,6 +143,7 @@ class UserMonitorController extends Controller
                             'label' => 'Government ID',
                             'fileName' => $verification->government_id_path ? basename($verification->government_id_path) : null,
                             'uploaded' => (bool) $verification->government_id_path,
+                            'mimeType' => $this->resolveDocumentMimeType($verification->government_id_path),
                             'previewUrl' => $this->resolveDocumentPreview($verification->government_id_path),
                         ],
                         [
@@ -149,6 +151,7 @@ class UserMonitorController extends Controller
                             'label' => 'Utility Bill',
                             'fileName' => $verification->utility_bill_path ? basename($verification->utility_bill_path) : null,
                             'uploaded' => (bool) $verification->utility_bill_path,
+                            'mimeType' => $this->resolveDocumentMimeType($verification->utility_bill_path),
                             'previewUrl' => $this->resolveDocumentPreview($verification->utility_bill_path),
                         ],
                         [
@@ -156,12 +159,40 @@ class UserMonitorController extends Controller
                             'label' => 'Bank Statement',
                             'fileName' => $verification->bank_statement_path ? basename($verification->bank_statement_path) : null,
                             'uploaded' => (bool) $verification->bank_statement_path,
+                            'mimeType' => $this->resolveDocumentMimeType($verification->bank_statement_path),
                             'previewUrl' => $this->resolveDocumentPreview($verification->bank_statement_path),
                         ],
                     ],
                 ] : null,
             ],
         ]);
+    }
+
+    private function resolveDocumentMimeType(?string $path): ?string
+    {
+        if (! $path) {
+            return null;
+        }
+
+        $extension = strtolower(pathinfo(parse_url($path, PHP_URL_PATH) ?? $path, PATHINFO_EXTENSION));
+
+        $mimeMap = [
+            'jpg' => 'image/jpeg',
+            'jpeg' => 'image/jpeg',
+            'jfif' => 'image/jpeg',
+            'png' => 'image/png',
+            'webp' => 'image/webp',
+            'bmp' => 'image/bmp',
+            'tif' => 'image/tiff',
+            'tiff' => 'image/tiff',
+            'pdf' => 'application/pdf',
+        ];
+
+        if ($extension === '') {
+            return null;
+        }
+
+        return $mimeMap[$extension] ?? null;
     }
 
     private function resolveDocumentPreview(?string $path): ?string
@@ -353,6 +384,94 @@ class UserMonitorController extends Controller
 
         return response()->json([
             'message' => 'Seller role revoked successfully.',
+        ]);
+    }
+
+    public function approveSeller(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+
+        $registration = SellerRegistration::query()->where('user_id', $user->id)->first();
+        if (! $registration) {
+            return response()->json([
+                'message' => 'User is not registered as seller.',
+            ], 422);
+        }
+
+        $previousStatus = (string) $registration->status;
+
+        $registration->forceFill([
+            'status' => 'approved',
+            'revoked_reason' => null,
+            'revoked_at' => null,
+        ])->save();
+
+        $this->logAction($request, $user, 'approve-seller', $validated['reason'], [
+            'seller_registration_id' => $registration->id,
+            'previous_status' => $previousStatus,
+        ]);
+
+        AdminNotification::notify(
+            'seller',
+            'Seller approved',
+            "{$user->name}'s seller request was approved.",
+            [
+                'user_id' => $user->id,
+                'seller_registration_id' => $registration->id,
+                'reason' => $validated['reason'],
+                'previous_status' => $previousStatus,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Seller request approved successfully.',
+        ]);
+    }
+
+    public function rejectSeller(Request $request, User $user)
+    {
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'min:5', 'max:1000'],
+        ]);
+
+        $registration = SellerRegistration::query()->where('user_id', $user->id)->first();
+        if (! $registration) {
+            return response()->json([
+                'message' => 'User is not registered as seller.',
+            ], 422);
+        }
+
+        $previousStatus = (string) $registration->status;
+
+        $registration->forceFill([
+            'status' => 'rejected',
+            'revoked_reason' => $validated['reason'],
+            'revoked_at' => now(),
+        ])->save();
+
+        $this->logAction($request, $user, 'reject-seller', $validated['reason'], [
+            'seller_registration_id' => $registration->id,
+            'previous_status' => $previousStatus,
+        ]);
+
+        AdminNotification::notify(
+            'seller',
+            'Seller rejected',
+            "{$user->name}'s seller request was rejected.",
+            [
+                'user_id' => $user->id,
+                'seller_registration_id' => $registration->id,
+                'reason' => $validated['reason'],
+                'previous_status' => $previousStatus,
+                'analytics' => AdminNotification::userSellerAnalyticsSnapshot(),
+            ]
+        );
+
+        return response()->json([
+            'message' => 'Seller request rejected successfully.',
         ]);
     }
 

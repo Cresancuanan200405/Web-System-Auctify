@@ -28,6 +28,7 @@ import { SellerDashboardPage } from './pages/seller/SellerDashboardPage';
 import { SellerProfilePage } from './pages/seller/SellerProfilePage';
 import { SellerStorePage } from './pages/SellerStorePage';
 import {
+    auctionService,
     authService,
     bidNotificationService,
     directMessageService,
@@ -47,12 +48,28 @@ const VALID_ACCOUNT_SECTIONS: AccountSection[] = [
     'wishlist',
     'orders',
     'reviews',
-    'cards',
     'zvip',
     'seller',
     'verification',
     'delete-account',
 ];
+
+const ACCOUNT_SECTION_TITLE_MAP: Record<AccountSection, string> = {
+    details: 'Account Details',
+    addresses: 'Saved Addresses',
+    preferences: 'Preferences',
+    cashback: 'Cashback',
+    wallet: 'Wallet',
+    wishlist: 'Wishlist',
+    orders: 'Orders',
+    reviews: 'Reviews',
+    zvip: 'ZVIP',
+    seller: 'Become a Seller',
+    verification: 'Account Verification',
+    'delete-account': 'Delete Account',
+};
+
+const SELLER_DASHBOARD_ACCESS_KEY = 'seller_dashboard_access';
 
 type AccountStatusDialog = {
     title: string;
@@ -128,9 +145,16 @@ const AppContent: React.FC = () => {
         'products' | 'shipping' | 'orders'
     >('products');
     const [canAccessSellerDashboard, setCanAccessSellerDashboard] =
-        useState(false);
+        useState(() => {
+            if (typeof window === 'undefined') {
+                return false;
+            }
+
+            return window.localStorage.getItem(SELLER_DASHBOARD_ACCESS_KEY) === '1';
+        });
     const [isSellerChatOpen, setIsSellerChatOpen] = useState(false);
     const [activeAuctionId, setActiveAuctionId] = useState<number | null>(null);
+    const [activeAuctionTitle, setActiveAuctionTitle] = useState('');
     const [activeSellerStoreId, setActiveSellerStoreId] = useState<
         number | null
     >(null);
@@ -435,9 +459,12 @@ const AppContent: React.FC = () => {
                 const status = (
                     response.registration?.status ?? ''
                 ).toLowerCase();
-                const hasAccess =
-                    status === 'submitted' || status === 'approved';
+                const hasAccess = status === 'approved';
                 setCanAccessSellerDashboard(hasAccess);
+                window.localStorage.setItem(
+                    SELLER_DASHBOARD_ACCESS_KEY,
+                    hasAccess ? '1' : '0',
+                );
 
                 if (status === 'revoked') {
                     const reason =
@@ -451,15 +478,24 @@ const AppContent: React.FC = () => {
                 }
             } catch {
                 if (isActive) {
-                    setCanAccessSellerDashboard(false);
+                    setCanAccessSellerDashboard(
+                        window.localStorage.getItem(SELLER_DASHBOARD_ACCESS_KEY) === '1',
+                    );
                 }
             }
         };
 
-        fetchSellerAccess();
+        void fetchSellerAccess();
+
+        const handleFocus = () => {
+            void fetchSellerAccess();
+        };
+
+        window.addEventListener('focus', handleFocus);
 
         return () => {
             isActive = false;
+            window.removeEventListener('focus', handleFocus);
         };
     }, [authUser]);
 
@@ -477,6 +513,14 @@ const AppContent: React.FC = () => {
             const target = detail?.target ?? 'account';
 
             if (!status) {
+                return;
+            }
+
+            const isCurrentAdminView =
+                typeof window !== 'undefined' &&
+                window.location.pathname.startsWith('/admin');
+
+            if (isCurrentAdminView && status === 'session-ended') {
                 return;
             }
 
@@ -801,11 +845,13 @@ const AppContent: React.FC = () => {
             setAuctionOrigin(null);
             const auctionId = Number(segments[1]);
             if (Number.isInteger(auctionId) && auctionId > 0) {
+                setActiveAuctionTitle('');
                 setActiveAuctionId(auctionId);
                 setViewMode('auction');
                 return;
             }
 
+            setActiveAuctionTitle('');
             setActiveAuctionId(null);
             setViewMode('home');
             return;
@@ -882,6 +928,7 @@ const AppContent: React.FC = () => {
         setSelectedHomeSubcategory(null);
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
+        setActiveAuctionTitle('');
         setActiveAuctionId(null);
         setActiveSellerStoreId(null);
         setActiveSellerStoreName('');
@@ -909,6 +956,7 @@ const AppContent: React.FC = () => {
         setSelectedHomeSubcategory(normalizedSubcategory);
         setAuctionOrigin(null);
         setSellerStoreOrigin(null);
+        setActiveAuctionTitle('');
         setActiveAuctionId(null);
         setActiveSellerStoreId(null);
         setActiveSellerStoreName('');
@@ -933,6 +981,7 @@ const AppContent: React.FC = () => {
         const nextOrigin =
             source ?? (viewMode === 'seller-store' ? 'seller-store' : 'home');
         setAuctionOrigin(nextOrigin);
+        setActiveAuctionTitle('');
         setActiveAuctionId(auctionId);
         setViewMode('auction');
         window.history.pushState({}, '', `/auction/${auctionId}`);
@@ -1425,6 +1474,79 @@ const AppContent: React.FC = () => {
             authUser?.id === activeSellerStoreId);
 
     useEffect(() => {
+        if (viewMode !== 'auction' || !activeAuctionId) {
+            return;
+        }
+
+        let isActive = true;
+
+        const loadAuctionTitle = async () => {
+            try {
+                const details = await auctionService.getProductDetails(
+                    activeAuctionId,
+                );
+                if (!isActive) {
+                    return;
+                }
+
+                setActiveAuctionTitle(details.title?.trim() || '');
+            } catch {
+                if (isActive) {
+                    setActiveAuctionTitle('');
+                }
+            }
+        };
+
+        void loadAuctionTitle();
+
+        return () => {
+            isActive = false;
+        };
+    }, [activeAuctionId, viewMode]);
+
+    useEffect(() => {
+        if (
+            viewMode !== 'seller-store' ||
+            !activeSellerStoreId ||
+            activeSellerStoreName.trim()
+        ) {
+            return;
+        }
+
+        let isActive = true;
+
+        const resolveStoreName = async () => {
+            try {
+                const products = await auctionService.getSellerStoreProducts(
+                    activeSellerStoreId,
+                );
+
+                if (!isActive) {
+                    return;
+                }
+
+                const first = products[0];
+                const resolvedName =
+                    first?.user?.seller_registration?.shop_name?.trim() ||
+                    first?.user?.name?.trim() ||
+                    '';
+
+                if (resolvedName) {
+                    setActiveSellerStoreName(resolvedName);
+                }
+            } catch {
+                // Keep fallback title when store details are unavailable.
+            }
+        };
+
+        void resolveStoreName();
+
+        return () => {
+            isActive = false;
+        };
+    }, [activeSellerStoreId, activeSellerStoreName, viewMode]);
+
+    useEffect(() => {
         if (viewMode === 'admin-login') {
             document.title = 'Auctify Admin Login';
             return;
@@ -1435,8 +1557,93 @@ const AppContent: React.FC = () => {
             return;
         }
 
-        document.title = isSellerContextView ? 'Auctify Seller' : 'Auctify';
-    }, [isSellerContextView, viewMode]);
+        const categoryLabel =
+            selectedHomeCategory &&
+            HOME_CATEGORY_OPTIONS.find(
+                (option) => option.value === selectedHomeCategory,
+            )?.label;
+
+        if (viewMode === 'auth') {
+            document.title =
+                authMode === 'register' ? 'Auctify Sign Up' : 'Auctify Sign In';
+            return;
+        }
+
+        if (viewMode === 'account') {
+            document.title =
+                `Auctify ${ACCOUNT_SECTION_TITLE_MAP[accountSection] ?? 'Account'}`;
+            return;
+        }
+
+        if (viewMode === 'bag') {
+            document.title = 'Auctify Bag';
+            return;
+        }
+
+        if (viewMode === 'category') {
+            document.title = categoryLabel
+                ? `Auctify ${categoryLabel}`
+                : 'Auctify Browse';
+            return;
+        }
+
+        if (viewMode === 'auction') {
+            document.title = activeAuctionTitle
+                ? `Auctify ${activeAuctionTitle}`
+                : activeAuctionId
+                  ? `Auctify Auction #${activeAuctionId}`
+                  : 'Auctify Auction';
+            return;
+        }
+
+        if (viewMode === 'seller-store') {
+            document.title = activeSellerStoreName
+                ? `Auctify ${activeSellerStoreName}`
+                : activeSellerStoreId
+                  ? `Auctify Seller Store #${activeSellerStoreId}`
+                  : 'Auctify Seller Store';
+            return;
+        }
+
+        if (viewMode === 'seller-profile') {
+            document.title = 'Auctify Seller Profile';
+            return;
+        }
+
+        if (viewMode === 'seller') {
+            if (sellerSubView === 'add-product') {
+                document.title = 'Auctify Seller Add Product';
+                return;
+            }
+
+            if (sellerDashboardSection === 'orders') {
+                document.title = 'Auctify Seller Orders';
+                return;
+            }
+
+            if (sellerDashboardSection === 'shipping') {
+                document.title = 'Auctify Seller Shipping';
+                return;
+            }
+
+            document.title = 'Auctify Seller Dashboard';
+            return;
+        }
+
+        document.title = isSellerContextView ? 'Auctify Seller' : 'Auctify Home';
+    }, [
+        accountSection,
+        activeAuctionId,
+        activeAuctionTitle,
+        activeSellerStoreId,
+        activeSellerStoreName,
+        authMode,
+        isSellerContextView,
+        selectedHomeCategory,
+        sellerDashboardSection,
+        sellerSubView,
+        viewMode,
+    ]);
 
     useEffect(() => {
         document.documentElement.classList.toggle('admin-mode', isAdminView);
@@ -1450,7 +1657,7 @@ const AppContent: React.FC = () => {
 
     return (
         <div className={isAdminView ? 'page page-admin' : 'page'}>
-            {!isAdminView && (
+            {!isAdminView && !isSellerContextView && (
                 <div className="promo-banner">
                     <div className="promo-item">
                         🎯 7 Days Free Returns | T&C Apply

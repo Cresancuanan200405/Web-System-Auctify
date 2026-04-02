@@ -1,14 +1,16 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useCards } from '../hooks/useCards';
 import { useOrderHistory } from '../hooks/useOrderHistory';
+import { useWallet } from '../hooks/useWallet';
 import { useWonAuctions } from '../hooks/useWonAuctions';
-import { auctionService } from '../services/api';
+import { auctionService, sellerService } from '../services/api';
 import type { AccountSection, AuctionProduct } from '../types';
 import { formatCurrency } from '../utils/helpers';
 
 const RECENT_SEARCHES_KEY = 'header_recent_searches';
 const MAX_RECENT_SEARCHES = 6;
+const VERIFIED_TO_BID_THRESHOLD = 500;
+const SELLER_DASHBOARD_ACCESS_KEY = 'seller_dashboard_access';
 
 interface HeaderProps {
     onNavigateHome: () => void;
@@ -63,7 +65,7 @@ export const Header: React.FC<HeaderProps> = ({
     onLogout,
 }) => {
     const { authUser } = useAuth();
-    const { savedCards, mainCardId } = useCards();
+    const { walletBalance } = useWallet();
     const { wonAuctions, isLoadingWonAuctions } = useWonAuctions();
     const { orders } = useOrderHistory();
     const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
@@ -72,6 +74,7 @@ export const Header: React.FC<HeaderProps> = ({
     const [searchProducts, setSearchProducts] = useState<AuctionProduct[]>([]);
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState(0);
+    const [hasSellerIndicator, setHasSellerIndicator] = useState(false);
     const [recentSearches, setRecentSearches] = useState<string[]>(() => {
         try {
             const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
@@ -87,8 +90,53 @@ export const Header: React.FC<HeaderProps> = ({
         20,
         Math.max(3, Number(maxHomeSearchResults || 8)),
     );
+    const isWalletVerified = Boolean(
+        authUser && walletBalance > VERIFIED_TO_BID_THRESHOLD,
+    );
 
-    const mainCard = savedCards.find((card) => card.id === mainCardId);
+    useEffect(() => {
+        if (!authUser) {
+            setHasSellerIndicator(false);
+            return;
+        }
+
+        let isActive = true;
+
+        const loadSellerRegistration = async () => {
+            try {
+                const response = await sellerService.getRegistration();
+                if (!isActive) {
+                    return;
+                }
+
+                const status = (
+                    response.registration?.status ?? ''
+                ).toLowerCase();
+                const hasSellerAccess = status === 'approved';
+
+                setHasSellerIndicator(hasSellerAccess);
+                window.localStorage.setItem(
+                    SELLER_DASHBOARD_ACCESS_KEY,
+                    hasSellerAccess ? '1' : '0',
+                );
+            } catch {
+                if (isActive) {
+                    setHasSellerIndicator(
+                        window.localStorage.getItem(
+                            SELLER_DASHBOARD_ACCESS_KEY,
+                        ) === '1',
+                    );
+                }
+            }
+        };
+
+        void loadSellerRegistration();
+
+        return () => {
+            isActive = false;
+        };
+    }, [authUser]);
+
     const activeBagItems = wonAuctions.filter(
         (item) => !orders.some((order) => order.auction_id === item.id),
     );
@@ -433,12 +481,6 @@ export const Header: React.FC<HeaderProps> = ({
         window.localStorage.removeItem(RECENT_SEARCHES_KEY);
     };
 
-    const getCardLogo = (type: string) => {
-        const extension = type === 'mastercard' ? 'jpg' : 'png';
-        const logoName = type === 'mastercard' ? 'landbank' : type;
-        return `/icons/${logoName}.${extension}`;
-    };
-
     const resolveMediaUrl = (url?: string) => {
         if (!url) {
             return '';
@@ -749,8 +791,17 @@ export const Header: React.FC<HeaderProps> = ({
                                 ? `Hi, ${authUser.name.split(' ')[0]}`
                                 : 'Login / Register'}
                         </span>
-                        {authUser?.is_verified && (
+                        {isWalletVerified && (
                             <span className="verified-badge">✓ Verified</span>
+                        )}
+                        {hasSellerIndicator && (
+                            <span
+                                className="seller-symbol-badge"
+                                title="Seller account active"
+                                aria-label="Seller account active"
+                            >
+                                ◆
+                            </span>
                         )}
                     </span>
                     <div className="dropdown-menu">
@@ -831,19 +882,8 @@ export const Header: React.FC<HeaderProps> = ({
                                             <path d="M7 12h4" />
                                         </svg>
                                         <span>Wallet</span>
-                                        {mainCard && (
-                                            <img
-                                                src={getCardLogo(mainCard.type)}
-                                                alt="Card logo"
-                                                className="dropdown-card-icon"
-                                            />
-                                        )}
                                         <span className="dropdown-amount">
-                                            {mainCard
-                                                ? formatCurrency(
-                                                      mainCard.balance || 0,
-                                                  )
-                                                : 'Php 0.00'}
+                                            {formatCurrency(walletBalance)}
                                         </span>
                                     </div>
                                 )}

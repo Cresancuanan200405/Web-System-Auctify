@@ -20,6 +20,7 @@ use App\Http\Controllers\Api\BidNotificationController;
 use App\Http\Controllers\Api\HomepageContentController;
 use App\Http\Controllers\Api\HomepageConfigController;
 use App\Http\Controllers\Api\SellerRegistrationController;
+use App\Http\Controllers\Api\WalletController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Broadcast;
 use Illuminate\Support\Facades\Route;
@@ -35,6 +36,10 @@ Route::prefix('auth')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('update-profile', [AuthController::class, 'updateProfile']);
         Route::delete('delete-account', [AuthController::class, 'deleteAccount']);
+        Route::get('wallet', [WalletController::class, 'show']);
+        Route::get('wallet/history', [WalletController::class, 'history']);
+        Route::post('wallet/top-up', [WalletController::class, 'topUp']);
+        Route::post('wallet/spend', [WalletController::class, 'spend']);
 
         Route::prefix('verification')->group(function () {
             Route::get('status', [AccountVerificationController::class, 'status']);
@@ -56,16 +61,10 @@ Route::get('settings/public', [AdminSettingController::class, 'publicIndex']);
 
 Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
     Route::post('login', [AdminAuthController::class, 'login']);
-    Route::post('verify-mfa', [AdminAuthController::class, 'verifyMfa'])->middleware('throttle:admin-mfa');
 
     Route::middleware(['auth:sanctum', 'admin', 'throttle:admin-actions'])->group(function () {
         Route::get('session', [AdminAuthController::class, 'session']);
         Route::post('logout', [AdminAuthController::class, 'logout']);
-        Route::get('mfa/status', [AdminAuthController::class, 'mfaStatus']);
-        Route::post('mfa/setup', [AdminAuthController::class, 'mfaSetup']);
-        Route::post('mfa/enable', [AdminAuthController::class, 'mfaEnable']);
-        Route::post('mfa/disable', [AdminAuthController::class, 'mfaDisable']);
-        Route::post('mfa/step-up', [AdminAuthController::class, 'stepUpMfa'])->middleware('throttle:admin-mfa');
         Route::get('homepage-config', [AdminHomepageConfigController::class, 'show']);
         Route::put('homepage-config', [AdminHomepageConfigController::class, 'update']);
         Route::post('homepage-media/upload', [HomepageMediaUploadController::class, 'store'])->middleware('throttle:admin-uploads');
@@ -75,11 +74,13 @@ Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
         Route::get('users', [UserMonitorController::class, 'index']);
         Route::get('users/{user}', [UserMonitorController::class, 'show']);
         Route::get('users/{user}/verification-media/{key}', [UserMonitorController::class, 'verificationMedia']);
-        Route::post('users/{user}/suspend', [UserMonitorController::class, 'suspend'])->middleware('admin.mfa.recent');
+        Route::post('users/{user}/suspend', [UserMonitorController::class, 'suspend']);
         Route::post('users/{user}/unsuspend', [UserMonitorController::class, 'unsuspend']);
-        Route::post('users/{user}/revoke-seller', [UserMonitorController::class, 'revokeSeller'])->middleware('admin.mfa.recent');
+        Route::post('users/{user}/approve-seller', [UserMonitorController::class, 'approveSeller']);
+        Route::post('users/{user}/reject-seller', [UserMonitorController::class, 'rejectSeller']);
+        Route::post('users/{user}/revoke-seller', [UserMonitorController::class, 'revokeSeller']);
         Route::post('users/{user}/unrevoke-seller', [UserMonitorController::class, 'unrevokeSeller']);
-        Route::post('users/{user}/delete', [UserMonitorController::class, 'destroy'])->middleware('admin.mfa.recent');
+        Route::post('users/{user}/delete', [UserMonitorController::class, 'destroy']);
 
         // Admin notifications
         Route::get('notifications', [AdminNotificationController::class, 'index']);

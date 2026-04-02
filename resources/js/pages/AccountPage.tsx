@@ -9,11 +9,10 @@ import { AddressesSection } from './account-sections/AddressesSection';
 import { BecomeSellerSection } from './account-sections/BecomeSellerSection';
 import { CashbackSection } from './account-sections/CashbackSection';
 import { DetailsSection } from './account-sections/DetailsSection';
-import { MyCardsSection } from './account-sections/MyCardsSection';
 import { OrdersSection } from './account-sections/OrdersSection';
 import { PreferencesSection } from './account-sections/PreferencesSection';
 import { ReviewsSection } from './account-sections/ReviewsSection';
-import { WalletSection } from './account-sections/WalletSection';
+import { WalletTopUpSection } from './account-sections/WalletTopUpSection';
 import { WishlistSection } from './account-sections/WishlistSection';
 import { ZVIPSection } from './account-sections/ZVIPSection';
 
@@ -40,7 +39,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
     onNavigateSellerStore,
 }) => {
     const { authUser } = useAuth();
-    const isVerified = Boolean(authUser?.is_verified);
+    const isSellerVerified = Boolean(authUser?.is_verified);
     const [showSellerGateModal, setShowSellerGateModal] = useState(false);
     const [showRestrictionModal, setShowRestrictionModal] = useState(false);
     const [restrictionTitle, setRestrictionTitle] = useState('');
@@ -93,41 +92,24 @@ export const AccountPage: React.FC<AccountPageProps> = ({
         }
     }, [activeSection, isSellerRevoked, onSectionChange]);
 
-    const showRevokedRestrictionDialog = (
-        target: 'verification' | 'seller',
-    ) => {
+    const showRevokedRestrictionDialog = () => {
         const reason = sellerRevokedReason?.trim();
         const suffix = reason ? ` Reason: ${reason}` : '';
-        const title =
-            target === 'verification'
-                ? 'Verification Unavailable'
-                : 'Seller Access Revoked';
-        const message =
-            target === 'verification'
-                ? `Your seller account has been revoked by admin. Verification cannot be opened at this time.${suffix}`
-                : `Your seller account has been revoked by admin, so Become a Seller is unavailable.${suffix}`;
+        const title = 'Seller Access Revoked';
+        const message = `Your seller account has been revoked by admin, so Become a Seller is unavailable.${suffix}`;
 
         setRestrictionTitle(title);
         setRestrictionMessage(message);
         setShowRestrictionModal(true);
     };
 
-    const handleVerificationClick = () => {
-        if (isSellerRevoked) {
-            showRevokedRestrictionDialog('verification');
-            return;
-        }
-
-        onSectionChange('verification');
-    };
-
     const handleBecomeSellerClick = () => {
         if (isSellerRevoked) {
-            showRevokedRestrictionDialog('seller');
+            showRevokedRestrictionDialog();
             return;
         }
 
-        if (isVerified) {
+        if (isSellerVerified) {
             onSectionChange('seller');
         } else {
             setShowSellerGateModal(true);
@@ -143,9 +125,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             case 'preferences':
                 return <PreferencesSection />;
             case 'wallet':
-                return <WalletSection />;
-            case 'cards':
-                return <MyCardsSection />;
+                return <WalletTopUpSection />;
             case 'zvip':
                 return <ZVIPSection />;
             case 'orders':
@@ -185,8 +165,8 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             <AccountSidebar
                 activeSection={activeSection}
                 onSectionChange={onSectionChange}
-                isVerified={isVerified}
-                isVerificationAllowed={!isSellerRevoked}
+                isSellerVerified={isSellerVerified}
+                isSellerAccessAllowed={!isSellerRevoked}
                 revokedNotice={
                     isSellerRevoked
                         ? sellerRevokedReason?.trim() ||
@@ -194,7 +174,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                         : null
                 }
                 onBecomeSellerClick={handleBecomeSellerClick}
-                onVerificationClick={handleVerificationClick}
             />
             <div className="account-main">{renderSection()}</div>
             {showSellerGateModal && (
@@ -208,14 +187,14 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                     >
                         <div className="delete-modal-header">
                             <h2 className="delete-modal-title">
-                                Verify your account to become a seller
+                                Complete seller verification first
                             </h2>
                         </div>
                         <div className="delete-modal-body">
                             <p className="delete-modal-text">
-                                To become a seller on AUCTIFY and start listing
-                                your own auctions, you need to complete account
-                                verification first.
+                                Seller verification is only needed when you
+                                want to become a seller. Finish this step to
+                                unlock seller registration and listing tools.
                             </p>
                             <div className="delete-modal-actions">
                                 <button
@@ -235,7 +214,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                                         onSectionChange('verification');
                                     }}
                                 >
-                                    Go to Account Verification
+                                    Start Seller Verification
                                 </button>
                             </div>
                         </div>

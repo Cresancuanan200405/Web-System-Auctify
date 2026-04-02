@@ -96,11 +96,6 @@ class AppServiceProvider extends ServiceProvider
             ];
         });
 
-        RateLimiter::for('admin-mfa', function (Request $request) {
-            $challengeToken = (string) $request->input('challenge_token', 'none');
-            return Limit::perMinute(8)->by($challengeToken.'|'.$request->ip());
-        });
-
         DB::prohibitDestructiveCommands(
             app()->isProduction(),
         );

@@ -31,7 +31,7 @@ const resolveBaseUrl = () => {
 };
 
 const baseUrl = resolveBaseUrl();
-const REQUEST_TIMEOUT_MS = 20000;
+const REQUEST_TIMEOUT_MS = 90000;
 
 const readCookie = (name: string) => {
     if (typeof document === 'undefined') {
@@ -118,6 +118,7 @@ function dispatchAccountStatus(detail: AccountStatusEventDetail) {
 
 async function request<T>(path: string, options: RequestInit) {
     const token = localStorage.getItem('auth_token');
+    const isAdminRequest = path.startsWith('/api/admin/');
 
     let response: Response;
     const method = options.method ?? 'GET';
@@ -192,7 +193,7 @@ async function request<T>(path: string, options: RequestInit) {
             }
         }
 
-        if (response.status === 401 && token) {
+        if (response.status === 401 && token && !isAdminRequest) {
             dispatchAccountStatus({
                 status: 'session-ended',
                 message:
@@ -244,6 +245,7 @@ export async function apiDelete<T>(path: string) {
 
 export async function apiPostForm<T>(path: string, formData: FormData) {
     const token = localStorage.getItem('auth_token');
+    const isAdminRequest = path.startsWith('/api/admin/');
 
     let response: Response;
     const headers = await buildHeaders('POST', undefined, false);
@@ -309,7 +311,7 @@ export async function apiPostForm<T>(path: string, formData: FormData) {
             }
         }
 
-        if (response.status === 401 && token) {
+        if (response.status === 401 && token && !isAdminRequest) {
             dispatchAccountStatus({
                 status: 'session-ended',
                 message:

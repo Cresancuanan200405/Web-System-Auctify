@@ -1,0 +1,51 @@
+{
+  "servers": {
+    "github": {
+      "command": "node",
+      "args": [
+        "./node_modules/@modelcontextprotocol/server-github/dist/index.js"
+      ],
+      "autoStart": true
+    },
+    "filesystem": {
+      "command": "node",
+      "args": [
+        "./node_modules/@modelcontextprotocol/server-filesystem/dist/index.js",
+        "."
+      ],
+      "autoStart": true
+    },
+    "stripe": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@stripe/mcp"
+      ],
+      "autoStart": true
+    },
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest"
+      ],
+      "autoStart": true
+    },
+    "pubnub": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "mcp-server-pubnub@latest"
+      ],
+      "autoStart": true
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@playwright/mcp@latest"
+      ],
+      "autoStart": true
+    }
+  }
+}

@@ -160,8 +160,6 @@ async function request<T>(path: string, options: RequestInit): Promise<T> {
 }
 
 export interface AdminLoginPayload {
-    mfa_required?: boolean;
-    challenge_token?: string;
     token?: string;
     message?: string;
     user?: {
@@ -170,26 +168,6 @@ export interface AdminLoginPayload {
         email: string;
         is_admin: boolean;
     };
-}
-
-export interface AdminMfaStatusPayload {
-    enabled: boolean;
-    recovery_codes_remaining: number;
-}
-
-export interface AdminMfaSetupPayload {
-    secret: string;
-    otpauth_uri: string;
-}
-
-export interface AdminMfaEnablePayload {
-    message: string;
-    recovery_codes: string[];
-}
-
-export interface AdminMfaStepUpPayload {
-    message: string;
-    verified_until_unix: number;
 }
 
 export interface AdminSellerDetails {
@@ -231,6 +209,7 @@ export interface AdminVerificationMedia {
     label: string;
     fileName?: string | null;
     uploaded?: boolean;
+    mimeType?: string | null;
     previewUrl?: string | null;
 }
 
@@ -282,21 +261,6 @@ export const adminApi = {
         return request<AdminLoginPayload>('/api/admin/login', {
             method: 'POST',
             body: JSON.stringify({ email, password }),
-        });
-    },
-
-    verifyMfa: (
-        challengeToken: string,
-        code?: string,
-        recoveryCode?: string,
-    ) => {
-        return request<AdminLoginPayload>('/api/admin/verify-mfa', {
-            method: 'POST',
-            body: JSON.stringify({
-                challenge_token: challengeToken,
-                ...(code ? { code } : {}),
-                ...(recoveryCode ? { recovery_code: recoveryCode } : {}),
-            }),
         });
     },
 
@@ -448,6 +412,36 @@ export const adminApi = {
         );
     },
 
+    approveSeller: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/approve-seller`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
+    },
+
+    rejectSeller: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/users/${userId}/reject-seller`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
+    },
+
     unrevokeSeller: (
         _token: string | null | undefined,
         userId: number,
@@ -571,55 +565,6 @@ export const adminApi = {
         );
     },
 
-    getMfaStatus: (_token?: string | null) => {
-        consumeToken(_token);
-        return request<AdminMfaStatusPayload>('/api/admin/mfa/status', {
-            method: 'GET',
-        });
-    },
-
-    setupMfa: (_token?: string | null) => {
-        consumeToken(_token);
-        return request<AdminMfaSetupPayload>('/api/admin/mfa/setup', {
-            method: 'POST',
-            body: JSON.stringify({}),
-        });
-    },
-
-    enableMfa: (
-        _token: string | null | undefined,
-        secret: string,
-        code: string,
-    ) => {
-        consumeToken(_token);
-        return request<AdminMfaEnablePayload>('/api/admin/mfa/enable', {
-            method: 'POST',
-            body: JSON.stringify({ secret, code }),
-        });
-    },
-
-    disableMfa: (_token: string | null | undefined, code: string) => {
-        consumeToken(_token);
-        return request<{ message: string }>('/api/admin/mfa/disable', {
-            method: 'POST',
-            body: JSON.stringify({ code }),
-        });
-    },
-
-    stepUpMfa: (
-        _token: string | null | undefined,
-        code?: string,
-        recoveryCode?: string,
-    ) => {
-        consumeToken(_token);
-        return request<AdminMfaStepUpPayload>('/api/admin/mfa/step-up', {
-            method: 'POST',
-            body: JSON.stringify({
-                ...(code ? { code } : {}),
-                ...(recoveryCode ? { recovery_code: recoveryCode } : {}),
-            }),
-        });
-    },
 };
 
 export interface AdminNotificationEntry {

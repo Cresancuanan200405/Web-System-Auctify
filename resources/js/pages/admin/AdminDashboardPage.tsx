@@ -173,6 +173,35 @@ const resolveAdminMediaUrl = (url?: string) => {
     return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
 };
 
+const getExtension = (fileName?: string | null): string => {
+    if (!fileName) {
+        return '';
+    }
+
+    const normalized = fileName.toLowerCase();
+    const dotIndex = normalized.lastIndexOf('.');
+    return dotIndex >= 0 ? normalized.slice(dotIndex + 1) : '';
+};
+
+const isImageMedia = (mimeType?: string | null, fileName?: string | null) => {
+    if (mimeType?.startsWith('image/')) {
+        return true;
+    }
+
+    const extension = getExtension(fileName);
+    return ['jpg', 'jpeg', 'jfif', 'png', 'webp', 'gif', 'bmp', 'svg', 'tif', 'tiff', 'avif', 'heic', 'heif'].includes(
+        extension,
+    );
+};
+
+const isPdfMedia = (mimeType?: string | null, fileName?: string | null) => {
+    if (mimeType === 'application/pdf') {
+        return true;
+    }
+
+    return getExtension(fileName) === 'pdf';
+};
+
 const DashboardIcon = () => (
     <svg
         viewBox="0 0 24 24"
@@ -303,6 +332,13 @@ const SearchIcon = () => (
 export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     onLogout,
 }) => {
+    const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+        if (typeof window === 'undefined') {
+            return false;
+        }
+
+        return window.localStorage.getItem('admin-sidebar-collapsed') === '1';
+    });
     const [activeSection, setActiveSection] = useState<AdminSection>(() =>
         getInitialAdminSection(),
     );
@@ -325,10 +361,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const [suspensionReason, setSuspensionReason] = useState('');
     const [sellerReason, setSellerReason] = useState('');
     const [deleteReason, setDeleteReason] = useState('');
-    const [userActionMfaCode, setUserActionMfaCode] = useState('');
-    const [userActionRecoveryCode, setUserActionRecoveryCode] = useState('');
-    const [useUserActionRecoveryCode, setUseUserActionRecoveryCode] =
-        useState(false);
     const [isApplyingUserAction, setIsApplyingUserAction] = useState(false);
     const [suspensionUnit, setSuspensionUnit] =
         useState<SuspensionUnit>('days');
@@ -342,7 +374,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const [dangerAcknowledge, setDangerAcknowledge] = useState(false);
     const [confirmDangerActionOpen, setConfirmDangerActionOpen] =
         useState(false);
-    const [lightboxUrl, setLightboxUrl] = useState<string | null>(null);
+    const [lightboxMedia, setLightboxMedia] = useState<{
+        url: string;
+        fileName: string;
+        mimeType: string | null;
+    } | null>(null);
     const [docPreviewUrls, setDocPreviewUrls] = useState<
         Record<string, string>
     >({});
@@ -379,7 +415,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     // Settings
     const [showSettingsPanel, setShowSettingsPanel] = useState(false);
     const [settingsPanelTab, setSettingsPanelTab] = useState<
-        'settings' | 'password' | 'mfa'
+        'settings' | 'password'
     >('settings');
     const [settings, setSettings] = useState<AdminSettingEntry[]>([]);
     const [settingsDraft, setSettingsDraft] = useState<Record<string, string>>(
@@ -393,19 +429,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const [cpNext, setCpNext] = useState('');
     const [cpConfirm, setCpConfirm] = useState('');
     const [cpLoading, setCpLoading] = useState(false);
-    const [mfaStatusLoading, setMfaStatusLoading] = useState(false);
-    const [mfaEnabled, setMfaEnabled] = useState(false);
-    const [mfaRecoveryCodesRemaining, setMfaRecoveryCodesRemaining] =
-        useState(0);
-    const [mfaSetupSecret, setMfaSetupSecret] = useState<string | null>(null);
-    const [mfaSetupUri, setMfaSetupUri] = useState<string | null>(null);
-    const [mfaSetupCode, setMfaSetupCode] = useState('');
-    const [mfaRecoveryCodes, setMfaRecoveryCodes] = useState<string[]>([]);
-    const [mfaActionCode, setMfaActionCode] = useState('');
-    const [mfaActionLoading, setMfaActionLoading] = useState(false);
-    const [mfaCopiedField, setMfaCopiedField] = useState<
-        'secret' | 'uri' | 'recovery' | null
-    >(null);
 
     // Calendar navigation
     const [calendarViewDate, setCalendarViewDate] = useState(() => new Date());
@@ -418,77 +441,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     const notificationPanelRef = useRef<HTMLDivElement>(null);
     const settingsPanelRef = useRef<HTMLDivElement>(null);
     const adminSearchRef = useRef<HTMLDivElement>(null);
-
-    const mfaQrCodeUrl = useMemo(() => {
-        if (!mfaSetupUri) {
-            return null;
-        }
-
-        return `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(mfaSetupUri)}`;
-    }, [mfaSetupUri]);
-
-    const copyToClipboard = React.useCallback(
-        async (value: string, field: 'secret' | 'uri' | 'recovery') => {
-            const trimmed = value.trim();
-
-            if (!trimmed) {
-                return;
-            }
-
-            try {
-                if (navigator.clipboard?.writeText) {
-                    await navigator.clipboard.writeText(trimmed);
-                } else {
-                    const fallbackInput = document.createElement('textarea');
-                    fallbackInput.value = trimmed;
-                    fallbackInput.style.position = 'fixed';
-                    fallbackInput.style.opacity = '0';
-                    document.body.appendChild(fallbackInput);
-                    fallbackInput.focus();
-                    fallbackInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(fallbackInput);
-                }
-
-                setMfaCopiedField(field);
-                window.setTimeout(() => {
-                    setMfaCopiedField((current) =>
-                        current === field ? null : current,
-                    );
-                }, 1500);
-            } catch {
-                toast.error(
-                    'Unable to copy text automatically. Please copy it manually.',
-                );
-            }
-        },
-        [],
-    );
-
-    const downloadRecoveryCodes = React.useCallback(() => {
-        if (mfaRecoveryCodes.length === 0) {
-            return;
-        }
-
-        const content = [
-            'Auctify Admin MFA Recovery Codes',
-            `Generated: ${new Date().toISOString()}`,
-            '',
-            ...mfaRecoveryCodes,
-            '',
-            'Store these codes securely. Each code can be used once.',
-        ].join('\n');
-
-        const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.href = url;
-        link.download = 'auctify-admin-mfa-recovery-codes.txt';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
-    }, [mfaRecoveryCodes]);
 
     useEffect(() => {
         const originalTitle = document.title;
@@ -1579,129 +1531,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         }
     };
 
-    const loadMfaStatus = async () => {
-        const token = getAdminAuthToken();
-
-        if (!token) {
-            return;
-        }
-
-        setMfaStatusLoading(true);
-
-        try {
-            const status = await adminApi.getMfaStatus(token);
-            setMfaEnabled(status.enabled);
-            setMfaRecoveryCodesRemaining(status.recovery_codes_remaining);
-        } catch {
-            // Keep panel stable if status fails to load.
-        } finally {
-            setMfaStatusLoading(false);
-        }
-    };
-
-    const handleStartMfaSetup = async () => {
-        const token = getAdminAuthToken();
-
-        if (!token) {
-            return;
-        }
-
-        setMfaActionLoading(true);
-
-        try {
-            const setup = await adminApi.setupMfa(token);
-            setMfaSetupSecret(setup.secret);
-            setMfaSetupUri(setup.otpauth_uri);
-            setMfaSetupCode('');
-            setMfaRecoveryCodes([]);
-            toast.info(
-                'MFA secret generated. Add it to your authenticator app, then verify with a code.',
-            );
-        } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to start MFA setup.',
-            );
-        } finally {
-            setMfaActionLoading(false);
-        }
-    };
-
-    const handleEnableMfa = async () => {
-        const token = getAdminAuthToken();
-
-        if (!token || !mfaSetupSecret) {
-            return;
-        }
-
-        if (!mfaSetupCode.trim()) {
-            toast.error('Enter a 6-digit code from your authenticator app.');
-            return;
-        }
-
-        setMfaActionLoading(true);
-
-        try {
-            const result = await adminApi.enableMfa(
-                token,
-                mfaSetupSecret,
-                mfaSetupCode,
-            );
-            setMfaEnabled(true);
-            setMfaRecoveryCodes(result.recovery_codes);
-            setMfaSetupCode('');
-            setMfaSetupSecret(null);
-            setMfaSetupUri(null);
-            setMfaRecoveryCodesRemaining(result.recovery_codes.length);
-            toast.success(result.message);
-        } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to enable MFA.',
-            );
-        } finally {
-            setMfaActionLoading(false);
-            void loadMfaStatus();
-        }
-    };
-
-    const handleDisableMfa = async () => {
-        const token = getAdminAuthToken();
-
-        if (!token) {
-            return;
-        }
-
-        if (!mfaActionCode.trim()) {
-            toast.error('Enter your authenticator code to disable MFA.');
-            return;
-        }
-
-        setMfaActionLoading(true);
-
-        try {
-            const result = await adminApi.disableMfa(token, mfaActionCode);
-            setMfaEnabled(false);
-            setMfaActionCode('');
-            setMfaSetupSecret(null);
-            setMfaSetupUri(null);
-            setMfaRecoveryCodes([]);
-            setMfaRecoveryCodesRemaining(0);
-            toast.success(result.message);
-        } catch (error) {
-            toast.error(
-                error instanceof Error
-                    ? error.message
-                    : 'Failed to disable MFA.',
-            );
-        } finally {
-            setMfaActionLoading(false);
-            void loadMfaStatus();
-        }
-    };
-
     const handleSaveSettings = async () => {
         const token = getAdminAuthToken();
         if (!token) return;
@@ -1744,7 +1573,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             setShowNotificationPanel(false);
             setSettingsGroupFilter('all');
             void loadSettings();
-            void loadMfaStatus();
         }
     };
 
@@ -2074,7 +1902,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         deleteDialog ||
         selectedUserId ||
         confirmDangerActionOpen ||
-        lightboxUrl,
+        lightboxMedia,
     );
 
     useEffect(() => {
@@ -2115,6 +1943,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             | 'suspend'
             | 'unsuspend'
             | 'delete'
+            | 'approve-seller'
+            | 'reject-seller'
             | 'revoke-seller'
             | 'unrevoke-seller',
         reasonInput: string,
@@ -2122,11 +1952,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         if (!selectedUser) {
             return;
         }
-
-        const requiresStepUp =
-            action === 'suspend' ||
-            action === 'revoke-seller' ||
-            action === 'delete';
 
         const reason = reasonInput.trim();
         if (reason.length < 5) {
@@ -2142,34 +1967,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
         setIsApplyingUserAction(true);
         try {
-            if (requiresStepUp) {
-                if (useUserActionRecoveryCode) {
-                    if (!userActionRecoveryCode.trim()) {
-                        toast.error(
-                            'Enter an MFA recovery code for this destructive action.',
-                        );
-                        setIsApplyingUserAction(false);
-                        return;
-                    }
-
-                    await adminApi.stepUpMfa(
-                        token,
-                        undefined,
-                        userActionRecoveryCode.trim(),
-                    );
-                } else {
-                    if (!userActionMfaCode.trim()) {
-                        toast.error(
-                            'Enter an MFA code for this destructive action.',
-                        );
-                        setIsApplyingUserAction(false);
-                        return;
-                    }
-
-                    await adminApi.stepUpMfa(token, userActionMfaCode.trim());
-                }
-            }
-
             if (action === 'suspend') {
                 const parsedDuration = Number(suspensionValue);
                 if (!Number.isInteger(parsedDuration) || parsedDuration <= 0) {
@@ -2190,6 +1987,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 await adminApi.deleteUser(token, selectedUser.id, reason);
                 setSelectedUser(null);
                 setSelectedUserId(null);
+            } else if (action === 'approve-seller') {
+                await adminApi.approveSeller(token, selectedUser.id, reason);
+            } else if (action === 'reject-seller') {
+                await adminApi.rejectSeller(token, selectedUser.id, reason);
             } else if (action === 'unrevoke-seller') {
                 await adminApi.unrevokeSeller(token, selectedUser.id, reason);
             } else {
@@ -2214,17 +2015,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             if (action === 'suspend' || action === 'unsuspend') {
                 setSuspensionReason('');
             }
-            if (action === 'revoke-seller' || action === 'unrevoke-seller') {
+            if (
+                action === 'approve-seller' ||
+                action === 'reject-seller' ||
+                action === 'revoke-seller' ||
+                action === 'unrevoke-seller'
+            ) {
                 setSellerReason('');
             }
             if (action === 'delete') {
                 setDeleteReason('');
-            }
-
-            if (requiresStepUp) {
-                setUserActionMfaCode('');
-                setUserActionRecoveryCode('');
-                setUseUserActionRecoveryCode(false);
             }
 
             toast.success('Action applied successfully.');
@@ -2244,12 +2044,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             setSuspensionReason('');
             setSellerReason('');
             setDeleteReason('');
-            setUserActionMfaCode('');
-            setUserActionRecoveryCode('');
-            setUseUserActionRecoveryCode(false);
-            setUserActionMfaCode('');
-            setUserActionRecoveryCode('');
-            setUseUserActionRecoveryCode(false);
             setSuspensionUnit('days');
             setSuspensionValue('1');
             setUserReviewTab('overview');
@@ -2528,6 +2322,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 key: string;
                 label: string;
                 fileName: string;
+                mimeType: string | null;
+                isImage: boolean;
                 previewUrl: string | null;
             }>;
         }
@@ -2538,6 +2334,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 key: item.key,
                 label: item.label,
                 fileName: item.fileName ?? 'Uploaded file',
+                mimeType: item.mimeType ?? null,
+                isImage: isImageMedia(item.mimeType, item.fileName),
                 previewUrl: item.previewUrl ?? null,
             }));
 
@@ -2578,9 +2376,26 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 key: item.key,
                 label: item.label,
                 fileName: item.fileName || 'Document',
+                mimeType: null,
+                isImage: false,
                 previewUrl: null,
             }));
     }, [selectedUser]);
+
+    const selectedSellerImages = useMemo(() => {
+        return selectedUserMedia.filter((media) => media.isImage);
+    }, [selectedUserMedia]);
+
+    useEffect(() => {
+        if (typeof window === 'undefined') {
+            return;
+        }
+
+        window.localStorage.setItem(
+            'admin-sidebar-collapsed',
+            isSidebarCollapsed ? '1' : '0',
+        );
+    }, [isSidebarCollapsed]);
 
     useEffect(() => {
         const objectUrls: string[] = [];
@@ -2619,6 +2434,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         `/api/admin/users/${selectedUser.id}/verification-media/${encodeURIComponent(media.key)}`,
                         {
                             credentials: 'include',
+                            headers: {
+                                Accept: '*/*',
+                                Authorization: `Bearer ${token}`,
+                                'X-Requested-With': 'XMLHttpRequest',
+                            },
                         },
                     );
 
@@ -2679,17 +2499,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
     }, [confirmDangerInput, selectedUser]);
 
     return (
-        <main className="admin-neo-shell">
-            <aside className="admin-neo-sidebar" aria-label="Admin navigation">
-                <div className="admin-neo-brand">
-                    <img
-                        src="/icons/Admin Logo.png"
-                        alt="Auctify Admin"
-                        className="admin-neo-brand-logo"
-                    />
-                    <span className="admin-neo-brand-name">Auctify</span>
+        <main
+            className={`admin-neo-shell ${isSidebarCollapsed ? 'sidebar-collapsed' : 'sidebar-expanded'}`}
+        >
+            <aside
+                className={`admin-neo-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}
+                aria-label="Admin navigation"
+                aria-expanded={!isSidebarCollapsed}
+            >
+                <div className="admin-neo-sidebar-top">
+                    <div className="admin-neo-brand">
+                        <img
+                            src="/icons/Admin Logo.png"
+                            alt="Auctify Admin"
+                            className="admin-neo-brand-logo"
+                        />
+                        <div className="admin-neo-brand-copy">
+                            <span className="admin-neo-brand-name">Auctify</span>
+                            <span className="admin-neo-sidebar-caption">
+                                Admin control center
+                            </span>
+                        </div>
+                    </div>
+                    <button
+                        type="button"
+                        className="admin-neo-sidebar-toggle"
+                        onClick={() => setIsSidebarCollapsed((current) => !current)}
+                        aria-label={
+                            isSidebarCollapsed
+                                ? 'Expand admin sidebar'
+                                : 'Collapse admin sidebar'
+                        }
+                        title={
+                            isSidebarCollapsed
+                                ? 'Expand sidebar'
+                                : 'Collapse sidebar'
+                        }
+                    >
+                        {isSidebarCollapsed ? '›' : '‹'}
+                    </button>
                 </div>
-                <nav className="admin-neo-menu-group" role="navigation">
+
+                <div className="admin-neo-sidebar-body">
+                    <nav className="admin-neo-menu-group" role="navigation">
                     <p className="admin-neo-nav-section-label">MAIN</p>
                     <button
                         type="button"
@@ -2733,9 +2585,9 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         </span>
                         <span className="admin-neo-menu-label">Users</span>
                     </button>
-                </nav>
+                    </nav>
 
-                <div className="admin-neo-sidebar-bottom">
+                    <div className="admin-neo-sidebar-bottom">
                     <p className="admin-neo-nav-section-label">TOOLS</p>
                     <button
                         type="button"
@@ -2767,6 +2619,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         </span>
                         <span className="admin-neo-menu-label">Log out</span>
                     </button>
+                    </div>
                 </div>
             </aside>
 
@@ -2863,19 +2716,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                     {settingsPanelTab ===
                                                     'settings'
                                                         ? 'System Settings'
-                                                        : settingsPanelTab ===
-                                                            'password'
-                                                          ? 'Change Password'
-                                                          : 'Admin MFA'}
+                                                        : 'Change Password'}
                                                 </strong>
                                                 <p>
                                                     {settingsPanelTab ===
                                                     'settings'
                                                         ? 'Operational controls, limits, and safety defaults.'
-                                                        : settingsPanelTab ===
-                                                            'password'
-                                                          ? 'Update your admin account password.'
-                                                          : 'Manage authenticator-based multi-factor access.'}
+                                                        : 'Update your admin account password.'}
                                                 </p>
                                             </div>
                                             {featureFlagHealth.total > 0 &&
@@ -2933,20 +2780,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                 }
                                             >
                                                 Change Password
-                                            </button>
-                                            <button
-                                                type="button"
-                                                role="tab"
-                                                aria-selected={
-                                                    settingsPanelTab === 'mfa'
-                                                }
-                                                className={`admin-settings-panel-tab ${settingsPanelTab === 'mfa' ? 'is-active' : ''}`}
-                                                onClick={() => {
-                                                    setSettingsPanelTab('mfa');
-                                                    void loadMfaStatus();
-                                                }}
-                                            >
-                                                MFA Security
                                             </button>
                                         </div>
 
@@ -3221,247 +3054,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                             </div>
                                         )}
 
-                                        {settingsPanelTab === 'mfa' && (
-                                            <div className="admin-settings-cp-section">
-                                                <div className="admin-settings-cp-fields">
-                                                    {mfaStatusLoading ? (
-                                                        <p className="admin-panel-dropdown-empty">
-                                                            Loading MFA status…
-                                                        </p>
-                                                    ) : (
-                                                        <>
-                                                            <p>
-                                                                MFA Status:{' '}
-                                                                <strong>
-                                                                    {mfaEnabled
-                                                                        ? 'Enabled'
-                                                                        : 'Disabled'}
-                                                                </strong>
-                                                            </p>
-                                                            <p>
-                                                                Recovery codes
-                                                                remaining:{' '}
-                                                                <strong>
-                                                                    {
-                                                                        mfaRecoveryCodesRemaining
-                                                                    }
-                                                                </strong>
-                                                            </p>
-                                                        </>
-                                                    )}
-
-                                                    {!mfaEnabled &&
-                                                        !mfaSetupSecret && (
-                                                            <button
-                                                                type="button"
-                                                                className="admin-neo-primary-btn"
-                                                                disabled={
-                                                                    mfaActionLoading
-                                                                }
-                                                                onClick={() =>
-                                                                    void handleStartMfaSetup()
-                                                                }
-                                                            >
-                                                                {mfaActionLoading
-                                                                    ? 'Preparing…'
-                                                                    : 'Start MFA Setup'}
-                                                            </button>
-                                                        )}
-
-                                                    {mfaSetupSecret && (
-                                                        <>
-                                                            {mfaQrCodeUrl && (
-                                                                <div className="admin-mfa-qr-wrap">
-                                                                    <img
-                                                                        className="admin-mfa-qr-image"
-                                                                        src={
-                                                                            mfaQrCodeUrl
-                                                                        }
-                                                                        alt="Scan this QR code in your authenticator app"
-                                                                    />
-                                                                </div>
-                                                            )}
-
-                                                            <div className="admin-mfa-inline-actions">
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-settings-input"
-                                                                    value={
-                                                                        mfaSetupSecret
-                                                                    }
-                                                                    readOnly
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={() =>
-                                                                        void copyToClipboard(
-                                                                            mfaSetupSecret,
-                                                                            'secret',
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {mfaCopiedField ===
-                                                                    'secret'
-                                                                        ? 'Copied'
-                                                                        : 'Copy secret'}
-                                                                </button>
-                                                            </div>
-                                                            {mfaSetupUri && (
-                                                                <div className="admin-mfa-inline-actions admin-mfa-inline-actions-stack">
-                                                                    <textarea
-                                                                        className="admin-settings-input"
-                                                                        value={
-                                                                            mfaSetupUri
-                                                                        }
-                                                                        readOnly
-                                                                        rows={3}
-                                                                    />
-                                                                    <button
-                                                                        type="button"
-                                                                        className="admin-neo-ghost-btn"
-                                                                        onClick={() =>
-                                                                            void copyToClipboard(
-                                                                                mfaSetupUri,
-                                                                                'uri',
-                                                                            )
-                                                                        }
-                                                                    >
-                                                                        {mfaCopiedField ===
-                                                                        'uri'
-                                                                            ? 'Copied'
-                                                                            : 'Copy setup URI'}
-                                                                    </button>
-                                                                </div>
-                                                            )}
-                                                            <input
-                                                                type="text"
-                                                                className="admin-settings-input"
-                                                                placeholder="Enter 6-digit authenticator code"
-                                                                value={
-                                                                    mfaSetupCode
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    setMfaSetupCode(
-                                                                        event
-                                                                            .target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                inputMode="numeric"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                className="admin-neo-primary-btn"
-                                                                disabled={
-                                                                    mfaActionLoading
-                                                                }
-                                                                onClick={() =>
-                                                                    void handleEnableMfa()
-                                                                }
-                                                            >
-                                                                {mfaActionLoading
-                                                                    ? 'Enabling…'
-                                                                    : 'Enable MFA'}
-                                                            </button>
-                                                        </>
-                                                    )}
-
-                                                    {mfaEnabled && (
-                                                        <>
-                                                            <input
-                                                                type="text"
-                                                                className="admin-settings-input"
-                                                                placeholder="Enter current MFA code to disable"
-                                                                value={
-                                                                    mfaActionCode
-                                                                }
-                                                                onChange={(
-                                                                    event,
-                                                                ) =>
-                                                                    setMfaActionCode(
-                                                                        event
-                                                                            .target
-                                                                            .value,
-                                                                    )
-                                                                }
-                                                                inputMode="numeric"
-                                                            />
-                                                            <button
-                                                                type="button"
-                                                                className="admin-neo-ghost-btn"
-                                                                disabled={
-                                                                    mfaActionLoading
-                                                                }
-                                                                onClick={() =>
-                                                                    void handleDisableMfa()
-                                                                }
-                                                            >
-                                                                {mfaActionLoading
-                                                                    ? 'Disabling…'
-                                                                    : 'Disable MFA'}
-                                                            </button>
-                                                        </>
-                                                    )}
-
-                                                    {mfaRecoveryCodes.length >
-                                                        0 && (
-                                                        <div className="admin-settings-group admin-settings-group-modern">
-                                                            <p className="admin-settings-group-label">
-                                                                Recovery Codes
-                                                                (shown once)
-                                                            </p>
-                                                            <div className="admin-mfa-recovery-actions">
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={() =>
-                                                                        void copyToClipboard(
-                                                                            mfaRecoveryCodes.join(
-                                                                                '\n',
-                                                                            ),
-                                                                            'recovery',
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {mfaCopiedField ===
-                                                                    'recovery'
-                                                                        ? 'Copied'
-                                                                        : 'Copy all codes'}
-                                                                </button>
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={
-                                                                        downloadRecoveryCodes
-                                                                    }
-                                                                >
-                                                                    Download
-                                                                    .txt
-                                                                </button>
-                                                            </div>
-                                                            {mfaRecoveryCodes.map(
-                                                                (code) => (
-                                                                    <input
-                                                                        key={
-                                                                            code
-                                                                        }
-                                                                        className="admin-settings-input"
-                                                                        type="text"
-                                                                        value={
-                                                                            code
-                                                                        }
-                                                                        readOnly
-                                                                    />
-                                                                ),
-                                                            )}
-                                                        </div>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 )}
                             </div>
@@ -5632,12 +5224,19 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                             </td>
                                                             <td>
                                                                 <span
-                                                                    className={`admin-user-chip ${user.isSeller ? 'verified' : 'pending'}`}
+                                                                                                                                        className={`admin-user-chip ${(user.sellerStatus ?? '').toLowerCase() === 'submitted' ? 'pending' : (user.sellerStatus ?? '').toLowerCase() === 'approved' ? 'verified' : user.isSeller ? 'verified' : 'pending'}`}
                                                                 >
-                                                                    {user.sellerStatus ||
-                                                                        (user.isSeller
-                                                                            ? 'Seller'
-                                                                            : 'No')}
+                                                                                                                                        {(user.sellerStatus ?? '').toLowerCase() === 'submitted'
+                                                                                                                                                ? 'Pending approval'
+                                                                                                                                                : (user.sellerStatus ?? '').toLowerCase() === 'approved'
+                                                                                                                                                    ? 'Approved seller'
+                                                                                                                                                    : (user.sellerStatus ?? '').toLowerCase() === 'rejected'
+                                                                                                                                                        ? 'Rejected'
+                                                                                                                                                        : (user.sellerStatus ?? '').toLowerCase() === 'revoked'
+                                                                                                                                                            ? 'Revoked'
+                                                                                                                                                            : user.isSeller
+                                                                                                                                                                ? 'Seller'
+                                                                                                                                                                : 'No'}
                                                                 </span>
                                                             </td>
                                                             <td>
@@ -6940,7 +6539,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                     onClick={() => setSelectedUserId(null)}
                 >
                     <div
-                        className={`delete-modal admin-user-modal admin-user-modal-wide${userReviewTab === 'documents' ? 'admin-user-modal-docs' : ''}`}
+                        className={`delete-modal admin-user-modal admin-user-modal-wide${userReviewTab === 'documents' ? ' admin-user-modal-docs' : ''}`}
                         onClick={(event) => event.stopPropagation()}
                     >
                         <div className="delete-modal-header admin-user-modal-header">
@@ -7435,6 +7034,52 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                     </span>
                                                                 </p>
                                                             </div>
+                                                            {selectedSellerImages.length > 0 && (
+                                                                <div className="admin-user-seller-media-strip">
+                                                                    <div className="admin-user-seller-media-strip-head">
+                                                                        <strong>Uploaded images</strong>
+                                                                        <span>
+                                                                            {selectedSellerImages.length} item
+                                                                            {selectedSellerImages.length === 1 ? '' : 's'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="admin-user-seller-media-grid">
+                                                                        {selectedSellerImages.map((media) => {
+                                                                            const previewUrl =
+                                                                                media.previewUrl ??
+                                                                                docPreviewUrls[media.key] ??
+                                                                                null;
+
+                                                                            return (
+                                                                                <button
+                                                                                    key={media.key}
+                                                                                    type="button"
+                                                                                    className="admin-user-seller-media-item"
+                                                                                    onClick={() =>
+                                                                                        previewUrl &&
+                                                                                        setLightboxMedia({
+                                                                                            url: previewUrl,
+                                                                                            fileName: media.fileName,
+                                                                                            mimeType: media.mimeType,
+                                                                                        })
+                                                                                    }
+                                                                                    disabled={!previewUrl}
+                                                                                    title={previewUrl ? 'Open full-size image' : media.label}
+                                                                                >
+                                                                                    {previewUrl ? (
+                                                                                        <img src={previewUrl} alt={media.label} />
+                                                                                    ) : (
+                                                                                        <span className="admin-user-seller-media-placeholder">
+                                                                                            No preview
+                                                                                        </span>
+                                                                                    )}
+                                                                                    <span>{media.label}</span>
+                                                                                </button>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </>
                                                     )}
                                                 </article>
@@ -7554,20 +7199,40 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                             type="button"
                                                                             className="admin-user-doc-preview-wrap admin-user-doc-preview-action"
                                                                             onClick={() =>
-                                                                                setLightboxUrl(
-                                                                                    effectivePreviewUrl,
-                                                                                )
+                                                                                setLightboxMedia({
+                                                                                    url: effectivePreviewUrl,
+                                                                                    fileName:
+                                                                                        media.fileName,
+                                                                                    mimeType:
+                                                                                        media.mimeType,
+                                                                                })
                                                                             }
                                                                             title="Open full-size document"
                                                                         >
-                                                                            <img
-                                                                                src={
-                                                                                    effectivePreviewUrl
-                                                                                }
-                                                                                alt={
-                                                                                    media.label
-                                                                                }
-                                                                            />
+                                                                            {media.isImage ? (
+                                                                                <img
+                                                                                    src={
+                                                                                        effectivePreviewUrl
+                                                                                    }
+                                                                                    alt={
+                                                                                        media.label
+                                                                                    }
+                                                                                />
+                                                                            ) : (
+                                                                                <div className="admin-user-doc-file-preview">
+                                                                                    <span className="admin-user-doc-file-icon">
+                                                                                        {isPdfMedia(
+                                                                                            media.mimeType,
+                                                                                            media.fileName,
+                                                                                        )
+                                                                                            ? 'PDF'
+                                                                                            : 'FILE'}
+                                                                                    </span>
+                                                                                    <span>
+                                                                                        Open document
+                                                                                    </span>
+                                                                                </div>
+                                                                            )}
                                                                         </button>
                                                                     ) : (
                                                                         <div className="admin-user-doc-preview-wrap">
@@ -7774,71 +7439,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                 Restore account
                                                             </button>
                                                         </div>
-
-                                                        <div className="admin-user-mfa-stepup">
-                                                            <p className="admin-user-mfa-stepup-title">
-                                                                MFA step-up
-                                                                required for
-                                                                suspension
-                                                                actions
-                                                            </p>
-                                                            <div className="admin-user-mfa-stepup-toggle-row">
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={() =>
-                                                                        setUseUserActionRecoveryCode(
-                                                                            (
-                                                                                prev,
-                                                                            ) =>
-                                                                                !prev,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {useUserActionRecoveryCode
-                                                                        ? 'Use authenticator code'
-                                                                        : 'Use recovery code'}
-                                                                </button>
-                                                            </div>
-                                                            {!useUserActionRecoveryCode ? (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionMfaCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionMfaCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter 6-digit MFA code"
-                                                                    inputMode="numeric"
-                                                                />
-                                                            ) : (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionRecoveryCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionRecoveryCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter MFA recovery code"
-                                                                />
-                                                            )}
-                                                        </div>
                                                     </div>
                                                 )}
 
@@ -7868,9 +7468,49 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                 )
                                                             }
                                                             rows={3}
-                                                            placeholder="State why seller status should be revoked or restored"
+                                                            placeholder="State why seller status should be approved, rejected, revoked, or restored"
                                                         />
                                                         <div className="admin-user-action-row">
+                                                            <button
+                                                                type="button"
+                                                                className="admin-user-action-btn is-success"
+                                                                onClick={() =>
+                                                                    handleUserAction(
+                                                                        'approve-seller',
+                                                                        sellerReason,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isApplyingUserAction ||
+                                                                    !selectedUser.sellerRegistration ||
+                                                                    selectedUser
+                                                                        .sellerRegistration
+                                                                        .status ===
+                                                                        'approved'
+                                                                }
+                                                            >
+                                                                Approve seller
+                                                            </button>
+                                                            <button
+                                                                type="button"
+                                                                className="admin-user-action-btn is-warning"
+                                                                onClick={() =>
+                                                                    handleUserAction(
+                                                                        'reject-seller',
+                                                                        sellerReason,
+                                                                    )
+                                                                }
+                                                                disabled={
+                                                                    isApplyingUserAction ||
+                                                                    !selectedUser.sellerRegistration ||
+                                                                    selectedUser
+                                                                        .sellerRegistration
+                                                                        .status !==
+                                                                        'submitted'
+                                                                }
+                                                            >
+                                                                Reject seller
+                                                            </button>
                                                             <button
                                                                 type="button"
                                                                 className="admin-user-action-btn is-warning"
@@ -7907,71 +7547,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                             >
                                                                 Restore seller
                                                             </button>
-                                                        </div>
-
-                                                        <div className="admin-user-mfa-stepup">
-                                                            <p className="admin-user-mfa-stepup-title">
-                                                                MFA step-up
-                                                                required for
-                                                                seller
-                                                                revocation
-                                                            </p>
-                                                            <div className="admin-user-mfa-stepup-toggle-row">
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={() =>
-                                                                        setUseUserActionRecoveryCode(
-                                                                            (
-                                                                                prev,
-                                                                            ) =>
-                                                                                !prev,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {useUserActionRecoveryCode
-                                                                        ? 'Use authenticator code'
-                                                                        : 'Use recovery code'}
-                                                                </button>
-                                                            </div>
-                                                            {!useUserActionRecoveryCode ? (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionMfaCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionMfaCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter 6-digit MFA code"
-                                                                    inputMode="numeric"
-                                                                />
-                                                            ) : (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionRecoveryCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionRecoveryCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter MFA recovery code"
-                                                                />
-                                                            )}
                                                         </div>
                                                     </div>
                                                 )}
@@ -8132,71 +7707,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                 delete account
                                                             </button>
                                                         </div>
-
-                                                        <div className="admin-user-mfa-stepup">
-                                                            <p className="admin-user-mfa-stepup-title">
-                                                                MFA step-up
-                                                                required for
-                                                                permanent
-                                                                deletion
-                                                            </p>
-                                                            <div className="admin-user-mfa-stepup-toggle-row">
-                                                                <button
-                                                                    type="button"
-                                                                    className="admin-neo-ghost-btn"
-                                                                    onClick={() =>
-                                                                        setUseUserActionRecoveryCode(
-                                                                            (
-                                                                                prev,
-                                                                            ) =>
-                                                                                !prev,
-                                                                        )
-                                                                    }
-                                                                >
-                                                                    {useUserActionRecoveryCode
-                                                                        ? 'Use authenticator code'
-                                                                        : 'Use recovery code'}
-                                                                </button>
-                                                            </div>
-                                                            {!useUserActionRecoveryCode ? (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionMfaCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionMfaCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter 6-digit MFA code"
-                                                                    inputMode="numeric"
-                                                                />
-                                                            ) : (
-                                                                <input
-                                                                    type="text"
-                                                                    className="admin-user-reason-input"
-                                                                    value={
-                                                                        userActionRecoveryCode
-                                                                    }
-                                                                    onChange={(
-                                                                        event,
-                                                                    ) =>
-                                                                        setUserActionRecoveryCode(
-                                                                            event
-                                                                                .target
-                                                                                .value,
-                                                                        )
-                                                                    }
-                                                                    placeholder="Enter MFA recovery code"
-                                                                />
-                                                            )}
-                                                        </div>
                                                     </div>
                                                 )}
                                             </article>
@@ -8293,13 +7803,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 </div>
             )}
 
-            {lightboxUrl && (
+            {lightboxMedia && (
                 <div
                     className="admin-lightbox-overlay"
                     role="dialog"
                     aria-label="Document preview"
                     aria-modal="true"
-                    onClick={() => setLightboxUrl(null)}
+                    onClick={() => setLightboxMedia(null)}
                 >
                     <div
                         className="admin-lightbox-frame"
@@ -8308,16 +7818,27 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                         <button
                             type="button"
                             className="admin-lightbox-close"
-                            onClick={() => setLightboxUrl(null)}
+                            onClick={() => setLightboxMedia(null)}
                             aria-label="Close preview"
                         >
                             ×
                         </button>
-                        <img
-                            src={lightboxUrl}
-                            alt="Document preview"
-                            className="admin-lightbox-img"
-                        />
+                        {isImageMedia(
+                            lightboxMedia.mimeType,
+                            lightboxMedia.fileName,
+                        ) ? (
+                            <img
+                                src={lightboxMedia.url}
+                                alt="Document preview"
+                                className="admin-lightbox-img"
+                            />
+                        ) : (
+                            <iframe
+                                src={lightboxMedia.url}
+                                title="Document preview"
+                                className="admin-lightbox-file"
+                            />
+                        )}
                     </div>
                 </div>
             )}

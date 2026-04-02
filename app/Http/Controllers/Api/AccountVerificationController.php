@@ -115,10 +115,10 @@ class AccountVerificationController extends Controller
         }
 
         $validated = $request->validate([
-            'government_id' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'selfie' => ['required', 'file', 'mimes:jpg,jpeg,png', 'max:5120'],
-            'utility_bill' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
-            'bank_statement' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:5120'],
+            'government_id' => ['required', 'file', 'mimes:pdf,jpg,jpeg,jfif,png,webp,bmp,tif,tiff', 'max:5120'],
+            'selfie' => ['required', 'file', 'mimes:jpg,jpeg,jfif,png,webp,bmp,tif,tiff', 'max:5120'],
+            'utility_bill' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,jfif,png,webp,bmp,tif,tiff', 'max:5120'],
+            'bank_statement' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,jfif,png,webp,bmp,tif,tiff', 'max:5120'],
         ]);
 
         $user = $request->user();

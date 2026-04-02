@@ -3,13 +3,22 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import * as apiClient from '../../api/client';
 import { useAuth } from '../../contexts/AuthContext';
-import { addressService, authService } from '../../services/api';
+import { useWallet } from '../../hooks/useWallet';
+import {
+    addressService,
+    authService,
+    bidNotificationService,
+    sellerService,
+} from '../../services/api';
 import { getCities, getProvinces, getBarangays } from '../../services/psgc';
 import type { AccountSection, Address, User } from '../../types';
 
 interface DetailsSectionProps {
     onNavigateSection: (section: AccountSection) => void;
 }
+
+const VERIFIED_TO_BID_THRESHOLD = 500;
+const ACTIVE_BIDDER_THRESHOLD = 10;
 
 // Utility function to format ISO date strings to YYYY-MM-DD format
 const formatBirthdayForInput = (dateString: string): string => {
@@ -47,6 +56,7 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
     onNavigateSection,
 }) => {
     const { authUser, updateUser, logout } = useAuth();
+    const { walletBalance } = useWallet();
     const passwordCooldownMs = 10 * 60 * 1000;
     const lastPasswordChangeKey = 'last_password_change_at';
     const [isEditingAccount, setIsEditingAccount] = useState(false);
@@ -69,6 +79,8 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
     );
     const [birthday, setBirthday] = useState('');
     const [gender, setGender] = useState<'female' | 'male' | ''>('');
+    const [hasSellerBadge, setHasSellerBadge] = useState(false);
+    const [bidActivityCount, setBidActivityCount] = useState(0);
 
     const userScopeKey = useMemo(() => {
         if (!authUser) return 'anonymous';
@@ -108,6 +120,57 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
             }
         };
     }, [authUser, birthdayStorageKey, genderStorageKey]);
+
+    useEffect(() => {
+        if (!authUser) {
+            return;
+        }
+
+        let isActive = true;
+
+        const loadBadges = async () => {
+            try {
+                const [registrationResponse, bidNotifications] =
+                    await Promise.all([
+                        sellerService.getRegistration(),
+                        bidNotificationService.getMyNotifications(),
+                    ]);
+
+                if (!isActive) {
+                    return;
+                }
+
+                const sellerStatus = (
+                    registrationResponse.registration?.status ?? ''
+                ).toLowerCase();
+                const sellerActive =
+                    Boolean(registrationResponse.registration) &&
+                    sellerStatus !== 'revoked' &&
+                    sellerStatus !== 'rejected';
+
+                const bidsParticipated = bidNotifications.items.filter(
+                    (item) =>
+                        item.type === 'new-bid' ||
+                        item.type === 'outbid' ||
+                        item.type === 'won',
+                ).length;
+
+                setHasSellerBadge(sellerActive);
+                setBidActivityCount(bidsParticipated);
+            } catch {
+                if (isActive) {
+                    setHasSellerBadge(false);
+                    setBidActivityCount(0);
+                }
+            }
+        };
+
+        void loadBadges();
+
+        return () => {
+            isActive = false;
+        };
+    }, [authUser]);
 
     useEffect(() => {
         if (!authUser) {
@@ -386,6 +449,9 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
 
     if (!authUser) return null;
 
+    const isVerifiedToBid = walletBalance > VERIFIED_TO_BID_THRESHOLD;
+    const isActiveBidder = bidActivityCount > ACTIVE_BIDDER_THRESHOLD;
+
     return (
         <>
             <div className="account-card">
@@ -435,6 +501,66 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
                     <div className="account-field-group">
                         <div className="account-field-label">Password</div>
                         <div className="account-field-value">************</div>
+                    </div>
+                </div>
+            </div>
+
+            <div className="account-card">
+                <div className="account-card-header">
+                    <div className="account-card-title">
+                        <span className="account-card-icon" aria-hidden="true">
+                            <img src="/icons/user.png" alt="Badges" />
+                        </span>
+                        <span>Badges</span>
+                    </div>
+                </div>
+                <div className="account-badges-grid">
+                    <div
+                        className={`account-badge-chip ${isVerifiedToBid ? 'is-earned' : ''}`}
+                    >
+                        <span className="account-badge-symbol" aria-hidden="true">
+                            ✓
+                        </span>
+                        <div className="account-badge-copy">
+                            <p className="account-badge-label">Verified to Bid</p>
+                            <p className="account-badge-meta">
+                                {isVerifiedToBid
+                                    ? 'Unlocked by wallet top-up above Php 500.'
+                                    : 'Top up above Php 500 to unlock.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        className={`account-badge-chip ${hasSellerBadge ? 'is-earned' : ''}`}
+                    >
+                        <span className="account-badge-symbol" aria-hidden="true">
+                            ◆
+                        </span>
+                        <div className="account-badge-copy">
+                            <p className="account-badge-label">Seller</p>
+                            <p className="account-badge-meta">
+                                {hasSellerBadge
+                                    ? 'Seller account is active.'
+                                    : 'Complete seller verification and registration.'}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div
+                        className={`account-badge-chip ${isActiveBidder ? 'is-earned' : ''}`}
+                    >
+                        <span className="account-badge-symbol" aria-hidden="true">
+                            ⚑
+                        </span>
+                        <div className="account-badge-copy">
+                            <p className="account-badge-label">Active Bidder</p>
+                            <p className="account-badge-meta">
+                                {isActiveBidder
+                                    ? `Reached ${bidActivityCount} bidding activities.`
+                                    : `Need more than ${ACTIVE_BIDDER_THRESHOLD} bidding activities (${bidActivityCount} so far).`}
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>

@@ -65,11 +65,14 @@ export const BecomeSellerSection: React.FC = () => {
     const [governmentIdFrontName, setGovernmentIdFrontName] = useState('');
     const [birCertificateName, setBirCertificateName] = useState('');
     const [isSubmittingSeller, setIsSubmittingSeller] = useState(false);
-    const [isSellerSubmitted, setIsSellerSubmitted] = useState(false);
     const [isCheckingRegistration, setIsCheckingRegistration] = useState(true);
-    const [hasSubmittedRegistration, setHasSubmittedRegistration] =
-        useState(false);
+    const [sellerRegistrationStatus, setSellerRegistrationStatus] =
+        useState<'submitted' | 'approved' | 'rejected' | 'revoked' | ''>('');
 
+    const hasSubmittedRegistration =
+        sellerRegistrationStatus === 'submitted' ||
+        sellerRegistrationStatus === 'approved';
+    const isSellerApproved = sellerRegistrationStatus === 'approved';
     const locationSummary = [
         regions.find((r) => r.code === selectedRegion)?.name,
         provinces.find((p) => p.code === selectedProvince)?.name,
@@ -114,7 +117,12 @@ export const BecomeSellerSection: React.FC = () => {
         const loadSellerRegistration = async () => {
             try {
                 const response = await sellerService.getRegistration();
-                setHasSubmittedRegistration(Boolean(response.registration));
+                const status = (
+                    response.registration?.status ?? ''
+                ).toLowerCase();
+                setSellerRegistrationStatus(
+                    status as 'submitted' | 'approved' | 'rejected' | 'revoked' | '',
+                );
             } catch (error) {
                 console.error('Failed to load seller registration:', error);
             } finally {
@@ -307,7 +315,7 @@ export const BecomeSellerSection: React.FC = () => {
                 agree_business_terms: agreeBusinessTerms,
             });
 
-            setIsSellerSubmitted(true);
+            setSellerRegistrationStatus('submitted');
             toast.success('Seller registration submitted successfully.');
         } catch (err: unknown) {
             const responseMessage =
@@ -387,7 +395,9 @@ export const BecomeSellerSection: React.FC = () => {
                     </h2>
                     <p className="seller-subtitle">
                         {hasSubmittedRegistration
-                            ? 'Your seller registration is already submitted. You can now manage your seller workspace and products.'
+                            ? isSellerApproved
+                                ? 'Your seller registration has been approved. You can now manage your seller workspace and products.'
+                                : 'Your seller request is pending admin review. You will be able to add products after it is approved.'
                             : 'To get started, register as a seller by providing a few details about yourself and the auctions you plan to host.'}
                     </p>
                     <button
@@ -395,18 +405,30 @@ export const BecomeSellerSection: React.FC = () => {
                         className="seller-primary-btn"
                         onClick={() => {
                             if (hasSubmittedRegistration) {
+                                if (!isSellerApproved) {
+                                    toast.info(
+                                        'Your seller request is pending admin review.',
+                                    );
+                                    return;
+                                }
+
                                 navigateToSellerProductListing();
                                 return;
                             }
 
                             setStarted(true);
                         }}
-                        disabled={isCheckingRegistration}
+                        disabled={
+                            isCheckingRegistration ||
+                            (hasSubmittedRegistration && !isSellerApproved)
+                        }
                     >
                         {isCheckingRegistration
                             ? 'Checking...'
                             : hasSubmittedRegistration
-                              ? 'Add Product'
+                              ? isSellerApproved
+                                  ? 'Add Product'
+                                  : 'Pending Approval'
                               : 'Start Seller Registration'}
                     </button>
                 </div>
@@ -452,29 +474,34 @@ export const BecomeSellerSection: React.FC = () => {
                     </div>
                 </div>
 
-                {isSellerSubmitted && (
+                {hasSubmittedRegistration && (
                     <div className="seller-success-wrap">
                         <div className="seller-success-icon" aria-hidden="true">
-                            ✓
+                            {isSellerApproved ? '✓' : '…'}
                         </div>
                         <h3 className="seller-success-title">
-                            Submitted Successfully
+                            {isSellerApproved
+                                ? 'Seller Request Approved'
+                                : 'Seller Request Pending'}
                         </h3>
                         <p className="seller-success-text">
-                            Your seller registration has been saved. You can now
-                            proceed to add your first product.
+                            {isSellerApproved
+                                ? 'Your seller registration has been approved. You can now add products and open your seller workspace.'
+                                : 'Your seller registration is waiting for admin review. You will be able to add products after it is approved.'}
                         </p>
-                        <button
-                            type="button"
-                            className="seller-primary-btn"
-                            onClick={navigateToSellerProductListing}
-                        >
-                            Go to Add Product
-                        </button>
+                        {isSellerApproved && (
+                            <button
+                                type="button"
+                                className="seller-primary-btn"
+                                onClick={navigateToSellerProductListing}
+                            >
+                                Go to Add Product
+                            </button>
+                        )}
                     </div>
                 )}
 
-                {!isSellerSubmitted && (
+                {!hasSubmittedRegistration && (
                     <>
                         <div className="seller-form-body">
                             {step === 1 && (

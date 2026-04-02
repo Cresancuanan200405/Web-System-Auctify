@@ -5,6 +5,7 @@ export interface User {
     name: string;
     email: string;
     phone?: string | null;
+    wallet_balance?: number | string;
     birthday?: string | null;
     gender?: string | null;
     google_id?: string | null;
@@ -69,6 +70,17 @@ export interface Barangay {
 
 export interface Preferences {
     [key: string]: boolean;
+}
+
+export interface WalletTransaction {
+    id: number;
+    type: 'top-up' | 'spend';
+    amount: number;
+    balance_before: number;
+    balance_after: number;
+    reference?: string | null;
+    description?: string | null;
+    created_at?: string | null;
 }
 
 export interface SellerRegistration {
@@ -277,7 +289,6 @@ export type AccountSection =
     | 'wishlist'
     | 'orders'
     | 'reviews'
-    | 'cards'
     | 'zvip'
     | 'verification'
     | 'seller'

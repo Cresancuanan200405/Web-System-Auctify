@@ -6,8 +6,25 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 
+/**
+ * @property int $id
+ * @property int $user_id
+ * @property string $title
+ * @property string $category
+ * @property string|null $subcategory
+ * @property string|null $description
+ * @property float|string $starting_price
+ * @property float|string $max_increment
+ * @property float|string $current_price
+ * @property string $status
+ * @property Carbon|null $starts_at
+ * @property Carbon|null $ends_at
+ * @property Carbon|null $created_at
+ * @property Carbon|null $updated_at
+ */
 class Auction extends Model
 {
     use HasFactory;
@@ -62,6 +79,11 @@ class Auction extends Model
     public function messageReads(): HasMany
     {
         return $this->hasMany(AuctionMessageRead::class);
+    }
+
+    public function bidWinner(): HasOne
+    {
+        return $this->hasOne(BidWinner::class);
     }
 
     public function getComputedStatus(?Carbon $referenceTime = null): string

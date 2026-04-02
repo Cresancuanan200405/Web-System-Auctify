@@ -1,2 +1,2 @@
 export { useLocalStorage, usePreference } from './useLocalStorage';
-export { useCards } from './useCards';
+export { useWallet } from './useWallet';

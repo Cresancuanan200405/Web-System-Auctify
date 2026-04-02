@@ -7,6 +7,8 @@ use App\Http\Requests\Auction\StoreAuctionRequest;
 use App\Models\AdminNotification;
 use App\Models\AdminSetting;
 use App\Models\Auction;
+use App\Models\Bid;
+use App\Models\BidWinner;
 use App\Models\SellerRegistration;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,6 +19,39 @@ use Illuminate\Support\Carbon;
 
 class AuctionController extends Controller
 {
+    private function resolveWinningBid(Auction $auction): ?Bid
+    {
+        if ($auction->getComputedStatus() !== 'closed') {
+            return null;
+        }
+
+        return $auction->bids()
+            ->where('amount', $auction->current_price)
+            ->orderByDesc('created_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    private function syncBidWinnerRecord(Auction $auction): ?BidWinner
+    {
+        $winningBid = $this->resolveWinningBid($auction);
+
+        if (! $winningBid) {
+            return null;
+        }
+
+        return BidWinner::query()->updateOrCreate(
+            ['auction_id' => $auction->id],
+            [
+                'bid_id' => $winningBid->id,
+                'winner_user_id' => $winningBid->user_id,
+                'seller_user_id' => $auction->user_id,
+                'winning_amount' => $winningBid->amount,
+                'won_at' => $winningBid->created_at,
+            ]
+        );
+    }
+
     private function ensureSellerCanManageAuctions(Request $request): ?JsonResponse
     {
         $registration = SellerRegistration::query()
@@ -42,7 +77,14 @@ class AuctionController extends Controller
             ], 403);
         }
 
-        if (! in_array((string) $registration->status, ['submitted', 'approved'], true)) {
+        if ((string) $registration->status === 'submitted') {
+            return response()->json([
+                'message' => 'Your seller registration is under admin review. You can publish products once approved.',
+                'account_status' => 'seller_pending_approval',
+            ], 403);
+        }
+
+        if ((string) $registration->status !== 'approved') {
             return response()->json([
                 'message' => 'Your seller profile is not active yet.',
                 'account_status' => 'seller_pending',
@@ -61,6 +103,18 @@ class AuctionController extends Controller
         $payload['updated_at'] = optional($auction->updated_at)?->toISOString();
         $payload['status'] = $auction->getComputedStatus();
 
+        if ($auction->relationLoaded('bidWinner') && $auction->bidWinner) {
+            $payload['bid_winner'] = [
+                'id' => $auction->bidWinner->id,
+                'auction_id' => $auction->bidWinner->auction_id,
+                'bid_id' => $auction->bidWinner->bid_id,
+                'winner_user_id' => $auction->bidWinner->winner_user_id,
+                'seller_user_id' => $auction->bidWinner->seller_user_id,
+                'winning_amount' => $auction->bidWinner->winning_amount,
+                'won_at' => optional($auction->bidWinner->won_at)?->toISOString(),
+            ];
+        }
+
         return $payload;
     }
 
@@ -74,7 +128,7 @@ class AuctionController extends Controller
         $this->syncAuctionStatuses();
 
         $query = Auction::query()
-            ->with(['media', 'user.sellerRegistration'])
+            ->with(['media', 'user.sellerRegistration', 'bidWinner'])
             ->withCount('bids')
             ->latest();
 
@@ -98,9 +152,16 @@ class AuctionController extends Controller
     public function show(Auction $auction)
     {
         $this->syncAuctionStatuses();
+        $this->syncBidWinnerRecord($auction);
         $auction->increment('page_views');
         $auction->refresh();
-        $auction->load(['bids.user', 'media', 'user.sellerRegistration', 'messages.user.sellerRegistration']);
+        $auction->load([
+            'bids.user',
+            'media',
+            'user.sellerRegistration',
+            'messages.user.sellerRegistration',
+            'bidWinner',
+        ]);
 
         return response()->json($this->transformAuction($auction));
     }
@@ -115,7 +176,7 @@ class AuctionController extends Controller
         $this->syncAuctionStatuses();
 
         $auctions = Auction::query()
-            ->with('media')
+            ->with(['media', 'bidWinner'])
             ->withCount([
                 'bids',
                 'messages',
@@ -126,6 +187,11 @@ class AuctionController extends Controller
             ->where('user_id', $request->user()->id)
             ->latest()
             ->get();
+
+        $auctions->each(function (Auction $auction): void {
+            $this->syncBidWinnerRecord($auction);
+            $auction->load('bidWinner');
+        });
 
         return response()->json(
             $auctions
@@ -141,7 +207,7 @@ class AuctionController extends Controller
         $userId = (int) $request->user()->id;
 
         $items = Auction::query()
-            ->with(['media', 'user.sellerRegistration', 'bids.user'])
+            ->with(['media', 'user.sellerRegistration', 'bids.user', 'bidWinner'])
             ->where('ends_at', '<=', now())
             ->whereHas('bids', function ($query) use ($userId) {
                 $query->where('user_id', $userId);
@@ -149,25 +215,30 @@ class AuctionController extends Controller
             ->latest('ends_at')
             ->get()
             ->map(function (Auction $auction) {
-                $winningBid = $auction->bids->first(function ($bid) use ($auction) {
-                    return (float) $bid->amount === (float) $auction->current_price;
-                });
+                $winnerRecord = $this->syncBidWinnerRecord($auction);
+                $winningBid = $winnerRecord
+                    ? $auction->bids->firstWhere('id', $winnerRecord->bid_id)
+                    : null;
 
                 return [
                     'auction' => $auction,
                     'winning_bid' => $winningBid,
+                    'winner_record' => $winnerRecord,
                 ];
             })
             ->filter(function (array $item) use ($userId) {
-                $winningBid = $item['winning_bid'];
+                $winnerRecord = $item['winner_record'];
 
-                return $winningBid && (int) $winningBid->user_id === $userId;
+                return $winnerRecord
+                    && (int) $winnerRecord->winner_user_id === $userId;
             })
             ->values()
             ->map(function (array $item) {
                 /** @var Auction $auction */
                 $auction = $item['auction'];
                 $winningBid = $item['winning_bid'];
+                /** @var BidWinner $winnerRecord */
+                $winnerRecord = $item['winner_record'];
 
                 return [
                     'id' => $auction->id,
@@ -186,8 +257,17 @@ class AuctionController extends Controller
                     'created_at' => optional($auction->created_at)?->toISOString(),
                     'updated_at' => optional($auction->updated_at)?->toISOString(),
                     'user' => $auction->user,
-                    'winning_bid_amount' => $winningBid->amount,
-                    'winning_bid_at' => optional($winningBid->created_at)?->toISOString(),
+                    'winning_bid_amount' => $winnerRecord->winning_amount,
+                    'winning_bid_at' => optional($winnerRecord->won_at)?->toISOString(),
+                    'bid_winner' => [
+                        'id' => $winnerRecord->id,
+                        'auction_id' => $winnerRecord->auction_id,
+                        'bid_id' => $winnerRecord->bid_id,
+                        'winner_user_id' => $winnerRecord->winner_user_id,
+                        'seller_user_id' => $winnerRecord->seller_user_id,
+                        'winning_amount' => $winnerRecord->winning_amount,
+                        'won_at' => optional($winnerRecord->won_at)?->toISOString(),
+                    ],
                 ];
             });
 

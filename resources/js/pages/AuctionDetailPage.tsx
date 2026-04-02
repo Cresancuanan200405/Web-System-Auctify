@@ -2,15 +2,14 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
-import { useCards } from '../hooks/useCards';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
+import { useWallet } from '../hooks/useWallet';
 import { addressService, auctionService } from '../services/api';
 import type {
     Address,
     AuctionMessage,
     AuctionProductDetail,
-    Card,
     WishlistItem,
 } from '../types';
 import {
@@ -41,14 +40,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 }) => {
     const dashboardGracePeriodMs = 30 * 60 * 1000;
     const { authUser } = useAuth();
-    const {
-        savedCards,
-        mainCardId,
-        setMainCardId,
-        updateCard,
-        getCardDisplayName,
-        getMainCard,
-    } = useCards();
+    const { walletBalance, deductFunds } = useWallet();
     const { orders, addOrder } = useOrderHistory();
     const [selectedAuction, setSelectedAuction] =
         useState<AuctionProductDetail | null>(null);
@@ -75,9 +67,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [addressLoading, setAddressLoading] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState('');
-    const [selectedCardId, setSelectedCardId] = useState<number | null>(
-        mainCardId,
-    );
     const [checkoutError, setCheckoutError] = useState('');
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [isOwnerActionMenuOpen, setIsOwnerActionMenuOpen] = useState(false);
@@ -424,10 +413,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         };
     }, [isBidDialogOpen, isCheckoutDialogOpen]);
 
-    useEffect(() => {
-        setSelectedCardId(mainCardId);
-    }, [mainCardId]);
-
     const minBidValue = selectedAuction
         ? Math.ceil(
               Math.max(
@@ -436,8 +421,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
               ),
           ) + Math.max(1, Math.ceil(Number(selectedAuction.max_increment || 0)))
         : 1;
-    const mainCard = getMainCard();
-    const walletBalance = Number(mainCard?.balance ?? 0);
     const currentBidBase = selectedAuction
         ? Math.max(
               Number(selectedAuction.starting_price || 0),
@@ -679,7 +662,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     const walletBidNotice = !authUser
         ? ''
         : isWalletEmpty
-          ? 'Your wallet balance is empty. Add funds to your main wallet card before placing a bid.'
+                    ? 'Your wallet balance is empty. Add funds before placing a bid.'
           : !hasEnoughBalanceForNextBid
             ? 'Your wallet balance is not enough to bid any longer on this auction. Add funds to continue bidding.'
             : '';
@@ -734,102 +717,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         return compactLabel(shortAddress, 44);
     };
 
-    const formatCardLabel = (card: Card) => {
-        return `${getCardDisplayName(card.type)} •••• ${card.number.slice(-4)} • ${formatPeso(Number(card.balance ?? 0).toFixed(2))}`;
-    };
-
-    const renderCardBrandLogo = (type: Card['type']) => {
-        switch (type) {
-            case 'visa':
-                return (
-                    <svg viewBox="0 0 48 18" role="img" aria-label="Visa">
-                        <text
-                            x="2"
-                            y="13"
-                            fontSize="12"
-                            fontWeight="800"
-                            fill="#ffffff"
-                            letterSpacing="0.08em"
-                        >
-                            VISA
-                        </text>
-                    </svg>
-                );
-            case 'mastercard':
-                return (
-                    <svg viewBox="0 0 44 20" role="img" aria-label="Mastercard">
-                        <circle cx="16" cy="10" r="7" fill="#ef4444" />
-                        <circle
-                            cx="24"
-                            cy="10"
-                            r="7"
-                            fill="#f59e0b"
-                            fillOpacity="0.9"
-                        />
-                    </svg>
-                );
-            case 'jcb':
-                return (
-                    <svg viewBox="0 0 32 18" role="img" aria-label="JCB">
-                        <text
-                            x="2"
-                            y="13"
-                            fontSize="11"
-                            fontWeight="800"
-                            fill="#ffffff"
-                            letterSpacing="0.06em"
-                        >
-                            JCB
-                        </text>
-                    </svg>
-                );
-            case 'gcash':
-                return (
-                    <svg viewBox="0 0 48 18" role="img" aria-label="GCash">
-                        <text
-                            x="2"
-                            y="13"
-                            fontSize="10"
-                            fontWeight="800"
-                            fill="#ffffff"
-                            letterSpacing="0.06em"
-                        >
-                            GCASH
-                        </text>
-                    </svg>
-                );
-            case 'maya':
-                return (
-                    <svg viewBox="0 0 40 18" role="img" aria-label="Maya">
-                        <text
-                            x="2"
-                            y="13"
-                            fontSize="11"
-                            fontWeight="800"
-                            fill="#ffffff"
-                            letterSpacing="0.08em"
-                        >
-                            MAYA
-                        </text>
-                    </svg>
-                );
-            default:
-                return (
-                    <svg viewBox="0 0 40 18" role="img" aria-label="Card">
-                        <text
-                            x="2"
-                            y="13"
-                            fontSize="10"
-                            fontWeight="800"
-                            fill="#ffffff"
-                        >
-                            CARD
-                        </text>
-                    </svg>
-                );
-        }
-    };
-
     const compactLabel = (value: string, max = 72) => {
         const normalized = value.replace(/\s+/g, ' ').trim();
         if (normalized.length <= max) {
@@ -841,24 +728,14 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 
     const selectedAddress =
         addresses.find((address) => address.id === selectedAddressId) ?? null;
-    const selectedCard =
-        savedCards.find((card) => card.id === selectedCardId) ?? null;
     const checkoutAmount = Number(finalWinner?.amount ?? 0);
-    const remainingBalance = selectedCard
-        ? Number(
-              (Number(selectedCard.balance ?? 0) - checkoutAmount).toFixed(2),
-          )
-        : null;
+    const remainingBalance = Number((walletBalance - checkoutAmount).toFixed(2));
     const selectedAddressPreview = selectedAddress
         ? formatAddress(selectedAddress)
         : 'No delivery address selected yet.';
-    const selectedCardPreview = selectedCard
-        ? formatCardLabel(selectedCard)
-        : 'No payment card selected yet.';
 
     const handleOpenCheckoutDialog = () => {
         setCheckoutError('');
-        setSelectedCardId(mainCardId ?? savedCards[0]?.id ?? null);
         setIsCheckoutDialogOpen(true);
     };
 
@@ -870,9 +747,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         const selectedAddress = addresses.find(
             (address) => address.id === selectedAddressId,
         );
-        const selectedCard = savedCards.find(
-            (card) => card.id === selectedCardId,
-        );
         const totalAmount = Number(finalWinner.amount ?? 0);
 
         if (!selectedAddress) {
@@ -880,14 +754,9 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
             return;
         }
 
-        if (!selectedCard) {
-            setCheckoutError('Select a payment card before checkout.');
-            return;
-        }
-
-        if (Number(selectedCard.balance ?? 0) < totalAmount) {
+        if (walletBalance < totalAmount) {
             setCheckoutError(
-                'The selected card does not have enough balance for this payment.',
+                'Your wallet balance does not have enough funds for this payment.',
             );
             return;
         }
@@ -895,16 +764,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         setIsCheckingOut(true);
 
         window.setTimeout(() => {
-            updateCard(selectedCard.id, (card) => ({
-                ...card,
-                balance: Number(
-                    (Number(card.balance ?? 0) - totalAmount).toFixed(2),
-                ),
-            }));
-
-            if (mainCardId !== selectedCard.id) {
-                setMainCardId(selectedCard.id);
-            }
+            deductFunds(totalAmount);
 
             addOrder({
                 id: `${selectedAuction.id}-${Date.now()}`,
@@ -928,7 +788,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 amount_paid: finalWinner.amount,
                 status: 'processing',
                 address_summary: formatAddress(selectedAddress),
-                payment_card_label: `${getCardDisplayName(selectedCard.type)} •••• ${selectedCard.number.slice(-4)}`,
+                payment_card_label: 'Auctify Wallet',
                 media_url: resolveMediaUrl(primaryMedia?.url),
                 media_type: primaryMedia?.media_type,
                 purchased_at: new Date().toISOString(),
@@ -959,7 +819,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                         amount_paid: finalWinner.amount,
                         status: 'processing',
                         address_summary: formatAddress(selectedAddress),
-                        payment_card_label: `${getCardDisplayName(selectedCard.type)} •••• ${selectedCard.number.slice(-4)}`,
+                        payment_card_label: 'Auctify Wallet',
                         media_url: resolveMediaUrl(primaryMedia?.url),
                         media_type: primaryMedia?.media_type,
                         purchased_at: new Date().toISOString(),
@@ -971,7 +831,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
             setCheckoutError('');
             setIsCheckoutDialogOpen(false);
             toast.success(
-                `Checkout complete. Deducted ${formatPeso(finalWinner.amount)} from your selected card.`,
+                `Checkout complete. Deducted ${formatPeso(finalWinner.amount)} from your wallet.`,
                 { autoClose: 2800 },
             );
         }, 350);
@@ -1810,8 +1670,8 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         </div>
                                         <p className="auction-checkout-info-note">
                                             Make sure your delivery address is
-                                            correct and your selected card has
-                                            enough balance. Payment is charged
+                                            correct and your wallet has enough
+                                            balance. Payment is charged
                                             immediately after you click Pay Now.
                                         </p>
                                     </div>
@@ -1848,59 +1708,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         </p>
                                     </label>
 
-                                    <div className="bag-checkout-label">
-                                        <span>Payment card</span>
-                                        <div
-                                            className="checkout-card-list"
-                                            role="list"
-                                            aria-label="Saved payment cards"
-                                        >
-                                            {savedCards.map((card) => (
-                                                <button
-                                                    key={card.id}
-                                                    type="button"
-                                                    className={`checkout-card-option ${selectedCardId === card.id ? 'is-selected' : ''}`}
-                                                    onClick={() =>
-                                                        setSelectedCardId(
-                                                            card.id,
-                                                        )
-                                                    }
-                                                    disabled={isCheckingOut}
-                                                >
-                                                    <div
-                                                        className={`checkout-card-visual checkout-card-visual-${card.type}`}
-                                                    >
-                                                        <span
-                                                            className="checkout-card-chip"
-                                                            aria-hidden="true"
-                                                        />
-                                                        <span className="checkout-card-brand">
-                                                            {renderCardBrandLogo(
-                                                                card.type,
-                                                            )}
-                                                        </span>
-                                                        <span className="checkout-card-number">
-                                                            ••••{' '}
-                                                            {card.number.slice(
-                                                                -4,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                    <div className="checkout-card-meta">
-                                                        <span>
-                                                            {formatCardLabel(
-                                                                card,
-                                                            )}
-                                                        </span>
-                                                    </div>
-                                                </button>
-                                            ))}
-                                        </div>
-                                        <p className="bag-checkout-field-preview">
-                                            {selectedCardPreview}
-                                        </p>
-                                    </div>
-
                                     <div
                                         className="checkout-deduction-box"
                                         aria-live="polite"
@@ -1914,18 +1721,20 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                             </strong>
                                         </div>
                                         <div className="checkout-deduction-row">
-                                            <span>
-                                                Card balance after payment
-                                            </span>
+                                            <span>Wallet balance</span>
                                             <strong>
-                                                {remainingBalance !== null
-                                                    ? formatPeso(
-                                                          Math.max(
-                                                              0,
-                                                              remainingBalance,
-                                                          ).toFixed(2),
-                                                      )
-                                                    : '--'}
+                                                {formatPeso(walletBalance.toFixed(2))}
+                                            </strong>
+                                        </div>
+                                        <div className="checkout-deduction-row">
+                                            <span>Balance after payment</span>
+                                            <strong>
+                                                {formatPeso(
+                                                    Math.max(
+                                                        0,
+                                                        remainingBalance,
+                                                    ).toFixed(2),
+                                                )}
                                             </strong>
                                         </div>
                                     </div>
@@ -1936,10 +1745,10 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                             before placing this order.
                                         </p>
                                     )}
-                                    {!savedCards.length && (
+                                    {walletBalance <= 0 && (
                                         <p className="bag-checkout-hint">
-                                            Add a wallet card in your account
-                                            before placing this order.
+                                            Add funds to your wallet before
+                                            placing this order.
                                         </p>
                                     )}
                                     {checkoutError && (
@@ -1967,7 +1776,8 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         disabled={
                                             isCheckingOut ||
                                             !addresses.length ||
-                                            !savedCards.length
+                                            walletBalance <= 0 ||
+                                            walletBalance < checkoutAmount
                                         }
                                     >
                                         {isCheckingOut

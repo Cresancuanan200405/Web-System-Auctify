@@ -10,6 +10,25 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
+/**
+ * @property int $id
+ * @property string $name
+ * @property string $email
+ * @property string|null $phone
+ * @property string|null $avatar
+ * @property \Illuminate\Support\Carbon|null $birthday
+ * @property bool $is_admin
+ * @property bool $is_suspended
+ * @property string|null $suspended_reason
+ * @property \Illuminate\Support\Carbon|null $suspended_at
+ * @property \Illuminate\Support\Carbon|null $suspended_until
+ * @property bool $is_verified
+ * @property float|string $wallet_balance
+ * @property \Illuminate\Support\Carbon|null $verified_at
+ * @property \Illuminate\Support\Carbon|null $verification_revoked_at
+ * @property \Illuminate\Support\Carbon|null $created_at
+ * @property \Illuminate\Support\Carbon|null $updated_at
+ */
 class User extends Authenticatable
 {
     /** @use HasFactory<\Database\Factories\UserFactory> */
@@ -25,9 +44,6 @@ class User extends Authenticatable
         'email',
         'password',
         'is_admin',
-        'admin_mfa_enabled',
-        'admin_mfa_secret',
-        'admin_mfa_recovery_codes',
         'is_suspended',
         'suspended_reason',
         'suspended_at',
@@ -38,6 +54,7 @@ class User extends Authenticatable
         'is_verified',
         'verified_at',
         'verification_revoked_at',
+        'wallet_balance',
         'last_login_at',
     ];
 
@@ -49,8 +66,6 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
-        'admin_mfa_secret',
-        'admin_mfa_recovery_codes',
     ];
 
     /**
@@ -64,13 +79,12 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'is_admin' => 'boolean',
-            'admin_mfa_enabled' => 'boolean',
-            'admin_mfa_recovery_codes' => 'array',
             'is_suspended' => 'boolean',
             'suspended_at' => 'datetime',
             'suspended_until' => 'datetime',
             'birthday' => 'date',
             'is_verified' => 'boolean',
+            'wallet_balance' => 'decimal:2',
             'verified_at' => 'datetime',
             'verification_revoked_at' => 'datetime',
             'last_login_at' => 'datetime',
@@ -120,5 +134,10 @@ class User extends Authenticatable
     public function sellerRegistration(): HasOne
     {
         return $this->hasOne(SellerRegistration::class);
+    }
+
+    public function walletTransactions(): HasMany
+    {
+        return $this->hasMany(\App\Models\WalletTransaction::class)->latest();
     }
 }

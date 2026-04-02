@@ -785,6 +785,20 @@ body {
     transition: stroke 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+.seller-symbol-badge {
+    margin-left: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #111827;
+    color: #f9fafb;
+    font-size: 10px;
+    line-height: 1;
+}
+
 .dropdown-wrapper {
     position: relative;
 }

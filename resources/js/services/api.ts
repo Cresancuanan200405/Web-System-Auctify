@@ -112,6 +112,22 @@ export interface VerificationStatusResponse {
     verification: VerificationStatus | null;
 }
 
+export interface WalletBalanceResponse {
+    message?: string;
+    wallet_balance: number;
+}
+
+export interface WalletTransactionItem {
+    id: number;
+    type: 'top-up' | 'spend';
+    amount: number;
+    balance_before: number;
+    balance_after: number;
+    reference?: string | null;
+    description?: string | null;
+    created_at?: string | null;
+}
+
 // Authentication Services
 export const authService = {
     login: async (credentials: LoginCredentials) => {
@@ -227,6 +243,30 @@ export const verificationService = {
             '/api/auth/verification/revoke',
             {},
         );
+    },
+};
+
+export const walletService = {
+    getBalance: async () => {
+        return apiGet<WalletBalanceResponse>('/api/auth/wallet');
+    },
+
+    getHistory: async () => {
+        return apiGet<{ transactions: WalletTransactionItem[] }>(
+            '/api/auth/wallet/history',
+        );
+    },
+
+    topUp: async (amount: number) => {
+        return apiPost<WalletBalanceResponse>('/api/auth/wallet/top-up', {
+            amount,
+        });
+    },
+
+    spend: async (amount: number) => {
+        return apiPost<WalletBalanceResponse>('/api/auth/wallet/spend', {
+            amount,
+        });
     },
 };
 
