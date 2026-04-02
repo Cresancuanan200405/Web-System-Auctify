@@ -8,6 +8,8 @@ if [ -z "${APP_KEY:-}" ]; then
     exit 1
 fi
 
+echo "Boot config: DB_HOST=${DB_HOST:-unset} DB_PORT=${DB_PORT:-unset} DB_USERNAME=${DB_USERNAME:-unset}"
+
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     php artisan migrate --force
 fi
