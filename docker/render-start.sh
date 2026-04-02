@@ -13,6 +13,18 @@ if [ -n "${DB_URL:-}" ]; then
     unset DB_URL
 fi
 
+# Compatibility fallback for stale Render env values that still point to direct
+# Supabase host (IPv6-only on some paths). Force IPv4-friendly pooler settings.
+if [ "${DB_HOST:-}" = "db.zakjudasfkoahkupdnju.supabase.co" ]; then
+    echo "Boot config: rewriting DB_HOST from direct endpoint to session pooler"
+    export DB_HOST="aws-0-ap-southeast-1.pooler.supabase.com"
+    export DB_PORT="5432"
+
+    if [ "${DB_USERNAME:-}" = "auctifyapp" ]; then
+        export DB_USERNAME="auctifyapp.zakjudasfkoahkupdnju"
+    fi
+fi
+
 echo "Boot config: DB_HOST=${DB_HOST:-unset} DB_PORT=${DB_PORT:-unset} DB_USERNAME=${DB_USERNAME:-unset}"
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
