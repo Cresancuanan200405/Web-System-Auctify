@@ -197,6 +197,7 @@ export interface AdminSellerDetails {
     vatStatus?: string | null;
     birCertificateName?: string | null;
     submitSwornDeclaration?: string | null;
+    agreeBusinessTerms?: boolean;
     submittedAt?: string | null;
     revokedAt?: string | null;
     revokedReason?: string | null;

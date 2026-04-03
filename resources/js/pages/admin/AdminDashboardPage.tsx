@@ -2411,7 +2411,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         }
 
         const needsFetch = selectedUserMedia
-            .filter((media) => !media.previewUrl)
             .filter((media) =>
                 [
                     'selfie',
@@ -2430,8 +2429,13 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         const loadPreviews = async () => {
             for (const media of needsFetch) {
                 try {
+                    const sourceUrl = resolveAdminMediaUrl(
+                        media.previewUrl ||
+                            `/api/admin/users/${selectedUser.id}/verification-media/${encodeURIComponent(media.key)}`,
+                    );
+
                     const response = await fetch(
-                        `/api/admin/users/${selectedUser.id}/verification-media/${encodeURIComponent(media.key)}`,
+                        sourceUrl,
                         {
                             credentials: 'include',
                             headers: {
@@ -7034,6 +7038,203 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                     </span>
                                                                 </p>
                                                             </div>
+                                                            <div className="admin-user-seller-grid">
+                                                                <p>
+                                                                    <strong>
+                                                                        Pickup
+                                                                        Address
+                                                                        Summary
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.pickupAddressSummary ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        ZIP Code
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.zipCode ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Submit
+                                                                        Business
+                                                                        Mode
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.submitBusinessMode ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Company
+                                                                        Registered
+                                                                        Name
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.companyRegisteredName ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Registered
+                                                                        Legal
+                                                                        Name
+                                                                    </strong>
+                                                                    <span>
+                                                                        {[
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.registeredFirstName,
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.registeredMiddleName,
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.registeredLastName,
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.registeredSuffix,
+                                                                        ]
+                                                                            .filter(
+                                                                                Boolean,
+                                                                            )
+                                                                            .join(
+                                                                                ' ',
+                                                                            ) ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Primary
+                                                                        Document
+                                                                        Type
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.primaryDocumentType ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Primary
+                                                                        Document
+                                                                        File
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.primaryDocumentName ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Government
+                                                                        ID Type
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.governmentIdType ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Government
+                                                                        ID File
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.governmentIdFrontName ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        BIR
+                                                                        Certificate
+                                                                        File
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.birCertificateName ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Sworn
+                                                                        Declaration
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.submitSwornDeclaration ||
+                                                                            'N/A'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Business
+                                                                        Terms
+                                                                        Accepted
+                                                                    </strong>
+                                                                    <span>
+                                                                        {selectedUser
+                                                                            .sellerRegistration
+                                                                            ?.agreeBusinessTerms
+                                                                            ? 'Yes'
+                                                                            : 'No'}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Submitted
+                                                                        At
+                                                                    </strong>
+                                                                    <span>
+                                                                        {formatDisplayDate(
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.submittedAt,
+                                                                        )}
+                                                                    </span>
+                                                                </p>
+                                                                <p>
+                                                                    <strong>
+                                                                        Last
+                                                                        Updated
+                                                                    </strong>
+                                                                    <span>
+                                                                        {formatDisplayDate(
+                                                                            selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.updatedAt,
+                                                                        )}
+                                                                    </span>
+                                                                </p>
+                                                            </div>
                                                             {selectedSellerImages.length > 0 && (
                                                                 <div className="admin-user-seller-media-strip">
                                                                     <div className="admin-user-seller-media-strip-head">
@@ -7046,8 +7247,8 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                     <div className="admin-user-seller-media-grid">
                                                                         {selectedSellerImages.map((media) => {
                                                                             const previewUrl =
-                                                                                media.previewUrl ??
                                                                                 docPreviewUrls[media.key] ??
+                                                                                media.previewUrl ??
                                                                                 null;
 
                                                                             return (
@@ -7181,10 +7382,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                     {selectedUserMedia.map(
                                                         (media) => {
                                                             const effectivePreviewUrl =
-                                                                media.previewUrl ??
                                                                 docPreviewUrls[
                                                                     media.key
                                                                 ] ??
+                                                                media.previewUrl ??
                                                                 null;
 
                                                             return (

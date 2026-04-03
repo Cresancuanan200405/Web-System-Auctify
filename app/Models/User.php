@@ -140,4 +140,29 @@ class User extends Authenticatable
     {
         return $this->hasMany(\App\Models\WalletTransaction::class)->latest();
     }
+
+    public function buyerOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'buyer_user_id')->latest();
+    }
+
+    public function sellerOrders(): HasMany
+    {
+        return $this->hasMany(Order::class, 'seller_user_id')->latest();
+    }
+
+    public function paymentsMade(): HasMany
+    {
+        return $this->hasMany(OrderPayment::class, 'payer_user_id')->latest();
+    }
+
+    public function paymentsReceived(): HasMany
+    {
+        return $this->hasMany(OrderPayment::class, 'payee_user_id')->latest();
+    }
+
+    public function shipmentsFulfilled(): HasMany
+    {
+        return $this->hasMany(OrderShipment::class, 'shipped_by_user_id')->latest();
+    }
 }

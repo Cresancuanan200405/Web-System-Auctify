@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import { AccountVerificationSection } from '@/pages/account-sections/AccountVerificationSection';
 import { DeleteAccountSection } from '@/pages/account-sections/DeleteAccountSection';
 import { AccountSidebar } from '../components/AccountSidebar';
 import { useAuth } from '../contexts/AuthContext';
@@ -40,7 +39,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
 }) => {
     const { authUser } = useAuth();
     const isSellerVerified = Boolean(authUser?.is_verified);
-    const [showSellerGateModal, setShowSellerGateModal] = useState(false);
     const [showRestrictionModal, setShowRestrictionModal] = useState(false);
     const [restrictionTitle, setRestrictionTitle] = useState('');
     const [restrictionMessage, setRestrictionMessage] = useState('');
@@ -109,11 +107,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             return;
         }
 
-        if (isSellerVerified) {
-            onSectionChange('seller');
-        } else {
-            setShowSellerGateModal(true);
-        }
+        onSectionChange('seller');
     };
 
     const renderSection = () => {
@@ -150,7 +144,7 @@ export const AccountPage: React.FC<AccountPageProps> = ({
             case 'seller':
                 return <BecomeSellerSection />;
             case 'verification':
-                return <AccountVerificationSection />;
+                return <BecomeSellerSection />;
             case 'delete-account':
                 return (
                     <DeleteAccountSection onAccountDeleted={onAccountDeleted} />
@@ -176,52 +170,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 onBecomeSellerClick={handleBecomeSellerClick}
             />
             <div className="account-main">{renderSection()}</div>
-            {showSellerGateModal && (
-                <div
-                    className="delete-modal-overlay"
-                    onClick={() => setShowSellerGateModal(false)}
-                >
-                    <div
-                        className="delete-modal"
-                        onClick={(event) => event.stopPropagation()}
-                    >
-                        <div className="delete-modal-header">
-                            <h2 className="delete-modal-title">
-                                Complete seller verification first
-                            </h2>
-                        </div>
-                        <div className="delete-modal-body">
-                            <p className="delete-modal-text">
-                                Seller verification is only needed when you
-                                want to become a seller. Finish this step to
-                                unlock seller registration and listing tools.
-                            </p>
-                            <div className="delete-modal-actions">
-                                <button
-                                    type="button"
-                                    className="delete-modal-cancel"
-                                    onClick={() =>
-                                        setShowSellerGateModal(false)
-                                    }
-                                >
-                                    Not now
-                                </button>
-                                <button
-                                    type="button"
-                                    className="delete-modal-confirm"
-                                    onClick={() => {
-                                        setShowSellerGateModal(false);
-                                        onSectionChange('verification');
-                                    }}
-                                >
-                                    Start Seller Verification
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            )}
-
             {showRestrictionModal && (
                 <div
                     className="delete-modal-overlay"

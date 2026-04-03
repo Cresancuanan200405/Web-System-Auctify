@@ -115,6 +115,7 @@ class UserMonitorController extends Controller
                     'vatStatus' => $user->sellerRegistration->vat_status,
                     'birCertificateName' => $user->sellerRegistration->bir_certificate_name,
                     'submitSwornDeclaration' => $user->sellerRegistration->submit_sworn_declaration,
+                    'agreeBusinessTerms' => (bool) $user->sellerRegistration->agree_business_terms,
                     'submittedAt' => optional($user->sellerRegistration->submitted_at)?->toIso8601String(),
                     'revokedAt' => optional($user->sellerRegistration->revoked_at)?->toIso8601String(),
                     'revokedReason' => $user->sellerRegistration->revoked_reason,
@@ -136,7 +137,7 @@ class UserMonitorController extends Controller
                             'fileName' => $verification->selfie_path ? basename($verification->selfie_path) : null,
                             'uploaded' => (bool) $verification->selfie_path,
                             'mimeType' => $this->resolveDocumentMimeType($verification->selfie_path),
-                            'previewUrl' => $this->resolveDocumentPreview($verification->selfie_path),
+                            'previewUrl' => $this->verificationMediaUrl($user->id, 'selfie', $verification->selfie_path),
                         ],
                         [
                             'key' => 'government-id',
@@ -144,7 +145,7 @@ class UserMonitorController extends Controller
                             'fileName' => $verification->government_id_path ? basename($verification->government_id_path) : null,
                             'uploaded' => (bool) $verification->government_id_path,
                             'mimeType' => $this->resolveDocumentMimeType($verification->government_id_path),
-                            'previewUrl' => $this->resolveDocumentPreview($verification->government_id_path),
+                            'previewUrl' => $this->verificationMediaUrl($user->id, 'government-id', $verification->government_id_path),
                         ],
                         [
                             'key' => 'utility-bill',
@@ -152,7 +153,7 @@ class UserMonitorController extends Controller
                             'fileName' => $verification->utility_bill_path ? basename($verification->utility_bill_path) : null,
                             'uploaded' => (bool) $verification->utility_bill_path,
                             'mimeType' => $this->resolveDocumentMimeType($verification->utility_bill_path),
-                            'previewUrl' => $this->resolveDocumentPreview($verification->utility_bill_path),
+                            'previewUrl' => $this->verificationMediaUrl($user->id, 'utility-bill', $verification->utility_bill_path),
                         ],
                         [
                             'key' => 'bank-statement',
@@ -160,7 +161,7 @@ class UserMonitorController extends Controller
                             'fileName' => $verification->bank_statement_path ? basename($verification->bank_statement_path) : null,
                             'uploaded' => (bool) $verification->bank_statement_path,
                             'mimeType' => $this->resolveDocumentMimeType($verification->bank_statement_path),
-                            'previewUrl' => $this->resolveDocumentPreview($verification->bank_statement_path),
+                            'previewUrl' => $this->verificationMediaUrl($user->id, 'bank-statement', $verification->bank_statement_path),
                         ],
                     ],
                 ] : null,
@@ -195,7 +196,7 @@ class UserMonitorController extends Controller
         return $mimeMap[$extension] ?? null;
     }
 
-    private function resolveDocumentPreview(?string $path): ?string
+    private function verificationMediaUrl(int $userId, string $key, ?string $path): ?string
     {
         if (! $path) {
             return null;
@@ -205,15 +206,7 @@ class UserMonitorController extends Controller
             return $path;
         }
 
-        if (str_starts_with($path, '/')) {
-            return $path;
-        }
-
-        if (Storage::disk('public')->exists($path)) {
-            return Storage::url($path);
-        }
-
-        return null;
+        return '/api/admin/users/' . $userId . '/verification-media/' . $key;
     }
 
     public function verificationMedia(User $user, string $key)
@@ -237,6 +230,14 @@ class UserMonitorController extends Controller
         $path = $pathByKey[$key];
         if (! $path) {
             abort(404);
+        }
+
+        if (filter_var($path, FILTER_VALIDATE_URL)) {
+            return redirect()->away($path);
+        }
+
+        if (str_starts_with($path, '/')) {
+            return redirect()->to($path);
         }
 
         if (Storage::disk('local')->exists($path)) {
@@ -408,6 +409,12 @@ class UserMonitorController extends Controller
             'revoked_at' => null,
         ])->save();
 
+        $user->forceFill([
+            'is_verified' => true,
+            'verified_at' => now(),
+            'verification_revoked_at' => null,
+        ])->save();
+
         $this->logAction($request, $user, 'approve-seller', $validated['reason'], [
             'seller_registration_id' => $registration->id,
             'previous_status' => $previousStatus,
@@ -450,6 +457,12 @@ class UserMonitorController extends Controller
             'status' => 'rejected',
             'revoked_reason' => $validated['reason'],
             'revoked_at' => now(),
+        ])->save();
+
+        $user->forceFill([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verification_revoked_at' => now(),
         ])->save();
 
         $this->logAction($request, $user, 'reject-seller', $validated['reason'], [
@@ -498,6 +511,12 @@ class UserMonitorController extends Controller
             'status' => 'submitted',
             'revoked_reason' => null,
             'revoked_at' => null,
+        ])->save();
+
+        $user->forceFill([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verification_revoked_at' => now(),
         ])->save();
 
         $this->logAction($request, $user, 'unrevoke-seller', $validated['reason'], [

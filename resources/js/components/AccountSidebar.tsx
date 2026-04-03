@@ -60,7 +60,7 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
                     )}
                     {isSellerAccessAllowed && !isSellerVerified && (
                         <span className="account-sidebar-item-note">
-                            Complete seller verification first
+                            Complete seller registration for admin approval
                         </span>
                     )}
                 </button>

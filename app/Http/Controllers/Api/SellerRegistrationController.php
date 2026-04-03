@@ -77,6 +77,12 @@ class SellerRegistrationController extends Controller
             ]
         );
 
+        $request->user()->forceFill([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verification_revoked_at' => now(),
+        ])->save();
+
         $user = $request->user();
         AdminNotification::notify(
             'kyc',
@@ -129,6 +135,12 @@ class SellerRegistrationController extends Controller
         }
 
         $registration->save();
+
+        $request->user()->forceFill([
+            'is_verified' => false,
+            'verified_at' => null,
+            'verification_revoked_at' => now(),
+        ])->save();
 
         return response()->json([
             'message' => 'Shipping settings updated successfully.',

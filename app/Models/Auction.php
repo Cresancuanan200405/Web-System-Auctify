@@ -86,6 +86,11 @@ class Auction extends Model
         return $this->hasOne(BidWinner::class);
     }
 
+    public function order(): HasOne
+    {
+        return $this->hasOne(Order::class);
+    }
+
     public function getComputedStatus(?Carbon $referenceTime = null): string
     {
         $reference = $referenceTime ?? now();

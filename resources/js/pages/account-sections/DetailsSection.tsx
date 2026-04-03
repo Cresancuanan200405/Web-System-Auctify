@@ -554,7 +554,7 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
                             <p className="account-badge-meta">
                                 {hasSellerBadge
                                     ? 'Seller account is active.'
-                                    : 'Complete seller verification and registration.'}
+                                    : 'Complete seller registration for admin approval.'}
                             </p>
                         </div>
                     </div>
