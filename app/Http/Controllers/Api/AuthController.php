@@ -159,6 +159,16 @@ class AuthController extends Controller
 
     private function resolveGoogleCallbackUrl(Request $request): string
     {
+        $configuredRedirect = trim((string) config('services.google.redirect', ''));
+        if ($configuredRedirect !== '' && filter_var($configuredRedirect, FILTER_VALIDATE_URL)) {
+            return rtrim($configuredRedirect, '/');
+        }
+
+        $appUrl = trim((string) config('app.url', ''));
+        if ($appUrl !== '' && filter_var($appUrl, FILTER_VALIDATE_URL)) {
+            return rtrim($appUrl, '/') . '/api/auth/google/callback';
+        }
+
         return rtrim($request->getSchemeAndHttpHost(), '/') . '/api/auth/google/callback';
     }
 
