@@ -30,6 +30,10 @@ try_db_connection() {
     php -r '$host=getenv("DB_HOST_TRY");$port=getenv("DB_PORT_TRY");$user=getenv("DB_USER_TRY");$pass=getenv("DB_PASS_TRY");$db=getenv("DB_NAME_TRY");$ssl=getenv("DB_SSLMODE_TRY")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$pdo->query("select 1");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
 }
 
+schema_has_users_table() {
+    php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$stmt=$pdo->query("select to_regclass(\x27public.users\x27)");$val=$stmt?$stmt->fetchColumn():null;exit($val?0:1);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
+}
+
 # Supabase pooler can vary by host shard, mode, and username format.
 # Probe safe combinations and pick the first working one.
 if [ -n "${DB_PASSWORD:-}" ]; then
@@ -86,7 +90,13 @@ fi
 echo "Boot config: DB_HOST=${DB_HOST:-unset} DB_PORT=${DB_PORT:-unset} DB_USERNAME=${DB_USERNAME:-unset}"
 
 if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
-    php artisan migrate --force
+    # On environments where schema was restored outside Laravel migrations,
+    # rerunning bootstrap migrations causes duplicate-table deploy failures.
+    if [ "${SKIP_MIGRATIONS_IF_SCHEMA_PRESENT:-true}" = "true" ] && schema_has_users_table >/dev/null 2>&1; then
+        echo "Boot config: users table already exists; skipping auto migrations"
+    else
+        php artisan migrate --force
+    fi
 fi
 
 if [ "${RUN_SEEDERS:-true}" = "true" ]; then

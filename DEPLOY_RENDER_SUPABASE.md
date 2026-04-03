@@ -41,6 +41,17 @@ This repository is now prepared for Docker-based deployment on Render with a Sup
 5. Set APP_URL to your Render public URL.
 6. Set SANCTUM_STATEFUL_DOMAINS and CORS_ALLOWED_ORIGINS to your deployed domain.
 7. Keep RUN_MIGRATIONS=true for first deploy to auto-run migrations.
+8. Keep SKIP_MIGRATIONS_IF_SCHEMA_PRESENT=true to avoid duplicate-table failures on redeploy when schema already exists.
+
+## Redeploy after manual schema restore
+
+If your Supabase schema was restored outside Laravel's migration tracking (for example, SQL replay), Render can fail with `relation "users" already exists` while running `0001_01_01_000000_create_users_table`.
+
+Use this setup:
+- RUN_MIGRATIONS=true
+- SKIP_MIGRATIONS_IF_SCHEMA_PRESENT=true
+
+With this guard, startup skips auto-migrate when the `users` table is already present.
 
 ## First deploy checks
 
