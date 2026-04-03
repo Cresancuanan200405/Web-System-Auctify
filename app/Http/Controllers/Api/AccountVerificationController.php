@@ -10,6 +10,13 @@ use Illuminate\Support\Facades\Hash;
 
 class AccountVerificationController extends Controller
 {
+    private function shouldExposeDevOtp(): bool
+    {
+        return app()->environment('local')
+            || config('app.debug')
+            || filter_var(env('VERIFICATION_SHOW_DEV_OTP', false), FILTER_VALIDATE_BOOL);
+    }
+
     public function status(Request $request)
     {
         $user = $request->user();
@@ -60,7 +67,7 @@ class AccountVerificationController extends Controller
         return response()->json([
             'message' => 'OTP sent successfully. Please confirm your phone number.',
             'verification' => $this->formatVerification($verification),
-            'dev_otp' => config('app.debug') ? $otp : null,
+            'dev_otp' => $this->shouldExposeDevOtp() ? $otp : null,
         ]);
     }
 
