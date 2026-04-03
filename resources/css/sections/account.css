@@ -2157,6 +2157,34 @@
     margin-bottom: 12px;
 }
 
+.seller-orders-refresh-btn {
+    border: 1px solid #1d4ed8;
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: #ffffff;
+    border-radius: 999px;
+    height: 36px;
+    padding: 0 16px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    cursor: pointer;
+    box-shadow: 0 8px 18px rgba(37, 99, 235, 0.24);
+    transition:
+        transform 0.18s ease,
+        box-shadow 0.18s ease,
+        filter 0.18s ease;
+}
+
+.seller-orders-refresh-btn:hover {
+    transform: translateY(-1px);
+    filter: brightness(1.04);
+    box-shadow: 0 12px 20px rgba(30, 64, 175, 0.28);
+}
+
+.seller-orders-refresh-btn:active {
+    transform: translateY(0);
+}
+
 .seller-order-summary-card {
     background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf3 100%);
     border: 1px solid #bbf7d0;

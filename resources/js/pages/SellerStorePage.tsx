@@ -821,7 +821,7 @@ export const SellerStorePage: React.FC<SellerStorePageProps> = ({
                                 >
                                     <button
                                         type="button"
-                                        className={`seller-store-review-filter-btn${selectedReviewRating === 0 ? 'active' : ''}`}
+                                        className={`seller-store-review-filter-btn seller-store-review-filter-btn-all${selectedReviewRating === 0 ? ' active' : ''}`}
                                         onClick={() =>
                                             setSelectedReviewRating(0)
                                         }

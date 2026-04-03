@@ -149,6 +149,37 @@ class AdminAuthController extends Controller
         ]);
     }
 
+    public function accounts(Request $request)
+    {
+        $currentAdminId = (int) $request->user()->id;
+
+        $accounts = User::query()
+            ->where('is_admin', true)
+            ->orderByDesc('last_login_at')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'email',
+                'last_login_at',
+                'created_at',
+                'updated_at',
+            ])
+            ->map(static fn (User $admin) => [
+                'id' => $admin->id,
+                'name' => $admin->name,
+                'email' => $admin->email,
+                'isCurrent' => $admin->id === $currentAdminId,
+                'lastSeenAt' => optional($admin->last_login_at ?? $admin->updated_at)?->toIso8601String(),
+                'createdAt' => optional($admin->created_at)?->toIso8601String(),
+            ])
+            ->values();
+
+        return response()->json([
+            'accounts' => $accounts,
+        ]);
+    }
+
     protected function throttleKey(Request $request): string
     {
         return Str::lower((string) $request->input('email')).'|'.$request->ip();

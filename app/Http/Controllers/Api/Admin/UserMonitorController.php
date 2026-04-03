@@ -10,6 +10,7 @@ use App\Support\AdminAudit;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Http\JsonResponse;
 
 class UserMonitorController extends Controller
 {
@@ -38,6 +39,7 @@ class UserMonitorController extends Controller
 
         $users = User::query()
             ->with('sellerRegistration')
+            ->where('is_admin', false)
             ->orderByDesc('id')
             ->get($selectColumns)
             ->map(fn (User $user) => [
@@ -64,6 +66,10 @@ class UserMonitorController extends Controller
 
     public function show(User $user)
     {
+        if ($user->is_admin) {
+            abort(404);
+        }
+
         $user->load([
             'sellerRegistration',
             'accountVerifications' => static fn ($query) => $query->latest()->limit(1),
@@ -114,6 +120,11 @@ class UserMonitorController extends Controller
                     'taxTin' => $user->sellerRegistration->tax_tin,
                     'vatStatus' => $user->sellerRegistration->vat_status,
                     'birCertificateName' => $user->sellerRegistration->bir_certificate_name,
+                    'documentMedia' => [
+                        $this->buildSellerRegistrationMediaItem($user->id, 'primary-document', $user->sellerRegistration->primary_document_type ?: 'Primary Document', $user->sellerRegistration->primary_document_name),
+                        $this->buildSellerRegistrationMediaItem($user->id, 'government-id', $user->sellerRegistration->government_id_type ?: 'Government ID', $user->sellerRegistration->government_id_front_name),
+                        $this->buildSellerRegistrationMediaItem($user->id, 'bir-certificate', 'BIR Certificate', $user->sellerRegistration->bir_certificate_name),
+                    ],
                     'submitSwornDeclaration' => $user->sellerRegistration->submit_sworn_declaration,
                     'agreeBusinessTerms' => (bool) $user->sellerRegistration->agree_business_terms,
                     'submittedAt' => optional($user->sellerRegistration->submitted_at)?->toIso8601String(),
@@ -211,6 +222,10 @@ class UserMonitorController extends Controller
 
     public function verificationMedia(User $user, string $key)
     {
+        if ($user->is_admin) {
+            abort(404);
+        }
+
         $verification = $user->accountVerifications()->latest()->first();
         if (! $verification) {
             abort(404);
@@ -251,19 +266,55 @@ class UserMonitorController extends Controller
         abort(404);
     }
 
+    public function sellerRegistrationMedia(User $user, string $key)
+    {
+        if ($user->is_admin) {
+            abort(404);
+        }
+
+        $registration = SellerRegistration::query()->where('user_id', $user->id)->first();
+        if (! $registration) {
+            abort(404);
+        }
+
+        $nameByKey = [
+            'primary-document' => $registration->primary_document_name,
+            'government-id' => $registration->government_id_front_name,
+            'bir-certificate' => $registration->bir_certificate_name,
+        ];
+
+        if (! array_key_exists($key, $nameByKey)) {
+            abort(404);
+        }
+
+        $resolved = $this->resolveStoredFileLocation($user->id, $nameByKey[$key]);
+
+        if (! $resolved) {
+            abort(404);
+        }
+
+        if ($resolved['type'] === 'url') {
+            return redirect()->away($resolved['value']);
+        }
+
+        if ($resolved['type'] === 'public_path') {
+            return redirect()->to($resolved['value']);
+        }
+
+        return response()->file(Storage::disk($resolved['disk'])->path($resolved['path']));
+    }
+
     public function suspend(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
             'duration_unit' => ['nullable', 'string', 'in:minutes,hours,days'],
             'duration_value' => ['nullable', 'integer', 'min:1', 'max:525600'],
         ]);
-
-        if ($user->is_admin) {
-            return response()->json([
-                'message' => 'Admin accounts cannot be suspended.',
-            ], 422);
-        }
 
         $suspendedUntil = null;
         $durationUnit = $validated['duration_unit'] ?? null;
@@ -303,6 +354,10 @@ class UserMonitorController extends Controller
 
     public function unsuspend(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -340,6 +395,10 @@ class UserMonitorController extends Controller
 
     public function revokeSeller(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -390,6 +449,10 @@ class UserMonitorController extends Controller
 
     public function approveSeller(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -440,6 +503,10 @@ class UserMonitorController extends Controller
 
     public function rejectSeller(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -490,6 +557,10 @@ class UserMonitorController extends Controller
 
     public function unrevokeSeller(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
@@ -542,15 +613,13 @@ class UserMonitorController extends Controller
 
     public function destroy(Request $request, User $user)
     {
+        if ($response = $this->guardAdminTargetMutation($user)) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'reason' => ['required', 'string', 'min:5', 'max:1000'],
         ]);
-
-        if ($user->is_admin) {
-            return response()->json([
-                'message' => 'Admin accounts cannot be deleted.',
-            ], 422);
-        }
 
         $snapshot = [
             'email' => $user->email,
@@ -581,5 +650,73 @@ class UserMonitorController extends Controller
     private function logAction(Request $request, User $targetUser, string $action, string $reason, array $details = []): void
     {
         AdminAudit::log($request, $action, $reason, $targetUser->id, $details);
+    }
+
+    private function guardAdminTargetMutation(User $user): ?JsonResponse
+    {
+        if (! $user->is_admin) {
+            return null;
+        }
+
+        return response()->json([
+            'message' => 'Admin accounts are managed separately and cannot be modified here.',
+        ], 422);
+    }
+
+    private function buildSellerRegistrationMediaItem(int $userId, string $key, string $label, ?string $fileName): array
+    {
+        $resolved = $this->resolveStoredFileLocation($userId, $fileName);
+
+        return [
+            'key' => $key,
+            'label' => $label,
+            'fileName' => $fileName,
+            'uploaded' => (bool) $fileName,
+            'mimeType' => $this->resolveDocumentMimeType($fileName),
+            'previewUrl' => $resolved ? '/api/admin/users/' . $userId . '/seller-registration-media/' . $key : null,
+            'isResolved' => (bool) $resolved,
+        ];
+    }
+
+    private function resolveStoredFileLocation(int $userId, ?string $value): ?array
+    {
+        if (! $value) {
+            return null;
+        }
+
+        if (filter_var($value, FILTER_VALIDATE_URL)) {
+            return ['type' => 'url', 'value' => $value];
+        }
+
+        if (str_starts_with($value, '/')) {
+            return ['type' => 'public_path', 'value' => $value];
+        }
+
+        $trimmedValue = trim($value);
+        $candidatePaths = [$trimmedValue];
+
+        $baseName = basename($trimmedValue);
+        $folders = [
+            'verification/user-' . $userId,
+            'seller-registration/user-' . $userId,
+            'seller/user-' . $userId,
+            'uploads/seller-registration/user-' . $userId,
+        ];
+
+        foreach ($folders as $folder) {
+            $candidatePaths[] = $folder . '/' . $baseName;
+        }
+
+        foreach (array_unique($candidatePaths) as $path) {
+            if (Storage::disk('local')->exists($path)) {
+                return ['type' => 'disk_file', 'disk' => 'local', 'path' => $path];
+            }
+
+            if (Storage::disk('public')->exists($path)) {
+                return ['type' => 'disk_file', 'disk' => 'public', 'path' => $path];
+            }
+        }
+
+        return null;
     }
 }

@@ -23,6 +23,7 @@ import {
 } from '../../services/adminApi';
 import { auctionService } from '../../services/api';
 import type { AuctionProduct } from '../../types';
+import { AdminAccountsPage } from './AdminAccountsPage';
 import { AdminOrderShipmentTrackingPage } from './AdminOrderShipmentTrackingPage';
 import { AdminPaymentHistoryPage } from './AdminPaymentHistoryPage';
 
@@ -34,6 +35,7 @@ type AdminSection =
     | 'overview'
     | 'homepage'
     | 'users'
+    | 'admin-accounts'
     | 'order-shipments'
     | 'payment-history';
 type SuspensionUnit = 'minutes' | 'hours' | 'days';
@@ -125,6 +127,7 @@ const ADMIN_SECTIONS: AdminSection[] = [
     'overview',
     'homepage',
     'users',
+    'admin-accounts',
     'order-shipments',
     'payment-history',
 ];
@@ -262,6 +265,21 @@ const UsersIcon = () => (
         <circle cx="9.5" cy="8" r="3.5" />
         <path d="M21 21v-1.5a4 4 0 0 0-3-3.86" />
         <path d="M15.5 4.2a3.5 3.5 0 0 1 0 6.6" />
+    </svg>
+);
+
+const AdminAccountsIcon = () => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+    >
+        <path d="M12 3l7 3v5c0 5.2-3.4 9.9-7 11-3.6-1.1-7-5.8-7-11V6l7-3z" />
+        <path d="M9.5 12.5l1.7 1.7 3.3-3.8" />
     </svg>
 );
 
@@ -2390,6 +2408,23 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             return verificationMedia;
         }
 
+        const sellerRegistrationMedia = (
+            selectedUser.sellerRegistration?.documentMedia ?? []
+        )
+            .filter((item) => item.uploaded)
+            .map((item) => ({
+                key: item.key,
+                label: item.label,
+                fileName: item.fileName ?? 'Uploaded file',
+                mimeType: item.mimeType ?? null,
+                isImage: isImageMedia(item.mimeType, item.fileName),
+                previewUrl: item.previewUrl ?? null,
+            }));
+
+        if (sellerRegistrationMedia.length > 0) {
+            return sellerRegistrationMedia;
+        }
+
         const sellerDocFallback: Array<{
             key: string;
             label: string;
@@ -2441,8 +2476,16 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 value: string | null | undefined;
                 note: string;
                 type: 'image' | 'file';
+                previewUrl?: string | null;
             }>;
         }
+
+        const sellerMediaMap = new Map(
+            (selectedUser.sellerRegistration.documentMedia ?? []).map((item) => [
+                item.key,
+                item,
+            ]),
+        );
 
         const mode = (selectedUser.sellerRegistration.submitBusinessMode ?? 'now').toLowerCase();
         const isImmediate = mode === 'now';
@@ -2454,6 +2497,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 value: selectedUser.sellerRegistration.primaryDocumentName,
                 note: isImmediate ? 'Required for immediate submission' : 'Planned for later submission',
                 type: 'file' as const,
+                previewUrl: sellerMediaMap.get('primary-document')?.previewUrl,
             },
             {
                 key: 'government-id',
@@ -2461,6 +2505,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 value: selectedUser.sellerRegistration.governmentIdFrontName,
                 note: isImmediate ? 'Identity proof' : 'Identity proof',
                 type: 'image' as const,
+                previewUrl: sellerMediaMap.get('government-id')?.previewUrl,
             },
             {
                 key: 'bir-certificate',
@@ -2468,6 +2513,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 value: selectedUser.sellerRegistration.birCertificateName,
                 note: isImmediate ? 'Compliance file' : 'Compliance file',
                 type: 'file' as const,
+                previewUrl: sellerMediaMap.get('bir-certificate')?.previewUrl,
             },
             {
                 key: 'sworn-declaration',
@@ -2681,6 +2727,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             <UsersIcon />
                         </span>
                         <span className="admin-neo-menu-label">Users</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-neo-menu-btn ${activeSection === 'admin-accounts' ? 'active' : ''}`}
+                        onClick={() => setActiveSection('admin-accounts')}
+                        title="Open admin accounts"
+                    >
+                        <span
+                            className="admin-neo-menu-icon"
+                            aria-hidden="true"
+                        >
+                            <AdminAccountsIcon />
+                        </span>
+                        <span className="admin-neo-menu-label">Admin Accounts</span>
                     </button>
                     <button
                         type="button"
@@ -5386,6 +5446,10 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             </section>
                         )}
 
+                        {activeSection === 'admin-accounts' && (
+                            <AdminAccountsPage token={getAdminAuthToken()} />
+                        )}
+
                         {activeSection === 'order-shipments' && (
                             <AdminOrderShipmentTrackingPage
                                 token={getAdminAuthToken()}
@@ -7379,12 +7443,40 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                     <div className="admin-user-seller-media-grid">
                                                                         {selectedSellerDocuments.map((document) => (
                                                                             <div key={document.key} className="admin-user-seller-media-item admin-user-seller-doc-card-item">
-                                                                                <div className="admin-user-seller-media-placeholder admin-user-seller-doc-preview">
-                                                                                    <span className="admin-user-doc-file-icon">
-                                                                                        {document.type === 'image' ? 'IMG' : 'FILE'}
-                                                                                    </span>
-                                                                                    <span>{document.label}</span>
-                                                                                </div>
+                                                                                {document.previewUrl ? (
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        className="admin-user-seller-media-placeholder admin-user-seller-doc-preview"
+                                                                                        onClick={() =>
+                                                                                            setLightboxMedia({
+                                                                                                url: document.previewUrl ?? '',
+                                                                                                fileName: String(document.value ?? document.label),
+                                                                                                mimeType: document.type === 'image' ? 'image/*' : null,
+                                                                                            })
+                                                                                        }
+                                                                                        title="Open preview"
+                                                                                    >
+                                                                                        {document.type === 'image' ? (
+                                                                                            <img
+                                                                                                src={document.previewUrl}
+                                                                                                alt={document.label}
+                                                                                                className="admin-user-doc-preview-image"
+                                                                                            />
+                                                                                        ) : (
+                                                                                            <>
+                                                                                                <span className="admin-user-doc-file-icon">FILE</span>
+                                                                                                <span>{document.label}</span>
+                                                                                            </>
+                                                                                        )}
+                                                                                    </button>
+                                                                                ) : (
+                                                                                    <div className="admin-user-seller-media-placeholder admin-user-seller-doc-preview">
+                                                                                        <span className="admin-user-doc-file-icon">
+                                                                                            {document.type === 'image' ? 'IMG' : 'FILE'}
+                                                                                        </span>
+                                                                                        <span>{document.label}</span>
+                                                                                    </div>
+                                                                                )}
                                                                                 <span>{document.value}</span>
                                                                                 <small className="admin-user-doc-status">
                                                                                     {document.note}

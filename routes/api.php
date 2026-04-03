@@ -68,6 +68,7 @@ Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
     Route::middleware(['auth:sanctum', 'admin', 'throttle:admin-actions'])->group(function () {
         Route::get('session', [AdminAuthController::class, 'session']);
         Route::post('logout', [AdminAuthController::class, 'logout']);
+        Route::get('accounts', [AdminAuthController::class, 'accounts']);
         Route::get('homepage-config', [AdminHomepageConfigController::class, 'show']);
         Route::put('homepage-config', [AdminHomepageConfigController::class, 'update']);
         Route::post('homepage-media/upload', [HomepageMediaUploadController::class, 'store'])->middleware('throttle:admin-uploads');
@@ -77,6 +78,7 @@ Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
         Route::get('users', [UserMonitorController::class, 'index']);
         Route::get('users/{user}', [UserMonitorController::class, 'show']);
         Route::get('users/{user}/verification-media/{key}', [UserMonitorController::class, 'verificationMedia']);
+        Route::get('users/{user}/seller-registration-media/{key}', [UserMonitorController::class, 'sellerRegistrationMedia']);
         Route::post('users/{user}/suspend', [UserMonitorController::class, 'suspend']);
         Route::post('users/{user}/unsuspend', [UserMonitorController::class, 'unsuspend']);
         Route::post('users/{user}/approve-seller', [UserMonitorController::class, 'approveSeller']);

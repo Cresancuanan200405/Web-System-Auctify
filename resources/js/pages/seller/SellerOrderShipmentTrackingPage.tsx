@@ -209,7 +209,7 @@ export const SellerOrderShipmentTrackingPage: React.FC = () => {
                     </div>
                     <button
                         type="button"
-                        className="seller-view-store-btn"
+                        className="seller-orders-refresh-btn"
                         onClick={() => {
                             void loadOrders();
                         }}

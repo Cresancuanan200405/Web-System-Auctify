@@ -196,6 +196,7 @@ export interface AdminSellerDetails {
     taxTin?: string | null;
     vatStatus?: string | null;
     birCertificateName?: string | null;
+    documentMedia?: AdminVerificationMedia[];
     submitSwornDeclaration?: string | null;
     agreeBusinessTerms?: boolean;
     submittedAt?: string | null;
@@ -238,6 +239,15 @@ export interface AdminUserListItem {
     suspendedUntil?: string | null;
     isSeller: boolean;
     sellerStatus?: string | null;
+    lastSeenAt?: string | null;
+    createdAt?: string | null;
+}
+
+export interface AdminAccountIdentity {
+    id: number;
+    name: string;
+    email: string;
+    isCurrent: boolean;
     lastSeenAt?: string | null;
     createdAt?: string | null;
 }
@@ -428,6 +438,16 @@ export const adminApi = {
         return request<{ users: AdminUserListItem[] }>('/api/admin/users', {
             method: 'GET',
         });
+    },
+
+    getAdminAccounts: (_token?: string | null) => {
+        consumeToken(_token);
+        return request<{ accounts: AdminAccountIdentity[] }>(
+            '/api/admin/accounts',
+            {
+                method: 'GET',
+            },
+        );
     },
 
     getUserDetails: (_token: string | null | undefined, userId: number) => {

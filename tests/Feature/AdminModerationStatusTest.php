@@ -8,6 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminModerationStatusTest extends TestCase
@@ -223,6 +224,70 @@ class AdminModerationStatusTest extends TestCase
             'revoked_reason' => null,
             'revoked_at' => null,
         ]);
+    }
+
+    public function test_admin_user_listing_excludes_admin_accounts(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $adminToken = $admin->createToken('admin-users-list')->plainTextToken;
+
+        $customer = User::factory()->create(['is_admin' => false]);
+
+        $response = $this->withToken($adminToken)
+            ->getJson('/api/admin/users')
+            ->assertOk();
+
+        $userIds = collect($response->json('users'))->pluck('id')->all();
+
+        $this->assertContains($customer->id, $userIds);
+        $this->assertNotContains($admin->id, $userIds);
+    }
+
+    public function test_admin_can_preview_seller_registration_media_when_file_exists(): void
+    {
+        $admin = User::factory()->create(['is_admin' => true]);
+        $adminToken = $admin->createToken('admin-seller-media')->plainTextToken;
+
+        $user = User::factory()->create(['is_admin' => false]);
+        $storedPath = 'verification/user-'.$user->id.'/primary-doc.jpg';
+        Storage::disk('local')->put($storedPath, 'fake-image-content');
+
+        SellerRegistration::query()->create([
+            'user_id' => $user->id,
+            'shop_name' => 'Media Shop',
+            'agree_business_terms' => true,
+            'status' => 'submitted',
+            'primary_document_type' => 'DTI Certificate',
+            'primary_document_name' => 'primary-doc.jpg',
+            'submitted_at' => now(),
+        ]);
+
+        $this->withToken($adminToken)
+            ->get('/api/admin/users/'.$user->id.'/seller-registration-media/primary-document')
+            ->assertOk();
+    }
+
+    public function test_admin_accounts_endpoint_returns_only_admin_identities(): void
+    {
+        $currentAdmin = User::factory()->create(['is_admin' => true]);
+        $currentToken = $currentAdmin->createToken('admin-accounts')->plainTextToken;
+
+        $otherAdmin = User::factory()->create(['is_admin' => true]);
+        $customer = User::factory()->create(['is_admin' => false]);
+
+        $response = $this->withToken($currentToken)
+            ->getJson('/api/admin/accounts')
+            ->assertOk();
+
+        $accounts = collect($response->json('accounts'));
+        $ids = $accounts->pluck('id')->all();
+
+        $this->assertContains($currentAdmin->id, $ids);
+        $this->assertContains($otherAdmin->id, $ids);
+        $this->assertNotContains($customer->id, $ids);
+
+        $currentEntry = $accounts->firstWhere('id', $currentAdmin->id);
+        $this->assertTrue((bool) ($currentEntry['isCurrent'] ?? false));
     }
 
     public function test_suspension_with_duration_expires_and_allows_login(): void
