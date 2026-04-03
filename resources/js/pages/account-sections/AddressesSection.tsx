@@ -74,58 +74,64 @@ export const AddressesSection: React.FC = () => {
                 const barangayMap: Record<string, string> = {};
 
                 // Provinces: fetch by region, then keep only those we actually use
-                for (const regionCode of uniqueRegionCodes) {
-                    if (!regionCode) continue;
-                    try {
-                        const provincesData = await getProvinces(regionCode);
-                        provincesData.forEach((p) => {
-                            if (uniqueProvinceCodes.includes(p.code)) {
-                                provinceMap[p.code] = p.name;
-                            }
-                        });
-                    } catch (error) {
-                        console.error(
-                            'Failed to load provinces for display:',
-                            error,
-                        );
-                    }
-                }
+                await Promise.all(
+                    uniqueRegionCodes.map(async (regionCode) => {
+                        if (!regionCode) return;
+                        try {
+                            const provincesData = await getProvinces(regionCode);
+                            provincesData.forEach((p) => {
+                                if (uniqueProvinceCodes.includes(p.code)) {
+                                    provinceMap[p.code] = p.name;
+                                }
+                            });
+                        } catch (error) {
+                            console.error(
+                                'Failed to load provinces for display:',
+                                error,
+                            );
+                        }
+                    }),
+                );
 
                 // Cities: fetch by province
-                for (const provinceCode of uniqueProvinceCodes) {
-                    if (!provinceCode) continue;
-                    try {
-                        const citiesData = await getCities(provinceCode);
-                        citiesData.forEach((c) => {
-                            if (uniqueCityCodes.includes(c.code)) {
-                                cityMap[c.code] = c.name;
-                            }
-                        });
-                    } catch (error) {
-                        console.error(
-                            'Failed to load cities for display:',
-                            error,
-                        );
-                    }
-                }
+                await Promise.all(
+                    uniqueProvinceCodes.map(async (provinceCode) => {
+                        if (!provinceCode) return;
+                        try {
+                            const citiesData = await getCities(provinceCode);
+                            citiesData.forEach((c) => {
+                                if (uniqueCityCodes.includes(c.code)) {
+                                    cityMap[c.code] = c.name;
+                                }
+                            });
+                        } catch (error) {
+                            console.error(
+                                'Failed to load cities for display:',
+                                error,
+                            );
+                        }
+                    }),
+                );
 
                 // Barangays: fetch by city
-                for (const cityCode of uniqueCityCodes) {
-                    if (!cityCode) continue;
-                    try {
-                        const barangaysData = await getBarangays(cityCode);
-                        barangaysData.forEach((b) => {
-                            if (uniqueBarangayCodes.includes(b.code)) {
-                                barangayMap[b.code] = b.name;
-                            }
-                        });
-                    } catch (error) {
-                        console.error(
-                            'Failed to load barangays for display:',
-                            error,
-                        );
-                    }
-                }
+                await Promise.all(
+                    uniqueCityCodes.map(async (cityCode) => {
+                        if (!cityCode) return;
+                        try {
+                            const barangaysData = await getBarangays(cityCode);
+                            barangaysData.forEach((b) => {
+                                if (uniqueBarangayCodes.includes(b.code)) {
+                                    barangayMap[b.code] = b.name;
+                                }
+                            });
+                        } catch (error) {
+                            console.error(
+                                'Failed to load barangays for display:',
+                                error,
+                            );
+                        }
+                    }),
+                );
 
                 setProvinceNames(provinceMap);
                 setCityNames(cityMap);
@@ -460,14 +466,14 @@ export const AddressesSection: React.FC = () => {
                                         `, ${address.building_name}`}
                                     <br />
                                     {barangayNames[address.barangay] ||
-                                        address.barangay}
-                                    , {cityNames[address.city] || address.city}
+                                        'Unknown barangay'}
+                                    , {cityNames[address.city] || 'Unknown city'}
                                     <br />
                                     {provinceNames[address.province] ||
-                                        address.province}
+                                        'Unknown province'}
                                     ,{' '}
                                     {regionNames[address.region] ||
-                                        address.region}
+                                        'Unknown region'}
                                 </div>
                             </div>
                         ))}

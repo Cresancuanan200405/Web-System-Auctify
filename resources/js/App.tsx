@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ToastContainer, toast } from 'react-toastify';
 import { Footer } from './components/Footer';
 import { Header } from './components/Header';
@@ -98,6 +98,7 @@ const defaultPlatformSettings: PublicPlatformSettings = {
 
 const AppContent: React.FC = () => {
     const { authUser, authToken, logout, updateUser } = useAuth();
+    const authUserRef = useRef(authUser);
     const authUserId = authUser?.id ?? null;
     const [viewMode, setViewMode] = useState<ViewMode>(() => {
         const savedViewMode = localStorage.getItem('ui_view_mode');
@@ -354,6 +355,10 @@ const AppContent: React.FC = () => {
     }, [authUser]);
 
     useEffect(() => {
+        authUserRef.current = authUser;
+    }, [authUser]);
+
+    useEffect(() => {
         if (!authUser || !authToken) {
             return;
         }
@@ -367,7 +372,27 @@ const AppContent: React.FC = () => {
                     return;
                 }
 
-                updateUser(response.user);
+                const currentUser = authUserRef.current;
+                const nextUser = response.user;
+
+                if (
+                    currentUser &&
+                    currentUser.id === nextUser.id &&
+                    currentUser.email === nextUser.email &&
+                    currentUser.name === nextUser.name &&
+                    currentUser.phone === nextUser.phone &&
+                    currentUser.is_verified === nextUser.is_verified &&
+                    currentUser.verified_at === nextUser.verified_at &&
+                    currentUser.verification_revoked_at ===
+                        nextUser.verification_revoked_at &&
+                    currentUser.avatar === nextUser.avatar &&
+                    currentUser.birthday === nextUser.birthday &&
+                    currentUser.gender === nextUser.gender
+                ) {
+                    return;
+                }
+
+                updateUser(nextUser);
             } catch {
                 // Errors here are handled globally by API event hooks if auth/session state changed.
             }
@@ -389,7 +414,7 @@ const AppContent: React.FC = () => {
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
         };
-    }, [authToken, authUser, updateUser]);
+    }, [authToken, updateUser]);
 
     useEffect(() => {
         const handleAuctifyToast = (event: Event) => {

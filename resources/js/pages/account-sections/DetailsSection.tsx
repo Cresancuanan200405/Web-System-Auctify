@@ -237,48 +237,60 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
             const nextCityNames: Record<string, string> = {};
             const nextBarangayNames: Record<string, string> = {};
 
-            for (const address of savedAddresses) {
-                if (!address.region) {
-                    continue;
-                }
+            const regionCodes = Array.from(
+                new Set(
+                    savedAddresses
+                        .map((address) => address.region)
+                        .filter(Boolean),
+                ),
+            );
 
-                try {
-                    const provinceList = await getProvinces(address.region);
-                    provinceList.forEach((province) => {
-                        if (provinceCodes.includes(province.code)) {
-                            nextProvinceNames[province.code] = province.name;
-                        }
-                    });
-                } catch {
-                    // Keep rendering stable when PSGC lookups fail.
-                }
-            }
+            await Promise.all(
+                regionCodes.map(async (regionCode) => {
+                    try {
+                        const provinceList = await getProvinces(regionCode);
+                        provinceList.forEach((province) => {
+                            if (provinceCodes.includes(province.code)) {
+                                nextProvinceNames[province.code] =
+                                    province.name;
+                            }
+                        });
+                    } catch {
+                        // Keep rendering stable when PSGC lookups fail.
+                    }
+                }),
+            );
 
-            for (const provinceCode of provinceCodes) {
-                try {
-                    const cityList = await getCities(provinceCode);
-                    cityList.forEach((city) => {
-                        if (cityCodes.includes(city.code)) {
-                            nextCityNames[city.code] = city.name;
-                        }
-                    });
-                } catch {
-                    // Keep rendering stable when PSGC lookups fail.
-                }
-            }
+            await Promise.all(
+                provinceCodes.map(async (provinceCode) => {
+                    try {
+                        const cityList = await getCities(provinceCode);
+                        cityList.forEach((city) => {
+                            if (cityCodes.includes(city.code)) {
+                                nextCityNames[city.code] = city.name;
+                            }
+                        });
+                    } catch {
+                        // Keep rendering stable when PSGC lookups fail.
+                    }
+                }),
+            );
 
-            for (const cityCode of cityCodes) {
-                try {
-                    const barangayList = await getBarangays(cityCode);
-                    barangayList.forEach((barangay) => {
-                        if (barangayCodes.includes(barangay.code)) {
-                            nextBarangayNames[barangay.code] = barangay.name;
-                        }
-                    });
-                } catch {
-                    // Keep rendering stable when PSGC lookups fail.
-                }
-            }
+            await Promise.all(
+                cityCodes.map(async (cityCode) => {
+                    try {
+                        const barangayList = await getBarangays(cityCode);
+                        barangayList.forEach((barangay) => {
+                            if (barangayCodes.includes(barangay.code)) {
+                                nextBarangayNames[barangay.code] =
+                                    barangay.name;
+                            }
+                        });
+                    } catch {
+                        // Keep rendering stable when PSGC lookups fail.
+                    }
+                }),
+            );
 
             if (!isActive) {
                 return;
@@ -603,12 +615,11 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
                             const houseNo = address.building_name || '';
                             const barangay =
                                 barangayNames[address.barangay] ||
-                                address.barangay;
-                            const city =
-                                cityNames[address.city] || address.city;
+                                'Unknown barangay';
+                            const city = cityNames[address.city] || 'Unknown city';
                             const province =
                                 provinceNames[address.province] ||
-                                address.province;
+                                'Unknown province';
                             return (
                                 <div
                                     key={address.id}

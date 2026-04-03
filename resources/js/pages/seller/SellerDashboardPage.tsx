@@ -1057,7 +1057,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                     <div className="seller-orders-tabs">
                         <button
                             type="button"
-                            className={`seller-orders-tab${orderTab === 'active' ? 'active' : ''}`}
+                            className={`seller-orders-tab ${orderTab === 'active' ? 'active' : ''}`}
                             onClick={() => setOrderTab('active')}
                         >
                             Active Orders
@@ -1069,7 +1069,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                         </button>
                         <button
                             type="button"
-                            className={`seller-orders-tab${orderTab === 'history' ? 'active' : ''}`}
+                            className={`seller-orders-tab ${orderTab === 'history' ? 'active' : ''}`}
                             onClick={() => setOrderTab('history')}
                         >
                             Order History

@@ -128,6 +128,21 @@ export interface WalletTransactionItem {
     created_at?: string | null;
 }
 
+type SellerRegistrationResponse = { registration: SellerRegistration | null };
+
+const SELLER_REGISTRATION_CACHE_TTL_MS = 30000;
+let sellerRegistrationCache: {
+    value: SellerRegistrationResponse;
+    expiresAt: number;
+} | null = null;
+let sellerRegistrationInFlight: Promise<SellerRegistrationResponse> | null =
+    null;
+
+const invalidateSellerRegistrationCache = () => {
+    sellerRegistrationCache = null;
+    sellerRegistrationInFlight = null;
+};
+
 // Authentication Services
 export const authService = {
     login: async (credentials: LoginCredentials) => {
@@ -275,10 +290,38 @@ export const sellerService = {
         return apiGet<AuctionProduct[]>('/api/seller/products');
     },
 
-    getRegistration: async () => {
-        return apiGet<{ registration: SellerRegistration | null }>(
+    getRegistration: async (options?: { force?: boolean }) => {
+        const force = options?.force === true;
+
+        if (
+            !force &&
+            sellerRegistrationCache &&
+            sellerRegistrationCache.expiresAt > Date.now()
+        ) {
+            return sellerRegistrationCache.value;
+        }
+
+        if (!force && sellerRegistrationInFlight) {
+            return sellerRegistrationInFlight;
+        }
+
+        const request = apiGet<SellerRegistrationResponse>(
             '/api/seller/registration',
-        );
+        )
+            .then((response) => {
+                sellerRegistrationCache = {
+                    value: response,
+                    expiresAt: Date.now() + SELLER_REGISTRATION_CACHE_TTL_MS,
+                };
+
+                return response;
+            })
+            .finally(() => {
+                sellerRegistrationInFlight = null;
+            });
+
+        sellerRegistrationInFlight = request;
+        return request;
     },
 
     updateShippingSettings: async (data: {
@@ -289,10 +332,22 @@ export const sellerService = {
         general_location?: string;
         zip_code?: string;
     }) => {
-        return apiPatch<{ message: string; registration: SellerRegistration }>(
+        invalidateSellerRegistrationCache();
+
+        const response = await apiPatch<{
+            message: string;
+            registration: SellerRegistration;
+        }>(
             '/api/seller/shipping-settings',
             data,
         );
+
+        sellerRegistrationCache = {
+            value: { registration: response.registration },
+            expiresAt: Date.now() + SELLER_REGISTRATION_CACHE_TTL_MS,
+        };
+
+        return response;
     },
 
     submitRegistration: async (data: {
@@ -324,10 +379,22 @@ export const sellerService = {
         submit_sworn_declaration?: 'yes' | 'no';
         agree_business_terms: boolean;
     }) => {
-        return apiPost<{ message: string; registration: SellerRegistration }>(
+        invalidateSellerRegistrationCache();
+
+        const response = await apiPost<{
+            message: string;
+            registration: SellerRegistration;
+        }>(
             '/api/seller/registration',
             data,
         );
+
+        sellerRegistrationCache = {
+            value: { registration: response.registration },
+            expiresAt: Date.now() + SELLER_REGISTRATION_CACHE_TTL_MS,
+        };
+
+        return response;
     },
 
     createProduct: async (formData: FormData) => {
