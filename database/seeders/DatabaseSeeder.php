@@ -29,6 +29,9 @@ class DatabaseSeeder extends Seeder
                     'email_verified_at' => now(),
                 ]
             );
+
+            $this->command?->warn('Seeded admin account using SEED_ADMIN_PASSWORD.');
+            $this->command?->line("Email: {$seedAdminEmail}");
         } elseif (! app()->isProduction()) {
             $generatedPassword = Str::password(24);
 
@@ -50,9 +53,11 @@ class DatabaseSeeder extends Seeder
             $this->command?->warn('Skipping admin seeding because SEED_ADMIN_PASSWORD is not set.');
         }
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
-        ]);
+        if (! app()->isProduction()) {
+            User::factory()->create([
+                'name' => 'Test User',
+                'email' => 'test@example.com',
+            ]);
+        }
     }
 }

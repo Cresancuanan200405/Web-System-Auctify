@@ -236,6 +236,58 @@ export const HomePage: React.FC<HomePageProps> = ({
     }, [miniSlides.length, currentMiniSlide]);
 
     useEffect(() => {
+        if (videoAds.length === 0) {
+            return;
+        }
+
+        const videos = Array.from(
+            document.querySelectorAll<HTMLVideoElement>('.video-ad-media'),
+        );
+
+        if (videos.length === 0) {
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            (entries) => {
+                entries.forEach((entry) => {
+                    const video = entry.target as HTMLVideoElement;
+
+                    if (entry.isIntersecting && entry.intersectionRatio >= 0.5) {
+                        const playPromise = video.play();
+                        if (playPromise && typeof playPromise.catch === 'function') {
+                            playPromise.catch(() => {
+                                // Ignore autoplay rejections; controls remain available.
+                            });
+                        }
+                    } else {
+                        video.pause();
+                    }
+                });
+            },
+            {
+                threshold: [0, 0.5, 1],
+            },
+        );
+
+        videos.forEach((video) => observer.observe(video));
+
+        const handleVisibility = () => {
+            if (document.visibilityState !== 'visible') {
+                videos.forEach((video) => video.pause());
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibility);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibility);
+            observer.disconnect();
+            videos.forEach((video) => video.pause());
+        };
+    }, [videoAds]);
+
+    useEffect(() => {
         let isActive = true;
 
         const fetchProducts = async () => {
@@ -802,7 +854,6 @@ export const HomePage: React.FC<HomePageProps> = ({
                                                 className="video-ad-media"
                                                 src={videoUrl}
                                                 poster={imageUrl || undefined}
-                                                autoPlay
                                                 loop
                                                 muted
                                                 playsInline

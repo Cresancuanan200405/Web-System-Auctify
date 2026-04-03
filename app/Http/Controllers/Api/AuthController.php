@@ -21,6 +21,7 @@ class AuthController extends Controller
     public function googleRedirect(Request $request)
     {
         $frontend = $this->resolveFrontendUrl($request->query('frontend'));
+        config(['services.google.redirect' => $this->resolveGoogleCallbackUrl($request)]);
         $statePayload = base64_encode(json_encode([
             'frontend' => $frontend,
         ]));
@@ -38,6 +39,7 @@ class AuthController extends Controller
     {
         $state = $this->extractState($request);
         $frontendUrl = $this->resolveFrontendUrl($state['frontend'] ?? null);
+        config(['services.google.redirect' => $this->resolveGoogleCallbackUrl($request)]);
         $googleUser = null;
 
         try {
@@ -153,6 +155,11 @@ class AuthController extends Controller
         }
 
         return rtrim(config('services.frontend.url'), '/');
+    }
+
+    private function resolveGoogleCallbackUrl(Request $request): string
+    {
+        return rtrim($request->getSchemeAndHttpHost(), '/') . '/api/auth/google/callback';
     }
 
     private function extractState(Request $request): array
