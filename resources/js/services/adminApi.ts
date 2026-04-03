@@ -248,8 +248,19 @@ export interface AdminAccountIdentity {
     name: string;
     email: string;
     isCurrent: boolean;
+    requiresPasswordReset?: boolean;
+    isInactive?: boolean;
+    inactiveAt?: string | null;
+    inactiveReason?: string | null;
     lastSeenAt?: string | null;
     createdAt?: string | null;
+    recentActivity?: Array<{
+        action: string;
+        reason: string;
+        triggeredByName?: string | null;
+        triggeredByEmail?: string | null;
+        createdAt?: string | null;
+    }>;
 }
 
 export interface AdminUserDetails extends AdminUserListItem {
@@ -446,6 +457,60 @@ export const adminApi = {
             '/api/admin/accounts',
             {
                 method: 'GET',
+            },
+        );
+    },
+
+    forceLogoutAdminAccount: (
+        _token: string | null | undefined,
+        userId: number,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/accounts/${userId}/force-logout`,
+            {
+                method: 'POST',
+            },
+        );
+    },
+
+    requireAdminPasswordReset: (
+        _token: string | null | undefined,
+        userId: number,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/accounts/${userId}/require-password-reset`,
+            {
+                method: 'POST',
+            },
+        );
+    },
+
+    deactivateAdminAccount: (
+        _token: string | null | undefined,
+        userId: number,
+        reason: string,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/accounts/${userId}/deactivate`,
+            {
+                method: 'POST',
+                body: JSON.stringify({ reason }),
+            },
+        );
+    },
+
+    reactivateAdminAccount: (
+        _token: string | null | undefined,
+        userId: number,
+    ) => {
+        consumeToken(_token);
+        return request<{ message: string }>(
+            `/api/admin/accounts/${userId}/reactivate`,
+            {
+                method: 'POST',
             },
         );
     },

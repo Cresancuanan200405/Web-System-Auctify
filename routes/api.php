@@ -69,6 +69,10 @@ Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
         Route::get('session', [AdminAuthController::class, 'session']);
         Route::post('logout', [AdminAuthController::class, 'logout']);
         Route::get('accounts', [AdminAuthController::class, 'accounts']);
+        Route::post('accounts/{user}/force-logout', [AdminAuthController::class, 'forceLogoutAccount']);
+        Route::post('accounts/{user}/require-password-reset', [AdminAuthController::class, 'requirePasswordReset']);
+        Route::post('accounts/{user}/deactivate', [AdminAuthController::class, 'deactivateAccount']);
+        Route::post('accounts/{user}/reactivate', [AdminAuthController::class, 'reactivateAccount']);
         Route::get('homepage-config', [AdminHomepageConfigController::class, 'show']);
         Route::put('homepage-config', [AdminHomepageConfigController::class, 'update']);
         Route::post('homepage-media/upload', [HomepageMediaUploadController::class, 'store'])->middleware('throttle:admin-uploads');

@@ -56,6 +56,9 @@ class User extends Authenticatable
         'verification_revoked_at',
         'wallet_balance',
         'last_login_at',
+        'admin_password_reset_required_at',
+        'admin_deactivated_at',
+        'admin_deactivation_reason',
     ];
 
     /**
@@ -88,6 +91,8 @@ class User extends Authenticatable
             'verified_at' => 'datetime',
             'verification_revoked_at' => 'datetime',
             'last_login_at' => 'datetime',
+            'admin_password_reset_required_at' => 'datetime',
+            'admin_deactivated_at' => 'datetime',
         ];
     }
 

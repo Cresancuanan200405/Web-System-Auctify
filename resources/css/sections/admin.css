@@ -3398,11 +3398,48 @@
     transition:
         width 0.24s ease,
         padding 0.24s ease;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(165, 215, 207, 0.55) rgba(5, 45, 46, 0.35);
+}
+
+.admin-neo-sidebar::-webkit-scrollbar {
+    width: 10px;
+}
+
+.admin-neo-sidebar::-webkit-scrollbar-track {
+    background: rgba(6, 51, 52, 0.55);
+    border-radius: 999px;
+}
+
+.admin-neo-sidebar::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, rgba(174, 222, 215, 0.78), rgba(113, 171, 160, 0.68));
+    border: 2px solid rgba(6, 51, 52, 0.65);
+    border-radius: 999px;
+}
+
+.admin-neo-sidebar::-webkit-scrollbar-button {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .admin-neo-sidebar.is-collapsed {
     width: 92px;
-    padding: 14px 10px;
+    padding: 14px 8px;
+    scrollbar-width: thin;
+    scrollbar-color: rgba(162, 214, 206, 0.62) rgba(5, 45, 46, 0.2);
+}
+
+.admin-neo-shell.sidebar-collapsed .admin-neo-sidebar::-webkit-scrollbar {
+    width: 7px;
+}
+
+.admin-neo-shell.sidebar-collapsed .admin-neo-sidebar::-webkit-scrollbar-track {
+    background: rgba(6, 51, 52, 0.3);
+}
+
+.admin-neo-shell.sidebar-collapsed .admin-neo-sidebar::-webkit-scrollbar-thumb {
+    border: 1px solid rgba(6, 51, 52, 0.55);
 }
 
 .admin-neo-sidebar-top {
@@ -3626,6 +3663,61 @@
 
 .admin-neo-shell.sidebar-collapsed .admin-neo-sidebar-toggle {
     margin-top: 2px;
+}
+
+.admin-account-audit-row td {
+    background: #f8fbfd;
+    border-bottom: 1px solid #e0e7ef;
+}
+
+.admin-account-audit-shell {
+    display: grid;
+    gap: 8px;
+    padding: 10px 8px;
+}
+
+.admin-account-audit-shell strong {
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #33506d;
+}
+
+.admin-account-audit-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 7px;
+}
+
+.admin-account-audit-list li {
+    display: grid;
+    gap: 2px;
+    border-left: 3px solid #c8d7e9;
+    padding-left: 9px;
+}
+
+.admin-account-audit-action {
+    font-size: 12px;
+    font-weight: 700;
+    color: #17375a;
+}
+
+.admin-account-audit-list li > span {
+    font-size: 12px;
+    color: #334155;
+}
+
+.admin-account-audit-list li > small {
+    font-size: 11px;
+    color: #64748b;
+}
+
+.admin-account-audit-empty {
+    margin: 0;
+    font-size: 12px;
+    color: #64748b;
 }
 
 .admin-neo-topbar {

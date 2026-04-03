@@ -290,6 +290,86 @@ class AdminModerationStatusTest extends TestCase
         $this->assertTrue((bool) ($currentEntry['isCurrent'] ?? false));
     }
 
+    public function test_admin_can_force_logout_require_reset_and_deactivate_admin_account(): void
+    {
+        $operator = User::factory()->create(['is_admin' => true]);
+        $operatorToken = $operator->createToken('admin-operator')->plainTextToken;
+
+        $targetAdmin = User::factory()->create(['is_admin' => true]);
+        $targetAdmin->createToken('admin')->plainTextToken;
+
+        $this->withToken($operatorToken)
+            ->postJson('/api/admin/accounts/'.$targetAdmin->id.'/force-logout')
+            ->assertOk();
+
+        $this->assertDatabaseMissing('personal_access_tokens', [
+            'tokenable_id' => $targetAdmin->id,
+            'name' => 'admin',
+        ]);
+
+        $this->withToken($operatorToken)
+            ->postJson('/api/admin/accounts/'.$targetAdmin->id.'/require-password-reset')
+            ->assertOk();
+
+        $targetAdmin->refresh();
+        $this->assertNotNull($targetAdmin->admin_password_reset_required_at);
+
+        $this->withToken($operatorToken)
+            ->postJson('/api/admin/accounts/'.$targetAdmin->id.'/deactivate', [
+                'reason' => 'Compromised credentials',
+            ])
+            ->assertOk();
+
+        $targetAdmin->refresh();
+        $this->assertNotNull($targetAdmin->admin_deactivated_at);
+        $this->assertSame('Compromised credentials', $targetAdmin->admin_deactivation_reason);
+
+        $this->withToken($operatorToken)
+            ->postJson('/api/admin/accounts/'.$targetAdmin->id.'/reactivate')
+            ->assertOk();
+
+        $targetAdmin->refresh();
+        $this->assertNull($targetAdmin->admin_deactivated_at);
+        $this->assertNull($targetAdmin->admin_deactivation_reason);
+
+        $accountsResponse = $this->withToken($operatorToken)
+            ->getJson('/api/admin/accounts')
+            ->assertOk();
+
+        $targetAccount = collect($accountsResponse->json('accounts'))
+            ->firstWhere('id', $targetAdmin->id);
+
+        $this->assertNotNull($targetAccount);
+        $this->assertNotEmpty($targetAccount['recentActivity'] ?? []);
+
+        $activityActions = collect($targetAccount['recentActivity'])->pluck('action')->all();
+        $this->assertContains('admin-force-logout', $activityActions);
+        $this->assertContains('admin-require-password-reset', $activityActions);
+        $this->assertContains('admin-deactivate-account', $activityActions);
+
+        $firstActivity = collect($targetAccount['recentActivity'])->first();
+        $this->assertSame($operator->name, $firstActivity['triggeredByName'] ?? null);
+        $this->assertSame($operator->email, $firstActivity['triggeredByEmail'] ?? null);
+    }
+
+    public function test_deactivated_admin_cannot_login(): void
+    {
+        $admin = User::factory()->create([
+            'is_admin' => true,
+            'email' => 'inactive-admin@example.com',
+            'password' => Hash::make('password123'),
+            'admin_deactivated_at' => now(),
+            'admin_deactivation_reason' => 'Inactive account',
+        ]);
+
+        $this->postJson('/api/admin/login', [
+            'email' => $admin->email,
+            'password' => 'password123',
+        ])
+            ->assertStatus(403)
+            ->assertJsonPath('account_status', 'admin_inactive');
+    }
+
     public function test_suspension_with_duration_expires_and_allows_login(): void
     {
         $user = User::factory()->create([
