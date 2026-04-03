@@ -143,10 +143,7 @@ export const DetailsSection: React.FC<DetailsSectionProps> = ({
                 const sellerStatus = (
                     registrationResponse.registration?.status ?? ''
                 ).toLowerCase();
-                const sellerActive =
-                    Boolean(registrationResponse.registration) &&
-                    sellerStatus !== 'revoked' &&
-                    sellerStatus !== 'rejected';
+                const sellerActive = sellerStatus === 'approved';
 
                 const bidsParticipated = bidNotifications.items.filter(
                     (item) =>

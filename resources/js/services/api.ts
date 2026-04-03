@@ -18,6 +18,8 @@ import type {
     DirectMessage,
     DirectMessageThreadListResponse,
     DirectMessageThreadResponse,
+    SellerOrderRecord,
+    OrderPaymentRecord,
 } from '../types';
 
 export interface PublicPlatformSettings {
@@ -503,5 +505,92 @@ export const directMessageService = {
 export const bidNotificationService = {
     getMyNotifications: async () => {
         return apiGet<BidNotificationListResponse>('/api/notifications/bids');
+    },
+};
+
+export const orderService = {
+    createFromBidWinner: async (data: {
+        bid_winner_id: number;
+        shipping_address_id?: number;
+        subtotal_amount?: number;
+        shipping_fee?: number;
+        service_fee?: number;
+        total_amount?: number;
+        capture_payment?: boolean;
+        payment?: {
+            method: string;
+            provider?: string;
+            provider_reference?: string;
+            status?: string;
+            amount?: number;
+            currency?: string;
+        };
+        meta?: Record<string, unknown>;
+    }) => {
+        return apiPost<{ message: string; order: SellerOrderRecord }>(
+            '/api/orders/from-bid-winner',
+            data,
+        );
+    },
+
+    getSellerOrders: async () => {
+        return apiGet<{ orders: SellerOrderRecord[] }>('/api/seller/orders');
+    },
+
+    updateSellerShippingStatus: async (
+        orderId: number,
+        data: {
+            status:
+                | 'pending'
+                | 'packed'
+                | 'shipped'
+                | 'in_transit'
+                | 'delivered'
+                | 'failed'
+                | 'cancelled';
+            shipping_method?: string;
+            carrier?: string;
+            service_level?: string;
+            tracking_number?: string;
+            estimated_delivery_at?: string;
+            delivered_at?: string;
+            notes?: string;
+        },
+    ) => {
+        return apiPatch<{ message: string; order: SellerOrderRecord }>(
+            `/api/seller/orders/${orderId}/shipping-status`,
+            data,
+        );
+    },
+
+    captureSellerPayment: async (
+        orderId: number,
+        data: {
+            method: string;
+            provider?: string;
+            provider_reference?: string;
+            status?:
+                | 'pending'
+                | 'paid'
+                | 'failed'
+                | 'refunded'
+                | 'partially_refunded';
+            amount?: number;
+            currency?: string;
+            failure_reason?: string;
+            metadata?: Record<string, unknown>;
+        },
+    ) => {
+        return apiPost<{
+            message: string;
+            payment: OrderPaymentRecord;
+            order: SellerOrderRecord;
+        }>(`/api/seller/orders/${orderId}/payments`, data);
+    },
+
+    getSellerPaymentHistory: async () => {
+        return apiGet<{ payments: OrderPaymentRecord[] }>(
+            '/api/seller/orders/payments/history',
+        );
     },
 };

@@ -5,6 +5,8 @@ import {
     useSellerOrderHistory,
     updateBuyerOrderStatus,
 } from '../../hooks/useOrderHistory';
+import { SellerOrderShipmentTrackingPage } from './SellerOrderShipmentTrackingPage';
+import { SellerPaymentHistoryPage } from './SellerPaymentHistoryPage';
 import {
     HOME_CATEGORY_OPTIONS,
     getCategoryLabel,
@@ -62,6 +64,9 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
     const [savingProduct, setSavingProduct] = useState(false);
     const [deletingProduct, setDeletingProduct] = useState(false);
     const [orderTab, setOrderTab] = useState<'active' | 'history'>('active');
+    const [orderOpsTab, setOrderOpsTab] = useState<'shipments' | 'payments'>(
+        'shipments',
+    );
     const [removedMediaIds, setRemovedMediaIds] = useState<number[]>([]);
     const addMoreMediaInputRef = useRef<HTMLInputElement | null>(null);
     const [additionalMediaEntries, setAdditionalMediaEntries] = useState<
@@ -2238,7 +2243,49 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                             </article>
                         )}
 
-                        {activeSection === 'orders' && <SellerOrdersSection />}
+                        {activeSection === 'orders' && (
+                            <>
+                                <article className="seller-dashboard-card seller-dashboard-card-wide">
+                                    <div className="seller-products-head">
+                                        <div>
+                                            <h3 className="seller-dashboard-card-title">
+                                                Order Operations
+                                            </h3>
+                                            <p className="seller-dashboard-card-text">
+                                                Track shipments and review payment history for seller orders.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="seller-orders-tabs">
+                                        <button
+                                            type="button"
+                                            className={`seller-orders-tab ${orderOpsTab === 'shipments' ? 'active' : ''}`}
+                                            onClick={() =>
+                                                setOrderOpsTab('shipments')
+                                            }
+                                        >
+                                            Shipment Tracking
+                                        </button>
+                                        <button
+                                            type="button"
+                                            className={`seller-orders-tab ${orderOpsTab === 'payments' ? 'active' : ''}`}
+                                            onClick={() =>
+                                                setOrderOpsTab('payments')
+                                            }
+                                        >
+                                            Payment History
+                                        </button>
+                                    </div>
+                                </article>
+
+                                {orderOpsTab === 'shipments' && (
+                                    <SellerOrderShipmentTrackingPage />
+                                )}
+                                {orderOpsTab === 'payments' && (
+                                    <SellerPaymentHistoryPage />
+                                )}
+                            </>
+                        )}
 
                         {activeSection === 'products' && (
                             <div className="seller-dashboard-grid">

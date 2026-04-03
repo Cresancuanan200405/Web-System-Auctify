@@ -250,6 +250,83 @@ export interface AdminUserDetails extends AdminUserListItem {
     verification?: AdminVerificationDetails | null;
 }
 
+export interface AdminOrderShipmentEntry {
+    id: number;
+    order_number?: string | null;
+    status: string;
+    shipping_status: string;
+    payment_status: string;
+    total_amount: string;
+    currency: string;
+    placed_at?: string | null;
+    completed_at?: string | null;
+    auction?: {
+        id: number;
+        title: string;
+    } | null;
+    buyer?: {
+        id: number;
+        name: string;
+        email?: string | null;
+    } | null;
+    seller?: {
+        id: number;
+        name: string;
+        email?: string | null;
+    } | null;
+    shipments?: Array<{
+        id: number;
+        status: string;
+        shipping_method?: string | null;
+        carrier?: string | null;
+        tracking_number?: string | null;
+        estimated_delivery_at?: string | null;
+        delivered_at?: string | null;
+        updated_at?: string | null;
+    }>;
+}
+
+export interface AdminOrderPaymentEntry {
+    id: number;
+    order_id: number;
+    method: string;
+    provider?: string | null;
+    provider_reference?: string | null;
+    status: string;
+    amount: string;
+    currency: string;
+    paid_at?: string | null;
+    created_at?: string | null;
+    payer?: {
+        id: number;
+        name: string;
+        email?: string | null;
+    } | null;
+    payee?: {
+        id: number;
+        name: string;
+        email?: string | null;
+    } | null;
+    order?: {
+        id: number;
+        order_number?: string | null;
+        auction?: {
+            id: number;
+            title: string;
+        } | null;
+        buyer?: {
+            id: number;
+            name: string;
+            email?: string | null;
+        } | null;
+        seller?: {
+            id: number;
+            name: string;
+            email?: string | null;
+        } | null;
+    } | null;
+}
+
 export interface HomepageMediaUploadResponse {
     message: string;
     type: 'video' | 'image';
@@ -469,6 +546,55 @@ export const adminApi = {
             {
                 method: 'POST',
                 body: JSON.stringify({ reason }),
+            },
+        );
+    },
+
+    getOrderShipments: (
+        _token: string | null | undefined,
+        params?: { status?: string; search?: string },
+    ) => {
+        consumeToken(_token);
+        const query = new URLSearchParams();
+        if (params?.status && params.status !== 'all') {
+            query.set('status', params.status);
+        }
+        if (params?.search && params.search.trim().length > 0) {
+            query.set('search', params.search.trim());
+        }
+
+        const suffix = query.toString() ? `?${query.toString()}` : '';
+
+        return request<{ orders: AdminOrderShipmentEntry[] }>(
+            `/api/admin/orders/shipments${suffix}`,
+            {
+                method: 'GET',
+            },
+        );
+    },
+
+    getOrderPayments: (
+        _token: string | null | undefined,
+        params?: { status?: string; method?: string; search?: string },
+    ) => {
+        consumeToken(_token);
+        const query = new URLSearchParams();
+        if (params?.status && params.status !== 'all') {
+            query.set('status', params.status);
+        }
+        if (params?.method && params.method !== 'all') {
+            query.set('method', params.method);
+        }
+        if (params?.search && params.search.trim().length > 0) {
+            query.set('search', params.search.trim());
+        }
+
+        const suffix = query.toString() ? `?${query.toString()}` : '';
+
+        return request<{ payments: AdminOrderPaymentEntry[] }>(
+            `/api/admin/orders/payments${suffix}`,
+            {
+                method: 'GET',
             },
         );
     },

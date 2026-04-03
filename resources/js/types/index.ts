@@ -235,6 +235,15 @@ export interface AuctionProductDetail extends AuctionProduct {
     bids?: AuctionBid[];
     messages?: AuctionMessage[];
     bids_count?: number;
+    bid_winner?: {
+        id: number;
+        auction_id: number;
+        bid_id: number;
+        winner_user_id: number;
+        seller_user_id: number;
+        winning_amount: string;
+        won_at?: string | null;
+    } | null;
 }
 
 export interface BagAuctionItem extends AuctionProduct {
@@ -243,6 +252,15 @@ export interface BagAuctionItem extends AuctionProduct {
     };
     winning_bid_amount: string;
     winning_bid_at?: string | null;
+    bid_winner?: {
+        id: number;
+        auction_id: number;
+        bid_id: number;
+        winner_user_id: number;
+        seller_user_id: number;
+        winning_amount: string;
+        won_at?: string | null;
+    } | null;
 }
 
 export interface BagAuctionListResponse {
@@ -268,6 +286,69 @@ export interface OrderHistoryItem {
     media_url?: string;
     media_type?: 'image' | 'video';
     purchased_at: string;
+}
+
+export interface OrderShipmentRecord {
+    id: number;
+    status: string;
+    shipping_method?: string | null;
+    carrier?: string | null;
+    service_level?: string | null;
+    tracking_number?: string | null;
+    shipped_at?: string | null;
+    estimated_delivery_at?: string | null;
+    delivered_at?: string | null;
+    failed_at?: string | null;
+    notes?: string | null;
+    updated_at?: string | null;
+}
+
+export interface OrderPaymentRecord {
+    id: number;
+    order_id: number;
+    method: string;
+    provider?: string | null;
+    provider_reference?: string | null;
+    status: string;
+    amount: string;
+    currency: string;
+    paid_at?: string | null;
+    failed_at?: string | null;
+    failure_reason?: string | null;
+    created_at?: string | null;
+    payer?: Pick<User, 'id' | 'name' | 'email'> | null;
+    payee?: Pick<User, 'id' | 'name' | 'email'> | null;
+    order?: {
+        id: number;
+        order_number?: string | null;
+        auction_id?: number;
+        auction?: Pick<AuctionProduct, 'id' | 'title'> | null;
+        buyer?: Pick<User, 'id' | 'name' | 'email'> | null;
+        seller?: Pick<User, 'id' | 'name' | 'email'> | null;
+    } | null;
+}
+
+export interface SellerOrderRecord {
+    id: number;
+    order_number?: string | null;
+    auction_id: number;
+    shipping_address_id?: number | null;
+    total_amount: string;
+    currency: string;
+    status: string;
+    payment_status: string;
+    shipping_status: string;
+    placed_at?: string | null;
+    completed_at?: string | null;
+    cancelled_at?: string | null;
+    cancellation_reason?: string | null;
+    buyer?: Pick<User, 'id' | 'name' | 'email'> | null;
+    seller?: Pick<User, 'id' | 'name' | 'email'> | null;
+    shipping_address?: Partial<Address> | null;
+    auction?: Pick<AuctionProduct, 'id' | 'title' | 'category' | 'subcategory' | 'media'> | null;
+    shipments?: OrderShipmentRecord[];
+    payments?: OrderPaymentRecord[];
+    created_at?: string | null;
 }
 
 export interface WishlistItem {

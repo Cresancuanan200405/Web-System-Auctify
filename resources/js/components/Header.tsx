@@ -75,13 +75,6 @@ export const Header: React.FC<HeaderProps> = ({
     const [isSearchLoading, setIsSearchLoading] = useState(false);
     const [activeSearchIndex, setActiveSearchIndex] = useState(0);
     const [hasSellerIndicator, setHasSellerIndicator] = useState(false);
-    const [sellerRegistrationSummary, setSellerRegistrationSummary] =
-        useState<{
-            status?: string | null;
-            shopName?: string | null;
-            sellerType?: string | null;
-            generalLocation?: string | null;
-        } | null>(null);
     const [recentSearches, setRecentSearches] = useState<string[]>(() => {
         try {
             const raw = window.localStorage.getItem(RECENT_SEARCHES_KEY);
@@ -104,7 +97,6 @@ export const Header: React.FC<HeaderProps> = ({
     useEffect(() => {
         if (!authUser) {
             setHasSellerIndicator(false);
-            setSellerRegistrationSummary(null);
             return;
         }
 
@@ -123,13 +115,6 @@ export const Header: React.FC<HeaderProps> = ({
                 const hasSellerAccess = status === 'approved';
 
                 setHasSellerIndicator(hasSellerAccess);
-                setSellerRegistrationSummary({
-                    status: response.registration?.status ?? null,
-                    shopName: response.registration?.shop_name ?? null,
-                    sellerType: response.registration?.seller_type ?? null,
-                    generalLocation:
-                        response.registration?.general_location ?? null,
-                });
                 window.localStorage.setItem(
                     SELLER_DASHBOARD_ACCESS_KEY,
                     hasSellerAccess ? '1' : '0',
@@ -141,7 +126,6 @@ export const Header: React.FC<HeaderProps> = ({
                             SELLER_DASHBOARD_ACCESS_KEY,
                         ) === '1',
                     );
-                    setSellerRegistrationSummary(null);
                 }
             }
         };
@@ -848,50 +832,6 @@ export const Header: React.FC<HeaderProps> = ({
                                             : 'Details'}
                                     </span>
                                 </div>
-                                {sellerRegistrationSummary && (
-                                    <div className="dropdown-item dropdown-item-seller-summary">
-                                        <div className="dropdown-seller-summary-meta">
-                                            <span className="dropdown-seller-summary-title">
-                                                {sellerRegistrationSummary.shopName ||
-                                                    'Seller Registration'}
-                                            </span>
-                                            <span>
-                                                Status:{' '}
-                                                {sellerRegistrationSummary.status ||
-                                                    'N/A'}
-                                            </span>
-                                            <span>
-                                                Type:{' '}
-                                                {sellerRegistrationSummary.sellerType ||
-                                                    'N/A'}
-                                            </span>
-                                            <span>
-                                                Location:{' '}
-                                                {sellerRegistrationSummary.generalLocation ||
-                                                    'N/A'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                )}
-                                {sellerRegistrationSummary && (
-                                    <div
-                                        className="dropdown-item clickable"
-                                        onClick={() => onNavigateAccount('seller')}
-                                    >
-                                        <svg
-                                            width="18"
-                                            height="18"
-                                            viewBox="0 0 24 24"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            strokeWidth="2"
-                                        >
-                                            <path d="M4 4h16v16H4z" />
-                                            <path d="M8 9h8M8 13h8M8 17h5" />
-                                        </svg>
-                                        <span>Seller Registration Data</span>
-                                    </div>
-                                )}
                                 {!isSellerMode && (
                                     <div
                                         className="dropdown-item clickable"

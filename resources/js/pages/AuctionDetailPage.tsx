@@ -5,7 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { useLocalStorage } from '../hooks/useLocalStorage';
 import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
 import { useWallet } from '../hooks/useWallet';
-import { addressService, auctionService } from '../services/api';
+import { addressService, auctionService, orderService } from '../services/api';
 import type {
     Address,
     AuctionMessage,
@@ -763,78 +763,118 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 
         setIsCheckingOut(true);
 
-        window.setTimeout(() => {
-            deductFunds(totalAmount);
-
-            addOrder({
-                id: `${selectedAuction.id}-${Date.now()}`,
-                auction_id: selectedAuction.id,
-                title: selectedAuction.title,
-                category: selectedAuction.category,
-                subcategory: selectedAuction.subcategory,
-                seller_user_id:
-                    selectedAuction.user?.id ?? selectedAuction.user_id,
-                seller_name:
-                    selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                    selectedAuction.user?.name ||
-                    'Unknown Seller',
-                seller_shop_name:
-                    selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                    selectedAuction.user?.name ||
-                    'Unknown Seller',
-                buyer_user_id: authUser?.id,
-                buyer_name: authUser?.name,
-                buyer_email: authUser?.email,
-                amount_paid: finalWinner.amount,
-                status: 'processing',
-                address_summary: formatAddress(selectedAddress),
-                payment_card_label: 'Auctify Wallet',
-                media_url: resolveMediaUrl(primaryMedia?.url),
-                media_type: primaryMedia?.media_type,
-                purchased_at: new Date().toISOString(),
-            });
-
-            if ((selectedAuction.user?.id ?? selectedAuction.user_id) > 0) {
-                addSellerOrder(
-                    selectedAuction.user?.id ?? selectedAuction.user_id,
-                    {
-                        id: `${selectedAuction.id}-${Date.now()}-seller`,
-                        auction_id: selectedAuction.id,
-                        title: selectedAuction.title,
-                        category: selectedAuction.category,
-                        subcategory: selectedAuction.subcategory,
-                        seller_user_id:
-                            selectedAuction.user?.id ?? selectedAuction.user_id,
-                        seller_name:
-                            selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                            selectedAuction.user?.name ||
-                            'Unknown Seller',
-                        seller_shop_name:
-                            selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                            selectedAuction.user?.name ||
-                            'Unknown Seller',
-                        buyer_user_id: authUser?.id,
-                        buyer_name: authUser?.name,
-                        buyer_email: authUser?.email,
-                        amount_paid: finalWinner.amount,
-                        status: 'processing',
-                        address_summary: formatAddress(selectedAddress),
-                        payment_card_label: 'Auctify Wallet',
-                        media_url: resolveMediaUrl(primaryMedia?.url),
-                        media_type: primaryMedia?.media_type,
-                        purchased_at: new Date().toISOString(),
-                    },
-                );
-            }
-
+        const bidWinnerId = selectedAuction.bid_winner?.id;
+        if (!bidWinnerId) {
+            setCheckoutError('Unable to confirm checkout because the winning bid record is missing.');
             setIsCheckingOut(false);
-            setCheckoutError('');
-            setIsCheckoutDialogOpen(false);
-            toast.success(
-                `Checkout complete. Deducted ${formatPeso(finalWinner.amount)} from your wallet.`,
-                { autoClose: 2800 },
-            );
-        }, 350);
+            return;
+        }
+
+
+        void (async () => {
+            try {
+                await orderService.createFromBidWinner({
+                    bid_winner_id: bidWinnerId,
+                    shipping_address_id: Number(selectedAddressId),
+                    subtotal_amount: totalAmount,
+                    shipping_fee: 0,
+                    service_fee: 0,
+                    total_amount: totalAmount,
+                    capture_payment: true,
+                    payment: {
+                        method: 'wallet',
+                        provider: 'Auctify Wallet',
+                        provider_reference: `auction-${selectedAuction.id}-${Date.now()}`,
+                        status: 'paid',
+                        amount: totalAmount,
+                        currency: 'PHP',
+                    },
+                    meta: {
+                        address_summary: formatAddress(selectedAddress),
+                        media_url: resolveMediaUrl(primaryMedia?.url),
+                    },
+                });
+
+                deductFunds(totalAmount);
+
+                addOrder({
+                    id: `${selectedAuction.id}-${Date.now()}`,
+                    auction_id: selectedAuction.id,
+                    title: selectedAuction.title,
+                    category: selectedAuction.category,
+                    subcategory: selectedAuction.subcategory,
+                    seller_user_id:
+                        selectedAuction.user?.id ?? selectedAuction.user_id,
+                    seller_name:
+                        selectedAuction.user?.seller_registration?.shop_name?.trim() ||
+                        selectedAuction.user?.name ||
+                        'Unknown Seller',
+                    seller_shop_name:
+                        selectedAuction.user?.seller_registration?.shop_name?.trim() ||
+                        selectedAuction.user?.name ||
+                        'Unknown Seller',
+                    buyer_user_id: authUser?.id,
+                    buyer_name: authUser?.name,
+                    buyer_email: authUser?.email,
+                    amount_paid: finalWinner.amount,
+                    status: 'processing',
+                    address_summary: formatAddress(selectedAddress),
+                    payment_card_label: 'Auctify Wallet',
+                    media_url: resolveMediaUrl(primaryMedia?.url),
+                    media_type: primaryMedia?.media_type,
+                    purchased_at: new Date().toISOString(),
+                });
+
+                if ((selectedAuction.user?.id ?? selectedAuction.user_id) > 0) {
+                    addSellerOrder(
+                        selectedAuction.user?.id ?? selectedAuction.user_id,
+                        {
+                            id: `${selectedAuction.id}-${Date.now()}-seller`,
+                            auction_id: selectedAuction.id,
+                            title: selectedAuction.title,
+                            category: selectedAuction.category,
+                            subcategory: selectedAuction.subcategory,
+                            seller_user_id:
+                                selectedAuction.user?.id ?? selectedAuction.user_id,
+                            seller_name:
+                                selectedAuction.user?.seller_registration?.shop_name?.trim() ||
+                                selectedAuction.user?.name ||
+                                'Unknown Seller',
+                            seller_shop_name:
+                                selectedAuction.user?.seller_registration?.shop_name?.trim() ||
+                                selectedAuction.user?.name ||
+                                'Unknown Seller',
+                            buyer_user_id: authUser?.id,
+                            buyer_name: authUser?.name,
+                            buyer_email: authUser?.email,
+                            amount_paid: finalWinner.amount,
+                            status: 'processing',
+                            address_summary: formatAddress(selectedAddress),
+                            payment_card_label: 'Auctify Wallet',
+                            media_url: resolveMediaUrl(primaryMedia?.url),
+                            media_type: primaryMedia?.media_type,
+                            purchased_at: new Date().toISOString(),
+                        },
+                    );
+                }
+
+                setCheckoutError('');
+                setIsCheckoutDialogOpen(false);
+                toast.success(
+                    `Checkout complete. Deducted ${formatPeso(finalWinner.amount)} from your wallet.`,
+                    { autoClose: 2800 },
+                );
+            } catch (error) {
+                const message =
+                    error instanceof Error
+                        ? error.message
+                        : 'Unable to create order from the winning bid.';
+                setCheckoutError(message);
+                toast.error(message);
+            } finally {
+                setIsCheckingOut(false);
+            }
+        })();
     };
 
     const formatCountdown = (targetTime: number | null) => {

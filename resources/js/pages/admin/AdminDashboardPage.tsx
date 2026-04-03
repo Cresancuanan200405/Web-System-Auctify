@@ -23,12 +23,19 @@ import {
 } from '../../services/adminApi';
 import { auctionService } from '../../services/api';
 import type { AuctionProduct } from '../../types';
+import { AdminOrderShipmentTrackingPage } from './AdminOrderShipmentTrackingPage';
+import { AdminPaymentHistoryPage } from './AdminPaymentHistoryPage';
 
 interface AdminDashboardPageProps {
     onLogout: () => void;
 }
 
-type AdminSection = 'overview' | 'homepage' | 'users';
+type AdminSection =
+    | 'overview'
+    | 'homepage'
+    | 'users'
+    | 'order-shipments'
+    | 'payment-history';
 type SuspensionUnit = 'minutes' | 'hours' | 'days';
 type QueueFilter =
     | 'all'
@@ -114,7 +121,13 @@ const formatNotifTypeLabel = (type: string): string =>
     NOTIF_TYPE_LABELS[type] ??
     type.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase());
 
-const ADMIN_SECTIONS: AdminSection[] = ['overview', 'homepage', 'users'];
+const ADMIN_SECTIONS: AdminSection[] = [
+    'overview',
+    'homepage',
+    'users',
+    'order-shipments',
+    'payment-history',
+];
 const HOMEPAGE_IMAGE_ACCEPT =
     'image/*,.jpg,.jpeg,.jfif,.png,.gif,.webp,.bmp,.tif,.tiff,.svg,.avif,.heic,.heif';
 
@@ -249,6 +262,40 @@ const UsersIcon = () => (
         <circle cx="9.5" cy="8" r="3.5" />
         <path d="M21 21v-1.5a4 4 0 0 0-3-3.86" />
         <path d="M15.5 4.2a3.5 3.5 0 0 1 0 6.6" />
+    </svg>
+);
+
+const ShipmentIcon = () => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+    >
+        <rect x="1.5" y="6" width="13" height="11" rx="2" />
+        <path d="M14.5 9h3.2l3 3v5h-6.2" />
+        <circle cx="7" cy="18" r="2" />
+        <circle cx="18" cy="18" r="2" />
+    </svg>
+);
+
+const PaymentIcon = () => (
+    <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+    >
+        <rect x="2" y="5" width="20" height="14" rx="2" />
+        <path d="M2 10h20" />
+        <path d="M6 15h4" />
+        <path d="M14 15h4" />
     </svg>
 );
 
@@ -2386,6 +2433,52 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         return selectedUserMedia.filter((media) => media.isImage);
     }, [selectedUserMedia]);
 
+    const selectedSellerDocuments = useMemo(() => {
+        if (!selectedUser?.sellerRegistration) {
+            return [] as Array<{
+                key: string;
+                label: string;
+                value: string | null | undefined;
+                note: string;
+                type: 'image' | 'file';
+            }>;
+        }
+
+        const mode = (selectedUser.sellerRegistration.submitBusinessMode ?? 'now').toLowerCase();
+        const isImmediate = mode === 'now';
+
+        return [
+            {
+                key: 'primary-document',
+                label: 'Primary document',
+                value: selectedUser.sellerRegistration.primaryDocumentName,
+                note: isImmediate ? 'Required for immediate submission' : 'Planned for later submission',
+                type: 'file' as const,
+            },
+            {
+                key: 'government-id',
+                label: 'Government ID',
+                value: selectedUser.sellerRegistration.governmentIdFrontName,
+                note: isImmediate ? 'Identity proof' : 'Identity proof',
+                type: 'image' as const,
+            },
+            {
+                key: 'bir-certificate',
+                label: 'BIR certificate',
+                value: selectedUser.sellerRegistration.birCertificateName,
+                note: isImmediate ? 'Compliance file' : 'Compliance file',
+                type: 'file' as const,
+            },
+            {
+                key: 'sworn-declaration',
+                label: 'Sworn declaration',
+                value: selectedUser.sellerRegistration.submitSwornDeclaration,
+                note: 'Seller acknowledgement',
+                type: 'file' as const,
+            },
+        ].filter((item) => Boolean(item.value));
+    }, [selectedUser]);
+
     useEffect(() => {
         if (typeof window === 'undefined') {
             return;
@@ -2588,6 +2681,34 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                             <UsersIcon />
                         </span>
                         <span className="admin-neo-menu-label">Users</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-neo-menu-btn ${activeSection === 'order-shipments' ? 'active' : ''}`}
+                        onClick={() => setActiveSection('order-shipments')}
+                        title="Open shipment tracking"
+                    >
+                        <span
+                            className="admin-neo-menu-icon"
+                            aria-hidden="true"
+                        >
+                            <ShipmentIcon />
+                        </span>
+                        <span className="admin-neo-menu-label">Shipments</span>
+                    </button>
+                    <button
+                        type="button"
+                        className={`admin-neo-menu-btn ${activeSection === 'payment-history' ? 'active' : ''}`}
+                        onClick={() => setActiveSection('payment-history')}
+                        title="Open payment history"
+                    >
+                        <span
+                            className="admin-neo-menu-icon"
+                            aria-hidden="true"
+                        >
+                            <PaymentIcon />
+                        </span>
+                        <span className="admin-neo-menu-label">Payments</span>
                     </button>
                     </nav>
 
@@ -5228,19 +5349,15 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                             </td>
                                                             <td>
                                                                 <span
-                                                                                                                                        className={`admin-user-chip ${(user.sellerStatus ?? '').toLowerCase() === 'submitted' ? 'pending' : (user.sellerStatus ?? '').toLowerCase() === 'approved' ? 'verified' : user.isSeller ? 'verified' : 'pending'}`}
+                                                                    className={`admin-user-chip ${(user.sellerStatus ?? '').toLowerCase() === 'approved' ? 'verified' : 'pending'}`}
                                                                 >
-                                                                                                                                        {(user.sellerStatus ?? '').toLowerCase() === 'submitted'
-                                                                                                                                                ? 'Pending approval'
-                                                                                                                                                : (user.sellerStatus ?? '').toLowerCase() === 'approved'
-                                                                                                                                                    ? 'Approved seller'
-                                                                                                                                                    : (user.sellerStatus ?? '').toLowerCase() === 'rejected'
-                                                                                                                                                        ? 'Rejected'
-                                                                                                                                                        : (user.sellerStatus ?? '').toLowerCase() === 'revoked'
-                                                                                                                                                            ? 'Revoked'
-                                                                                                                                                            : user.isSeller
-                                                                                                                                                                ? 'Seller'
-                                                                                                                                                                : 'No'}
+                                                                    {(user.sellerStatus ?? '').toLowerCase() === 'approved'
+                                                                        ? 'Approved seller'
+                                                                        : (user.sellerStatus ?? '').toLowerCase() === 'revoked'
+                                                                            ? 'Revoked'
+                                                                            : (user.sellerStatus ?? '').toLowerCase() === 'rejected'
+                                                                                ? 'Rejected'
+                                                                                : 'Pending approval'}
                                                                 </span>
                                                             </td>
                                                             <td>
@@ -5267,6 +5384,18 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                     </div>
                                 </article>
                             </section>
+                        )}
+
+                        {activeSection === 'order-shipments' && (
+                            <AdminOrderShipmentTrackingPage
+                                token={getAdminAuthToken()}
+                            />
+                        )}
+
+                        {activeSection === 'payment-history' && (
+                            <AdminPaymentHistoryPage
+                                token={getAdminAuthToken()}
+                            />
                         )}
                     </section>
 
@@ -7235,6 +7364,36 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                     </span>
                                                                 </p>
                                                             </div>
+                                                            {selectedSellerDocuments.length > 0 && (
+                                                                <div className="admin-user-seller-documents-shell">
+                                                                    <div className="admin-user-seller-media-strip-head">
+                                                                        <strong>Seller Documents</strong>
+                                                                        <span>
+                                                                            {selectedUser
+                                                                                .sellerRegistration
+                                                                                ?.submitBusinessMode === 'later'
+                                                                                ? 'Submit later mode'
+                                                                                : 'Submit now mode'}
+                                                                        </span>
+                                                                    </div>
+                                                                    <div className="admin-user-seller-media-grid">
+                                                                        {selectedSellerDocuments.map((document) => (
+                                                                            <div key={document.key} className="admin-user-seller-media-item admin-user-seller-doc-card-item">
+                                                                                <div className="admin-user-seller-media-placeholder admin-user-seller-doc-preview">
+                                                                                    <span className="admin-user-doc-file-icon">
+                                                                                        {document.type === 'image' ? 'IMG' : 'FILE'}
+                                                                                    </span>
+                                                                                    <span>{document.label}</span>
+                                                                                </div>
+                                                                                <span>{document.value}</span>
+                                                                                <small className="admin-user-doc-status">
+                                                                                    {document.note}
+                                                                                </small>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                             {selectedSellerImages.length > 0 && (
                                                                 <div className="admin-user-seller-media-strip">
                                                                     <div className="admin-user-seller-media-strip-head">
@@ -7271,7 +7430,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                                         <img src={previewUrl} alt={media.label} />
                                                                                     ) : (
                                                                                         <span className="admin-user-seller-media-placeholder">
-                                                                                            No preview
+                                                                                            {media.fileName}
                                                                                         </span>
                                                                                     )}
                                                                                     <span>{media.label}</span>
@@ -7436,13 +7595,20 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                             )}
                                                                         </button>
                                                                     ) : (
-                                                                        <div className="admin-user-doc-preview-wrap">
-                                                                            <img
-                                                                                src="/icons/Auctify1.jpg"
-                                                                                alt={
-                                                                                    media.label
-                                                                                }
-                                                                            />
+                                                                        <div className="admin-user-doc-preview-wrap admin-user-doc-preview-fallback">
+                                                                            <div className="admin-user-doc-file-preview">
+                                                                                <span className="admin-user-doc-file-icon">
+                                                                                    {isPdfMedia(
+                                                                                        media.mimeType,
+                                                                                        media.fileName,
+                                                                                    )
+                                                                                        ? 'PDF'
+                                                                                        : media.isImage
+                                                                                            ? 'IMG'
+                                                                                            : 'FILE'}
+                                                                                </span>
+                                                                                <span>{media.fileName}</span>
+                                                                            </div>
                                                                         </div>
                                                                     )}
                                                                     <figcaption>

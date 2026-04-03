@@ -3,6 +3,7 @@
 use App\Http\Controllers\Api\AddressController;
 use App\Http\Controllers\Api\Admin\AdminAuthController;
 use App\Http\Controllers\Api\Admin\AdminNotificationController;
+use App\Http\Controllers\Api\Admin\OrderManagementController;
 use App\Http\Controllers\Api\Admin\AdminSettingController;
 use App\Http\Controllers\Api\Admin\CarouselSlideController as AdminCarouselSlideController;
 use App\Http\Controllers\Api\Admin\HomepageConfigController as AdminHomepageConfigController;
@@ -19,6 +20,8 @@ use App\Http\Controllers\Api\BidController;
 use App\Http\Controllers\Api\BidNotificationController;
 use App\Http\Controllers\Api\HomepageContentController;
 use App\Http\Controllers\Api\HomepageConfigController;
+use App\Http\Controllers\Api\OrderLifecycleController;
+use App\Http\Controllers\Api\SellerOrderController;
 use App\Http\Controllers\Api\SellerRegistrationController;
 use App\Http\Controllers\Api\WalletController;
 use Illuminate\Http\Request;
@@ -81,6 +84,8 @@ Route::prefix('admin')->middleware(['web', 'admin.ip'])->group(function () {
         Route::post('users/{user}/revoke-seller', [UserMonitorController::class, 'revokeSeller']);
         Route::post('users/{user}/unrevoke-seller', [UserMonitorController::class, 'unrevokeSeller']);
         Route::post('users/{user}/delete', [UserMonitorController::class, 'destroy']);
+        Route::get('orders/shipments', [OrderManagementController::class, 'shipments']);
+        Route::get('orders/payments', [OrderManagementController::class, 'payments']);
 
         // Admin notifications
         Route::get('notifications', [AdminNotificationController::class, 'index']);
@@ -133,4 +138,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('seller/registration', [SellerRegistrationController::class, 'store']);
     Route::get('seller/registration', [SellerRegistrationController::class, 'show']);
     Route::patch('seller/shipping-settings', [SellerRegistrationController::class, 'updateShippingSettings']);
+    Route::post('orders/from-bid-winner', [OrderLifecycleController::class, 'storeFromBidWinner']);
+    Route::get('seller/orders', [SellerOrderController::class, 'index']);
+    Route::patch('seller/orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus']);
+    Route::post('seller/orders/{order}/payments', [SellerOrderController::class, 'capturePayment']);
+    Route::get('seller/orders/payments/history', [SellerOrderController::class, 'paymentHistory']);
 });
