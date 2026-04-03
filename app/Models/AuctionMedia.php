@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\MediaStorage;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -25,6 +26,6 @@ class AuctionMedia extends Model
 
     public function getUrlAttribute(): string
     {
-        return '/api/media/' . ltrim($this->file_path, '/');
+        return MediaStorage::url($this->file_path);
     }
 }

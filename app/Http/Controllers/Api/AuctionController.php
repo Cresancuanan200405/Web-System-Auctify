@@ -10,9 +10,9 @@ use App\Models\Auction;
 use App\Models\Bid;
 use App\Models\BidWinner;
 use App\Models\SellerRegistration;
+use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
@@ -278,13 +278,17 @@ class AuctionController extends Controller
 
     public function media(string $path)
     {
-        if (! Storage::disk('public')->exists($path)) {
+        if (! MediaStorage::exists($path)) {
             abort(404);
         }
 
-        $absolutePath = Storage::disk('public')->path($path);
+        $absolutePath = MediaStorage::localAbsolutePath($path);
 
-        return response()->file($absolutePath);
+        if ($absolutePath !== null) {
+            return response()->file($absolutePath);
+        }
+
+        return redirect()->away(MediaStorage::url($path));
     }
 
     public function store(StoreAuctionRequest $request)
@@ -335,7 +339,7 @@ class AuctionController extends Controller
             foreach ($request->file('media') as $file) {
                 $mimeType = $file->getMimeType() ?: '';
                 $auction->media()->create([
-                    'file_path' => $file->store('auction-media', 'public'),
+                    'file_path' => MediaStorage::store($file, 'auction-media'),
                     'media_type' => str_starts_with($mimeType, 'video/') ? 'video' : 'image',
                 ]);
             }
@@ -394,7 +398,7 @@ class AuctionController extends Controller
 
             foreach ($mediaToRemove as $media) {
                 if (! empty($media->file_path)) {
-                    Storage::disk('public')->delete($media->file_path);
+                    MediaStorage::delete($media->file_path);
                 }
                 $media->delete();
             }
@@ -414,7 +418,7 @@ class AuctionController extends Controller
             foreach ($newFiles as $file) {
                 $mimeType = $file->getMimeType() ?: '';
                 $auction->media()->create([
-                    'file_path' => $file->store('auction-media', 'public'),
+                    'file_path' => MediaStorage::store($file, 'auction-media'),
                     'media_type' => str_starts_with($mimeType, 'video/') ? 'video' : 'image',
                 ]);
             }

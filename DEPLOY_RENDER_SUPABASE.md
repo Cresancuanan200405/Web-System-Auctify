@@ -20,6 +20,18 @@ This repository is now prepared for Docker-based deployment on Render with a Sup
 7. Set DB_PASSWORD in Render to your Supabase database password (from Dashboard -> Project Settings -> Database).
 8. Use sslmode=require.
 
+## Supabase Storage setup (required for media persistence)
+
+1. In Supabase, go to Storage and create a bucket named media.
+2. Set the media bucket visibility to Public.
+3. In Supabase, copy Project URL and Service Role key from Project Settings -> API.
+4. In Render environment variables, set:
+  - SUPABASE_URL=https://your-project-ref.supabase.co
+  - SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+  - SUPABASE_STORAGE_ENABLED=true
+  - SUPABASE_STORAGE_BUCKET=media
+5. Redeploy Render service after setting these variables.
+
 ## Render setup
 
 1. In Render, create a new Web Service from this GitHub repository.

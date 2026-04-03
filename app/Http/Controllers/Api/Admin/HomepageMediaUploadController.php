@@ -4,8 +4,8 @@ namespace App\Http\Controllers\Api\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Support\AdminAudit;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 
 class HomepageMediaUploadController extends Controller
 {
@@ -35,7 +35,7 @@ class HomepageMediaUploadController extends Controller
         }
 
         $directory = $type === 'video' ? 'homepage/videos' : 'homepage/images';
-        $storedPath = $file->store($directory, 'public');
+        $storedPath = MediaStorage::store($file, $directory);
 
         AdminAudit::log($request, 'admin-upload-homepage-media', 'Admin uploaded homepage media.', null, [
             'type' => $type,
@@ -49,7 +49,7 @@ class HomepageMediaUploadController extends Controller
             'message' => 'Media uploaded successfully.',
             'type' => $type,
             'path' => $storedPath,
-            'url' => '/api/homepage-media/'.$storedPath,
+            'url' => MediaStorage::url($storedPath),
         ], 201);
     }
 
@@ -59,10 +59,16 @@ class HomepageMediaUploadController extends Controller
             abort(404);
         }
 
-        if (! Storage::disk('public')->exists($path)) {
+        if (! MediaStorage::exists($path)) {
             abort(404);
         }
 
-        return response()->file(Storage::disk('public')->path($path));
+        $absolutePath = MediaStorage::localAbsolutePath($path);
+
+        if ($absolutePath !== null) {
+            return response()->file($absolutePath);
+        }
+
+        return redirect()->away(MediaStorage::url($path));
     }
 }
