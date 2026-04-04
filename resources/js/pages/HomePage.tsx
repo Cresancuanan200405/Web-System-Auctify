@@ -706,7 +706,19 @@ export const HomePage: React.FC<HomePageProps> = ({
                             </div>
                             <button
                                 className="hero-btn"
-                                onClick={onNavigateToRegister}
+                                onClick={() => {
+                                    if (onNavigateToBrowse) {
+                                        onNavigateToBrowse();
+                                        return;
+                                    }
+
+                                    if (onNavigateHome) {
+                                        onNavigateHome();
+                                        return;
+                                    }
+
+                                    onNavigateToRegister();
+                                }}
                             >
                                 BID NOW →
                             </button>

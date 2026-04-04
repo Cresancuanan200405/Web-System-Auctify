@@ -1,3 +1,5 @@
+import { useEffect } from 'react';
+import { orderService } from '../services/api';
 import type { OrderHistoryItem } from '../types';
 import { useLocalStorage } from './useLocalStorage';
 
@@ -187,6 +189,118 @@ export const useOrderHistory = () => {
         orderHistoryKey,
         [],
     );
+
+    useEffect(() => {
+        let isActive = true;
+        let pollId: number | null = null;
+
+        if (userStorageScope === 'anonymous') {
+            return () => {
+                isActive = false;
+            };
+        }
+
+        const toUiStatus = (
+            shippingStatus?: string | null,
+            orderStatus?: string | null,
+        ): OrderHistoryItem['status'] => {
+            if (shippingStatus === 'delivered') {
+                return 'delivered';
+            }
+
+            if (
+                shippingStatus === 'failed' ||
+                shippingStatus === 'cancelled' ||
+                orderStatus === 'cancelled'
+            ) {
+                return 'cancelled';
+            }
+
+            return 'processing';
+        };
+
+        const loadOrdersFromApi = async () => {
+            try {
+                const response = await orderService.getMyOrders();
+                if (!isActive) {
+                    return;
+                }
+
+                const mappedFromApi: OrderHistoryItem[] = (response.orders ?? []).map(
+                    (order) => {
+                        const firstMedia = order.auction?.media?.[0];
+                        const shipping = order.shipping_address;
+                        const addressSummary = [
+                            shipping?.first_name && shipping?.last_name
+                                ? `${shipping.first_name} ${shipping.last_name}`
+                                : '',
+                            shipping?.street_address,
+                            shipping?.barangay,
+                            shipping?.city,
+                            shipping?.province,
+                            shipping?.region,
+                        ]
+                            .filter(Boolean)
+                            .join(', ');
+
+                        return {
+                            id: String(order.id),
+                            auction_id: order.auction_id,
+                            title: order.auction?.title ?? `Order #${order.order_number ?? order.id}`,
+                            category: order.auction?.category,
+                            seller_user_id: order.seller?.id,
+                            seller_name: order.seller?.name ?? 'Unknown Seller',
+                            seller_shop_name: order.seller?.name ?? 'Unknown Seller',
+                            buyer_user_id: order.buyer?.id,
+                            buyer_name: order.buyer?.name,
+                            buyer_email: order.buyer?.email,
+                            amount_paid: order.total_amount,
+                            status: toUiStatus(order.shipping_status, order.status),
+                            address_summary:
+                                addressSummary ||
+                                String(
+                                    (order as { meta?: { address_summary?: string } }).meta
+                                        ?.address_summary ?? '',
+                                ),
+                            payment_card_label:
+                                order.payments?.[0]?.method?.toUpperCase() ?? 'Payment',
+                            media_url: firstMedia?.url,
+                            media_type: firstMedia?.media_type,
+                            purchased_at:
+                                order.placed_at ?? order.created_at ?? new Date().toISOString(),
+                        };
+                    },
+                );
+
+                // Keep optimistic local entries not yet in DB while preferring DB records for canonical status.
+                const currentRaw = window.localStorage.getItem(orderHistoryKey);
+                const currentLocal = currentRaw
+                    ? (JSON.parse(currentRaw) as OrderHistoryItem[])
+                    : [];
+
+                const map = new Map<string, OrderHistoryItem>();
+                currentLocal.forEach((order) => map.set(String(order.id), order));
+                mappedFromApi.forEach((order) => map.set(String(order.id), order));
+                setOrders(Array.from(map.values()));
+            } catch {
+                // Keep local orders when API is temporarily unavailable.
+            }
+        };
+
+        void loadOrdersFromApi();
+        pollId = window.setInterval(() => {
+            if (document.visibilityState === 'visible') {
+                void loadOrdersFromApi();
+            }
+        }, 20_000);
+
+        return () => {
+            isActive = false;
+            if (pollId !== null) {
+                window.clearInterval(pollId);
+            }
+        };
+    }, [orderHistoryKey, setOrders, userStorageScope]);
 
     const addOrder = (order: OrderHistoryItem) => {
         setOrders([order, ...orders]);

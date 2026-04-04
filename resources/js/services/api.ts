@@ -570,6 +570,10 @@ export const bidNotificationService = {
 };
 
 export const orderService = {
+    getMyOrders: async () => {
+        return apiGet<{ orders: SellerOrderRecord[] }>('/api/orders');
+    },
+
     createFromBidWinner: async (data: {
         bid_winner_id: number;
         shipping_address_id?: number;
@@ -613,6 +617,7 @@ export const orderService = {
             carrier?: string;
             service_level?: string;
             tracking_number?: string;
+            shipped_at?: string;
             estimated_delivery_at?: string;
             delivered_at?: string;
             notes?: string;

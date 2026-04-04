@@ -11,6 +11,29 @@ use Illuminate\Http\Request;
 
 class OrderLifecycleController extends Controller
 {
+    public function index(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        $orders = Order::query()
+            ->with([
+                'auction.media',
+                'buyer',
+                'seller',
+                'shippingAddress',
+                'shipments' => fn ($query) => $query->latest()->limit(1),
+                'payments' => fn ($query) => $query->latest()->limit(1),
+            ])
+            ->where('buyer_user_id', $user?->id)
+            ->latest()
+            ->limit(150)
+            ->get();
+
+        return response()->json([
+            'orders' => $orders,
+        ]);
+    }
+
     public function storeFromBidWinner(Request $request, OrderLifecycleService $lifecycle): JsonResponse
     {
         $validated = $request->validate([

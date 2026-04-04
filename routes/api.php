@@ -144,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('seller/registration', [SellerRegistrationController::class, 'store']);
     Route::get('seller/registration', [SellerRegistrationController::class, 'show']);
     Route::patch('seller/shipping-settings', [SellerRegistrationController::class, 'updateShippingSettings']);
+    Route::get('orders', [OrderLifecycleController::class, 'index']);
     Route::post('orders/from-bid-winner', [OrderLifecycleController::class, 'storeFromBidWinner']);
     Route::get('seller/orders', [SellerOrderController::class, 'index']);
     Route::patch('seller/orders/{order}/shipping-status', [SellerOrderController::class, 'updateShippingStatus']);

@@ -37,6 +37,23 @@ const prettyStatus = (value: string) =>
         .replace(/_/g, ' ')
         .replace(/\b\w/g, (char) => char.toUpperCase());
 
+const resolveMediaUrl = (url?: string | null) => {
+    if (!url) {
+        return '';
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        return url;
+    }
+
+    const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(/\/$/, '');
+    if (!apiBase) {
+        return url;
+    }
+
+    return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
+};
+
 export const SellerOrderShipmentTrackingPage: React.FC = () => {
     const [orders, setOrders] = useState<SellerOrderRecord[]>([]);
     const [loading, setLoading] = useState(true);
@@ -114,26 +131,34 @@ export const SellerOrderShipmentTrackingPage: React.FC = () => {
         setIsUpdatingOrderId(order.id);
 
         try {
-            const trackingNumber =
-                nextStatus === 'shipped' || nextStatus === 'in_transit'
-                    ? window.prompt(
-                          'Tracking number (optional):',
-                          order.shipments?.[0]?.tracking_number ?? '',
-                      ) ?? undefined
-                    : undefined;
-
-            const carrier =
-                nextStatus === 'shipped' || nextStatus === 'in_transit'
-                    ? window.prompt(
-                          'Courier/carrier (optional):',
-                          order.shipments?.[0]?.carrier ?? '',
-                      ) ?? undefined
-                    : undefined;
+            const latest = order.shipments?.[0] ?? null;
+            const nowIso = new Date().toISOString();
+            const autoTracking =
+                latest?.tracking_number ||
+                `AUCT-${order.id}-${Date.now().toString().slice(-6)}`;
+            const autoCarrier = latest?.carrier || 'Auctify Express';
+            const autoServiceLevel = latest?.service_level || 'Standard';
+            const autoNotes =
+                nextStatus === 'delivered'
+                    ? 'Order marked delivered by seller.'
+                    : 'Shipment created automatically from seller dashboard.';
 
             await orderService.updateSellerShippingStatus(order.id, {
                 status: nextStatus,
-                tracking_number: trackingNumber,
-                carrier,
+                tracking_number:
+                    nextStatus === 'shipped' || nextStatus === 'in_transit'
+                        ? autoTracking
+                        : latest?.tracking_number ?? undefined,
+                carrier:
+                    nextStatus === 'shipped' || nextStatus === 'in_transit'
+                        ? autoCarrier
+                        : latest?.carrier ?? undefined,
+                service_level:
+                    nextStatus === 'shipped' || nextStatus === 'in_transit'
+                        ? autoServiceLevel
+                        : latest?.service_level ?? undefined,
+                delivered_at: nextStatus === 'delivered' ? nowIso : undefined,
+                notes: autoNotes,
             });
 
             toast.success('Shipping status updated.');
@@ -150,38 +175,21 @@ export const SellerOrderShipmentTrackingPage: React.FC = () => {
     };
 
     const handleCapturePayment = async (order: SellerOrderRecord) => {
-        const method = window.prompt('Payment method (e.g., wallet, gcash):', 'wallet');
-
-        if (!method || method.trim().length === 0) {
-            return;
-        }
-
-        const amountRaw = window.prompt(
-            'Captured amount:',
-            String(order.total_amount ?? '0'),
-        );
-
-        if (amountRaw === null) {
-            return;
-        }
-
-        const amount = Number(amountRaw);
+        const amount = Number(order.total_amount ?? 0);
         if (!Number.isFinite(amount) || amount < 0) {
             toast.error('Invalid payment amount.');
             return;
         }
 
-        const providerReference =
-            window.prompt('Payment reference (optional):', '') ?? undefined;
-
         setIsUpdatingOrderId(order.id);
 
         try {
             await orderService.captureSellerPayment(order.id, {
-                method: method.trim(),
+                method: 'wallet',
+                provider: 'Auctify Wallet',
                 status: 'paid',
                 amount,
-                provider_reference: providerReference,
+                provider_reference: `seller-capture-${order.id}-${Date.now()}`,
             });
 
             toast.success('Payment record captured.');
@@ -295,7 +303,7 @@ export const SellerOrderShipmentTrackingPage: React.FC = () => {
                                 {visibleOrders.map((order) => {
                                     const latestShipment = order.shipments?.[0] ?? null;
                                     const media = order.auction?.media?.[0] ?? null;
-                                    const mediaUrl = media?.url ?? '';
+                                    const mediaUrl = resolveMediaUrl(media?.url ?? '');
 
                                     return (
                                         <tr key={order.id} className="seller-order-history-row">
