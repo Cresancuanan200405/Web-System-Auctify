@@ -363,15 +363,24 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
             return url;
         }
 
+        const normalized = url.trim();
+        const candidatePath = normalized.startsWith('/')
+            ? normalized
+            : normalized.startsWith('storage/')
+              ? `/${normalized}`
+              : /^([a-z0-9_-]+\/)+[^/]+$/i.test(normalized)
+                ? `/storage/${normalized}`
+                : `/${normalized}`;
+
         const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
             /\/$/,
             '',
         );
         if (!apiBase) {
-            return url;
+            return candidatePath;
         }
 
-        return `${apiBase}${url.startsWith('/') ? url : `/${url}`}`;
+        return `${apiBase}${candidatePath}`;
     };
 
     const getMediaFileName = (filePath?: string) => {

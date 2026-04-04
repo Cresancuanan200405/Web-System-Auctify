@@ -543,6 +543,36 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
         }).format(date);
     };
 
+    const resolveMediaUrl = (url?: string | null) => {
+        if (!url) {
+            return '';
+        }
+
+        if (url.startsWith('http://') || url.startsWith('https://')) {
+            return url;
+        }
+
+        const normalized = url.trim();
+        const candidatePath = normalized.startsWith('/')
+            ? normalized
+            : normalized.startsWith('storage/')
+              ? `/${normalized}`
+              : /^([a-z0-9_-]+\/)+[^/]+$/i.test(normalized)
+                ? `/storage/${normalized}`
+                : `/${normalized}`;
+
+        const apiBase = import.meta.env.VITE_API_BASE_URL?.trim().replace(
+            /\/$/,
+            '',
+        );
+
+        if (!apiBase) {
+            return candidatePath;
+        }
+
+        return `${apiBase}${candidatePath}`;
+    };
+
     const formatFileSize = (size?: number | null) => {
         if (!size || size <= 0) {
             return '';
@@ -1480,9 +1510,9 @@ export const SellerChatDialog: React.FC<SellerChatDialogProps> = ({
                                     {selectedBidNotification.media_url ? (
                                         <img
                                             className="seller-chat-bid-detail-image"
-                                            src={
-                                                selectedBidNotification.media_url
-                                            }
+                                            src={resolveMediaUrl(
+                                                selectedBidNotification.media_url,
+                                            )}
                                             alt={
                                                 selectedBidNotification.auction_title
                                             }

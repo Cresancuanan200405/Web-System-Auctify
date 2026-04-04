@@ -7,6 +7,7 @@ use App\Models\AdminNotification;
 use App\Models\SellerRegistration;
 use App\Models\User;
 use App\Support\AdminAudit;
+use App\Support\MediaStorage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
@@ -213,11 +214,15 @@ class UserMonitorController extends Controller
             return null;
         }
 
+        if (str_starts_with($path, '/storage/')) {
+            return $path;
+        }
+
         if (filter_var($path, FILTER_VALIDATE_URL)) {
             return $path;
         }
 
-        return '/api/admin/users/' . $userId . '/verification-media/' . $key;
+        return MediaStorage::url($path);
     }
 
     public function verificationMedia(User $user, string $key)
@@ -251,7 +256,7 @@ class UserMonitorController extends Controller
             return redirect()->away($path);
         }
 
-        if (str_starts_with($path, '/')) {
+        if (str_starts_with($path, '/storage/')) {
             return redirect()->to($path);
         }
 
@@ -261,6 +266,10 @@ class UserMonitorController extends Controller
 
         if (Storage::disk('public')->exists($path)) {
             return response()->file(Storage::disk('public')->path($path));
+        }
+
+        if (MediaStorage::exists($path)) {
+            return redirect()->away(MediaStorage::url($path));
         }
 
         abort(404);
@@ -299,6 +308,10 @@ class UserMonitorController extends Controller
 
         if ($resolved['type'] === 'public_path') {
             return redirect()->to($resolved['value']);
+        }
+
+        if ($resolved['type'] === 'media_url') {
+            return redirect()->away($resolved['value']);
         }
 
         return response()->file(Storage::disk($resolved['disk'])->path($resolved['path']));
@@ -673,9 +686,18 @@ class UserMonitorController extends Controller
             'fileName' => $fileName,
             'uploaded' => (bool) $fileName,
             'mimeType' => $this->resolveDocumentMimeType($fileName),
-            'previewUrl' => $resolved ? '/api/admin/users/' . $userId . '/seller-registration-media/' . $key : null,
+            'previewUrl' => $resolved ? $this->resolvedPreviewUrl($userId, $key, $resolved) : null,
             'isResolved' => (bool) $resolved,
         ];
+    }
+
+    private function resolvedPreviewUrl(int $userId, string $key, array $resolved): string
+    {
+        if ($resolved['type'] === 'url' || $resolved['type'] === 'public_path' || $resolved['type'] === 'media_url') {
+            return $resolved['value'];
+        }
+
+        return '/api/admin/users/' . $userId . '/seller-registration-media/' . $key;
     }
 
     private function resolveStoredFileLocation(int $userId, ?string $value): ?array
@@ -693,7 +715,11 @@ class UserMonitorController extends Controller
         }
 
         $trimmedValue = trim($value);
-        $candidatePaths = [$trimmedValue];
+        $candidatePaths = [$trimmedValue, ltrim($trimmedValue, '/')];
+
+        if (str_starts_with(ltrim($trimmedValue, '/'), 'storage/')) {
+            $candidatePaths[] = substr(ltrim($trimmedValue, '/'), strlen('storage/'));
+        }
 
         $baseName = basename($trimmedValue);
         $folders = [
@@ -708,6 +734,10 @@ class UserMonitorController extends Controller
         }
 
         foreach (array_unique($candidatePaths) as $path) {
+            if (MediaStorage::exists($path)) {
+                return ['type' => 'media_url', 'value' => MediaStorage::url($path)];
+            }
+
             if (Storage::disk('local')->exists($path)) {
                 return ['type' => 'disk_file', 'disk' => 'local', 'path' => $path];
             }

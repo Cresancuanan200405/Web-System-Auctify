@@ -26,50 +26,58 @@ class MediaStorage
             return $path;
         }
 
+        $normalizedPath = self::normalizePath($path);
+
         if (self::shouldUseSupabase()) {
             $baseUrl = rtrim((string) config('services.supabase.url', ''), '/');
             $bucket = trim((string) config('services.supabase.storage_bucket', ''), '/');
 
             if ($baseUrl !== '' && $bucket !== '') {
-                $encodedPath = str_replace('%2F', '/', rawurlencode(ltrim($path, '/')));
+                $encodedPath = str_replace('%2F', '/', rawurlencode($normalizedPath));
 
                 return $baseUrl . '/storage/v1/object/public/' . $bucket . '/' . $encodedPath;
             }
         }
 
-        return Storage::url($path);
+        return Storage::url($normalizedPath);
     }
 
     public static function exists(string $path): bool
     {
+        $normalizedPath = self::normalizePath($path);
+
         if (self::shouldUseSupabase()) {
             $response = self::supabaseClient()
-                ->head(self::supabaseObjectApiBase() . '/' . ltrim($path, '/'));
+                ->head(self::supabaseObjectApiBase() . '/' . $normalizedPath);
 
             if ($response->successful()) {
                 return true;
             }
         }
 
-        return Storage::disk('public')->exists($path);
+        return Storage::disk('public')->exists($normalizedPath);
     }
 
     public static function delete(string $path): void
     {
+        $normalizedPath = self::normalizePath($path);
+
         if (self::shouldUseSupabase()) {
-            self::supabaseClient()->delete(self::supabaseObjectApiBase() . '/' . ltrim($path, '/'));
+            self::supabaseClient()->delete(self::supabaseObjectApiBase() . '/' . $normalizedPath);
         }
 
-        Storage::disk('public')->delete($path);
+        Storage::disk('public')->delete($normalizedPath);
     }
 
     public static function localAbsolutePath(string $path): ?string
     {
-        if (! Storage::disk('public')->exists($path)) {
+        $normalizedPath = self::normalizePath($path);
+
+        if (! Storage::disk('public')->exists($normalizedPath)) {
             return null;
         }
 
-        return Storage::disk('public')->path($path);
+        return Storage::disk('public')->path($normalizedPath);
     }
 
     private static function storeToSupabase(UploadedFile $file, string $directory): string
@@ -131,5 +139,16 @@ class MediaStorage
     private static function isAbsoluteUrl(string $path): bool
     {
         return str_starts_with($path, 'http://') || str_starts_with($path, 'https://');
+    }
+
+    private static function normalizePath(string $path): string
+    {
+        $normalized = ltrim(trim($path), '/');
+
+        if (str_starts_with($normalized, 'storage/')) {
+            $normalized = substr($normalized, strlen('storage/'));
+        }
+
+        return ltrim($normalized, '/');
     }
 }
