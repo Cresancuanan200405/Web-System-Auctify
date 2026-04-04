@@ -18,7 +18,7 @@ export const BagPage: React.FC<BagPageProps> = ({
     onNavigateToAuction,
 }) => {
     const { authUser } = useAuth();
-    const { wonAuctions, isLoadingWonAuctions } = useWonAuctions();
+    const { wonAuctions, isLoadingWonAuctions, refreshWonAuctions } = useWonAuctions();
     const { orders, addOrder } = useOrderHistory();
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [addressLoading, setAddressLoading] = useState(false);
@@ -109,25 +109,31 @@ export const BagPage: React.FC<BagPageProps> = ({
     };
 
     const formatAddress = (address: Address) => {
+        if (!address) {
+            return 'Invalid address';
+        }
         return [
-            `${address.first_name} ${address.last_name}`.trim(),
-            address.street_address,
-            address.barangay,
-            address.city,
-            address.province,
-            address.region,
+            `${String(address.first_name || '').trim()} ${String(address.last_name || '').trim()}`.trim(),
+            String(address.street_address || '').trim(),
+            String(address.barangay || '').trim(),
+            String(address.city || '').trim(),
+            String(address.province || '').trim(),
+            String(address.region || '').trim(),
         ]
-            .filter(Boolean)
+            .filter((part) => part && part.length > 0)
             .join(', ');
     };
 
-    const formatAddressOptionLabel = (address: Address) => {
+    const formatAddressOptionLabel = (address: Address | null | undefined) => {
+        if (!address) {
+            return '';
+        }
         const shortAddress = [
-            address.street_address,
-            address.city,
-            address.province,
+            String(address.street_address || '').trim(),
+            String(address.city || '').trim(),
+            String(address.province || '').trim(),
         ]
-            .filter(Boolean)
+            .filter((part) => part && part.length > 0)
             .join(', ');
         return compactLabel(shortAddress, 44);
     };
@@ -265,6 +271,8 @@ export const BagPage: React.FC<BagPageProps> = ({
                     'Checkout complete. Your order is now queued for seller fulfillment.',
                     { autoClose: 2800 },
                 );
+                // Refresh won auctions to remove the item from the bag
+                await refreshWonAuctions();
             } catch (error) {
                 const message =
                     error instanceof Error

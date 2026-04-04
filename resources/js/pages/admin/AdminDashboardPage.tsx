@@ -2493,17 +2493,22 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
         ): { previewUrl: string | null; type: 'image' | 'file' } => {
             const media = sellerMediaMap.get(key);
             const normalizedValue = typeof value === 'string' ? value.trim() : '';
-            const canResolveStoredPath =
-                normalizedValue.startsWith('/') ||
-                normalizedValue.startsWith('storage/') ||
-                normalizedValue.startsWith('http://') ||
-                normalizedValue.startsWith('https://');
+            
+            // If we have a direct previewUrl from media, use it
+            if (media?.previewUrl) {
+                const isImage = isImageMedia(media?.mimeType, value);
+                return {
+                    previewUrl: media.previewUrl,
+                    type: isImage ? 'image' : 'file',
+                };
+            }
+            
+            // If we have a file name value, fall back to the API endpoint
             const previewUrl =
-                media?.previewUrl ||
-                (canResolveStoredPath
-                    ? resolveAdminMediaUrl(normalizedValue)
-                    : null) ||
-                null;
+                normalizedValue && selectedUser
+                    ? `/api/admin/users/${selectedUser.id}/seller-registration-media/${key}`
+                    : null;
+                    
             const isImage = isImageMedia(media?.mimeType, value);
 
             return {

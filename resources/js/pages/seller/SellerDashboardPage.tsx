@@ -856,20 +856,46 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
             if (!confirmed) return;
 
             const order = orders.find((o) => o.id === orderId);
-            updateOrderStatus(orderId, 'delivered');
-
-            // Sync status to buyer's order history in real-time
-            if (order?.buyer_user_id && order.auction_id) {
-                updateBuyerOrderStatus(
-                    order.buyer_user_id,
-                    order.auction_id,
-                    'delivered',
-                    order.id,
-                );
-            }
+            if (!order) return;
 
             setMarkedAsShipped((prev) => new Set([...prev, orderId]));
-            toast.success('Order marked as shipped. Buyer order updated.');
+
+            // Update order status on the backend
+            void (async () => {
+                try {
+                    await sellerService.updateSellerShippingStatus(
+                        parseInt(orderId.replace(/-seller$/, ''), 10),
+                        { status: 'delivered' },
+                    );
+
+                    // Update seller's local state
+                    updateOrderStatus(orderId, 'delivered');
+
+                    // Sync status to buyer's order history
+                    if (order?.buyer_user_id && order.auction_id) {
+                        updateBuyerOrderStatus(
+                            order.buyer_user_id,
+                            order.auction_id,
+                            'delivered',
+                            order.id,
+                        );
+                    }
+
+                    toast.success(
+                        'Order marked as shipped. Status updated for buyer.',
+                    );
+                } catch (error) {
+                    const message =
+                        error instanceof Error ? error.message : 'Update failed';
+                    toast.error(`Unable to update order status: ${message}`);
+                    // Remove from marked set if failed
+                    setMarkedAsShipped((prev) => {
+                        const next = new Set(prev);
+                        next.delete(orderId);
+                        return next;
+                    });
+                }
+            })();
         };
 
         const handlePrintLabel = (order: OrderHistoryItem) => {
