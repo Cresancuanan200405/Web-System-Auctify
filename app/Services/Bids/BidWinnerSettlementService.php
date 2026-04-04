@@ -9,6 +9,7 @@ use App\Models\User;
 use App\Models\WalletTransaction;
 use App\Services\Wallet\WalletReservationService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class BidWinnerSettlementService
 {
@@ -48,6 +49,10 @@ class BidWinnerSettlementService
 
     public function settleWallet(BidWinner $winner): BidWinner
     {
+        if (! $this->hasWalletDeductionColumns()) {
+            return $winner;
+        }
+
         if ($winner->wallet_deducted_at) {
             return $winner;
         }
@@ -198,5 +203,14 @@ class BidWinnerSettlementService
     private function walletReference(int $winnerId): string
     {
         return 'auction-win-' . $winnerId;
+    }
+
+    private function hasWalletDeductionColumns(): bool
+    {
+        return Schema::hasColumns('bid_winners', [
+            'wallet_deducted_at',
+            'wallet_deduction_failed_at',
+            'wallet_deduction_failure_reason',
+        ]);
     }
 }

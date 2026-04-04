@@ -128,6 +128,12 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     fi
 fi
 
+if [ "${SKIP_MIGRATIONS_IF_SCHEMA_PRESENT:-true}" = "true" ] && schema_has_users_table >/dev/null 2>&1; then
+    echo "Boot config: ensuring additive wallet schema patches"
+    ensure_bid_winner_wallet_columns || true
+    ensure_wallet_reservations_table || true
+fi
+
 if [ "${RUN_SEEDERS:-true}" = "true" ]; then
     php artisan db:seed --force
 fi

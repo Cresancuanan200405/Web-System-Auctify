@@ -4,11 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\AdminNotification;
 use App\Models\SellerRegistration;
+use App\Support\MediaStorage;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
-use Illuminate\Support\Str;
 
 class SellerRegistrationController extends Controller
 {
@@ -188,14 +188,15 @@ class SellerRegistrationController extends Controller
             return null;
         }
 
-        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
-        $fileName = $prefix . '-' . Str::uuid() . '.' . $extension;
-        $storedPath = $file->storeAs('seller-registration/user-' . $userId, $fileName, 'public');
+        $storedPath = MediaStorage::store(
+            $file,
+            'seller-registration/user-' . $userId . '/' . $prefix
+        );
 
-        if (! $storedPath) {
+        if (! is_string($storedPath) || trim($storedPath) === '') {
             return null;
         }
 
-        return '/storage/' . $storedPath;
+        return MediaStorage::url($storedPath);
     }
 }
