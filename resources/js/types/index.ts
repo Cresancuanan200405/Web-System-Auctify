@@ -243,6 +243,9 @@ export interface AuctionProductDetail extends AuctionProduct {
         seller_user_id: number;
         winning_amount: string;
         won_at?: string | null;
+        wallet_deducted_at?: string | null;
+        wallet_deduction_failed_at?: string | null;
+        wallet_deduction_failure_reason?: string | null;
     } | null;
 }
 
@@ -260,6 +263,9 @@ export interface BagAuctionItem extends AuctionProduct {
         seller_user_id: number;
         winning_amount: string;
         won_at?: string | null;
+        wallet_deducted_at?: string | null;
+        wallet_deduction_failed_at?: string | null;
+        wallet_deduction_failure_reason?: string | null;
     } | null;
 }
 

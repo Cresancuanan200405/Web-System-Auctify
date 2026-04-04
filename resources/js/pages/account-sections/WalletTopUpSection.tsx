@@ -136,14 +136,12 @@ export const WalletTopUpSection: React.FC = () => {
 
             <div className="wallet-balance-card">
                 <div className="wallet-balance-illustration" aria-hidden="true">
-                    <div className="wallet-illustration-main">
-                        <div className="wallet-illustration-chip" />
-                        <div className="wallet-illustration-lines">
-                            <span />
-                            <span />
-                            <span />
-                        </div>
-                    </div>
+                    <img
+                        src="/icons/wallet.jpg"
+                        alt=""
+                        className="wallet-balance-image"
+                        loading="lazy"
+                    />
                 </div>
                 <div className="wallet-balance-content">
                     <div className="wallet-balance-label">Available wallet balance</div>

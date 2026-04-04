@@ -117,6 +117,8 @@ export interface VerificationStatusResponse {
 export interface WalletBalanceResponse {
     message?: string;
     wallet_balance: number;
+    wallet_total_balance?: number;
+    wallet_reserved_balance?: number;
 }
 
 export interface WalletTransactionItem {
@@ -378,17 +380,68 @@ export const sellerService = {
         tax_tin?: string;
         vat_status?: 'vat' | 'non-vat';
         bir_certificate_name?: string;
+        primary_document_file?: File;
+        government_id_front_file?: File;
+        bir_certificate_file?: File;
         submit_sworn_declaration?: 'yes' | 'no';
         agree_business_terms: boolean;
     }) => {
         invalidateSellerRegistrationCache();
 
-        const response = await apiPost<{
+        const formData = new FormData();
+        const appendIfPresent = (key: string, value: string | undefined) => {
+            if (typeof value === 'string' && value.length > 0) {
+                formData.append(key, value);
+            }
+        };
+
+        appendIfPresent('shop_name', data.shop_name);
+        appendIfPresent('contact_email', data.contact_email);
+        appendIfPresent('contact_phone', data.contact_phone);
+        appendIfPresent('pickup_address_summary', data.pickup_address_summary);
+        appendIfPresent('submit_business_mode', data.submit_business_mode);
+        appendIfPresent('seller_type', data.seller_type);
+        appendIfPresent('company_registered_name', data.company_registered_name);
+        appendIfPresent('registered_last_name', data.registered_last_name);
+        appendIfPresent('registered_first_name', data.registered_first_name);
+        appendIfPresent('registered_middle_name', data.registered_middle_name);
+        appendIfPresent('registered_suffix', data.registered_suffix);
+        appendIfPresent('general_location', data.general_location);
+        appendIfPresent('registered_address', data.registered_address);
+        appendIfPresent('zip_code', data.zip_code);
+        appendIfPresent('primary_document_type', data.primary_document_type);
+        appendIfPresent('primary_document_name', data.primary_document_name);
+        appendIfPresent('government_id_type', data.government_id_type);
+        appendIfPresent('government_id_front_name', data.government_id_front_name);
+        appendIfPresent('business_email', data.business_email);
+        appendIfPresent('business_email_otp', data.business_email_otp);
+        appendIfPresent('business_phone_number', data.business_phone_number);
+        appendIfPresent('business_phone_otp', data.business_phone_otp);
+        appendIfPresent('tax_tin', data.tax_tin);
+        appendIfPresent('vat_status', data.vat_status);
+        appendIfPresent('bir_certificate_name', data.bir_certificate_name);
+        appendIfPresent('submit_sworn_declaration', data.submit_sworn_declaration);
+
+        formData.append('agree_business_terms', data.agree_business_terms ? '1' : '0');
+
+        if (data.primary_document_file) {
+            formData.append('primary_document_file', data.primary_document_file);
+        }
+
+        if (data.government_id_front_file) {
+            formData.append('government_id_front_file', data.government_id_front_file);
+        }
+
+        if (data.bir_certificate_file) {
+            formData.append('bir_certificate_file', data.bir_certificate_file);
+        }
+
+        const response = await apiPostForm<{
             message: string;
             registration: SellerRegistration;
         }>(
             '/api/seller/registration',
-            data,
+            formData,
         );
 
         sellerRegistrationCache = {
@@ -435,10 +488,18 @@ export const auctionService = {
         return apiGet<BagAuctionListResponse>('/api/bag/won-auctions');
     },
 
-    placeBid: async (productId: number, amount: number) => {
+    placeBid: async (
+        productId: number,
+        amount: number,
+        options?: { acknowledge_auto_deduct?: boolean },
+    ) => {
         return apiPost<{ id: number; amount: string }>(
             `/api/auctions/${productId}/bids`,
-            { amount },
+            {
+                amount,
+                acknowledge_auto_deduct:
+                    options?.acknowledge_auto_deduct ?? false,
+            },
         );
     },
 

@@ -16,6 +16,9 @@ use Illuminate\Support\Carbon;
  * @property int $seller_user_id
  * @property string $winning_amount
  * @property Carbon|null $won_at
+ * @property Carbon|null $wallet_deducted_at
+ * @property Carbon|null $wallet_deduction_failed_at
+ * @property string|null $wallet_deduction_failure_reason
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -30,6 +33,9 @@ class BidWinner extends Model
         'seller_user_id',
         'winning_amount',
         'won_at',
+        'wallet_deducted_at',
+        'wallet_deduction_failed_at',
+        'wallet_deduction_failure_reason',
     ];
 
     protected function casts(): array
@@ -37,6 +43,8 @@ class BidWinner extends Model
         return [
             'winning_amount' => 'decimal:2',
             'won_at' => 'datetime',
+            'wallet_deducted_at' => 'datetime',
+            'wallet_deduction_failed_at' => 'datetime',
         ];
     }
 

@@ -2141,6 +2141,66 @@
     color: #966104;
 }
 
+.admin-account-action-stack {
+    display: grid;
+    gap: 7px;
+}
+
+.admin-account-action-btn {
+    min-height: 36px;
+    width: 100%;
+    border-radius: 10px;
+    border: 1px solid #d6e0ec;
+    background: #ffffff;
+    color: #17324f;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    padding: 0 10px;
+    cursor: pointer;
+    transition:
+        transform 0.14s ease,
+        box-shadow 0.14s ease,
+        border-color 0.14s ease,
+        background 0.14s ease;
+}
+
+.admin-account-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 16px rgba(15, 23, 42, 0.1);
+}
+
+.admin-account-action-btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.52;
+    transform: none;
+    box-shadow: none;
+}
+
+.admin-account-action-btn.is-neutral {
+    background: #f8fbff;
+    border-color: #cfdeed;
+    color: #1f3d5b;
+}
+
+.admin-account-action-btn.is-accent {
+    background: linear-gradient(135deg, #eaf4ff 0%, #dbeafe 100%);
+    border-color: #b9d2f3;
+    color: #1d4a81;
+}
+
+.admin-account-action-btn.is-danger {
+    background: linear-gradient(135deg, #fff1f2 0%, #ffe4e6 100%);
+    border-color: #fecdd3;
+    color: #9f1239;
+}
+
+.admin-account-action-btn.is-success {
+    background: linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%);
+    border-color: #a7f3d0;
+    color: #065f46;
+}
+
 .admin-users-empty {
     text-align: center;
     color: #6e7f95;

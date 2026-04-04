@@ -2487,8 +2487,46 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             ]),
         );
 
+        const resolveSellerDocument = (
+            key: string,
+            value: string | null | undefined,
+        ): { previewUrl: string | null; type: 'image' | 'file' } => {
+            const media = sellerMediaMap.get(key);
+            const normalizedValue = typeof value === 'string' ? value.trim() : '';
+            const canResolveStoredPath =
+                normalizedValue.startsWith('/') ||
+                normalizedValue.startsWith('storage/') ||
+                normalizedValue.startsWith('http://') ||
+                normalizedValue.startsWith('https://');
+            const previewUrl =
+                media?.previewUrl ||
+                (canResolveStoredPath
+                    ? resolveAdminMediaUrl(normalizedValue)
+                    : null) ||
+                null;
+            const isImage = isImageMedia(media?.mimeType, value);
+
+            return {
+                previewUrl,
+                type: isImage ? 'image' : 'file',
+            };
+        };
+
         const mode = (selectedUser.sellerRegistration.submitBusinessMode ?? 'now').toLowerCase();
         const isImmediate = mode === 'now';
+
+        const primaryDocument = resolveSellerDocument(
+            'primary-document',
+            selectedUser.sellerRegistration.primaryDocumentName,
+        );
+        const governmentId = resolveSellerDocument(
+            'government-id',
+            selectedUser.sellerRegistration.governmentIdFrontName,
+        );
+        const birCertificate = resolveSellerDocument(
+            'bir-certificate',
+            selectedUser.sellerRegistration.birCertificateName,
+        );
 
         return [
             {
@@ -2496,31 +2534,31 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                 label: 'Primary document',
                 value: selectedUser.sellerRegistration.primaryDocumentName,
                 note: isImmediate ? 'Required for immediate submission' : 'Planned for later submission',
-                type: 'file' as const,
-                previewUrl: sellerMediaMap.get('primary-document')?.previewUrl,
+                type: primaryDocument.type,
+                previewUrl: primaryDocument.previewUrl,
             },
             {
                 key: 'government-id',
                 label: 'Government ID',
                 value: selectedUser.sellerRegistration.governmentIdFrontName,
                 note: isImmediate ? 'Identity proof' : 'Identity proof',
-                type: 'image' as const,
-                previewUrl: sellerMediaMap.get('government-id')?.previewUrl,
+                type: governmentId.type,
+                previewUrl: governmentId.previewUrl,
             },
             {
                 key: 'bir-certificate',
                 label: 'BIR certificate',
                 value: selectedUser.sellerRegistration.birCertificateName,
                 note: isImmediate ? 'Compliance file' : 'Compliance file',
-                type: 'file' as const,
-                previewUrl: sellerMediaMap.get('bir-certificate')?.previewUrl,
+                type: birCertificate.type,
+                previewUrl: birCertificate.previewUrl,
             },
             {
                 key: 'sworn-declaration',
                 label: 'Sworn declaration',
                 value: selectedUser.sellerRegistration.submitSwornDeclaration,
                 note: 'Seller acknowledgement',
-                type: 'file' as const,
+                type: 'file',
             },
         ].filter((item) => Boolean(item.value));
     }, [selectedUser]);

@@ -4,9 +4,11 @@ namespace App\Http\Controllers\Api;
 
 use App\Models\AdminNotification;
 use App\Models\SellerRegistration;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controller;
+use Illuminate\Support\Str;
 
 class SellerRegistrationController extends Controller
 {
@@ -54,8 +56,10 @@ class SellerRegistrationController extends Controller
             'zip_code' => 'required|string|max:20',
             'primary_document_type' => 'required_if:submit_business_mode,now|nullable|string|max:255',
             'primary_document_name' => 'required_if:submit_business_mode,now|nullable|string|max:255',
+            'primary_document_file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
             'government_id_type' => 'required_if:submit_business_mode,now|nullable|string|max:255',
             'government_id_front_name' => 'required_if:submit_business_mode,now|nullable|string|max:255',
+            'government_id_front_file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
             'business_email' => 'required|email|max:255',
             'business_email_otp' => 'nullable|string|max:20',
             'business_phone_number' => 'required|string|max:50',
@@ -63,9 +67,39 @@ class SellerRegistrationController extends Controller
             'tax_tin' => 'required_if:submit_business_mode,now|nullable|string|max:255',
             'vat_status' => 'required_if:submit_business_mode,now|nullable|in:vat,non-vat',
             'bir_certificate_name' => 'required_if:submit_business_mode,now|nullable|string|max:255',
+            'bir_certificate_file' => 'nullable|file|mimes:jpg,jpeg,png,webp,pdf|max:10240',
             'submit_sworn_declaration' => 'required_if:submit_business_mode,now|nullable|in:yes,no',
             'agree_business_terms' => 'required|accepted',
         ]);
+
+        $userId = $request->user()->id;
+
+        $primaryDocumentPath = $this->storeRegistrationDocument(
+            $request->file('primary_document_file'),
+            $userId,
+            'primary-document'
+        );
+        if ($primaryDocumentPath) {
+            $validated['primary_document_name'] = $primaryDocumentPath;
+        }
+
+        $governmentIdPath = $this->storeRegistrationDocument(
+            $request->file('government_id_front_file'),
+            $userId,
+            'government-id'
+        );
+        if ($governmentIdPath) {
+            $validated['government_id_front_name'] = $governmentIdPath;
+        }
+
+        $birCertificatePath = $this->storeRegistrationDocument(
+            $request->file('bir_certificate_file'),
+            $userId,
+            'bir-certificate'
+        );
+        if ($birCertificatePath) {
+            $validated['bir_certificate_name'] = $birCertificatePath;
+        }
 
         $registration = SellerRegistration::updateOrCreate(
             ['user_id' => $request->user()->id],
@@ -146,5 +180,22 @@ class SellerRegistrationController extends Controller
             'message' => 'Shipping settings updated successfully.',
             'registration' => $registration,
         ]);
+    }
+
+    private function storeRegistrationDocument(?UploadedFile $file, int $userId, string $prefix): ?string
+    {
+        if (! $file) {
+            return null;
+        }
+
+        $extension = strtolower($file->getClientOriginalExtension() ?: $file->extension() ?: 'bin');
+        $fileName = $prefix . '-' . Str::uuid() . '.' . $extension;
+        $storedPath = $file->storeAs('seller-registration/user-' . $userId, $fileName, 'public');
+
+        if (! $storedPath) {
+            return null;
+        }
+
+        return '/storage/' . $storedPath;
     }
 }

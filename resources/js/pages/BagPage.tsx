@@ -3,7 +3,6 @@ import { createPortal } from 'react-dom';
 import { toast } from 'react-toastify';
 import { useAuth } from '../contexts/AuthContext';
 import { addSellerOrder, useOrderHistory } from '../hooks/useOrderHistory';
-import { useWallet } from '../hooks/useWallet';
 import { useWonAuctions } from '../hooks/useWonAuctions';
 import { addressService, orderService } from '../services/api';
 import type { Address, BagAuctionItem } from '../types';
@@ -19,7 +18,6 @@ export const BagPage: React.FC<BagPageProps> = ({
     onNavigateToAuction,
 }) => {
     const { authUser } = useAuth();
-    const { walletBalance, deductFunds } = useWallet();
     const { wonAuctions, isLoadingWonAuctions } = useWonAuctions();
     const { orders, addOrder } = useOrderHistory();
     const [addresses, setAddresses] = useState<Address[]>([]);
@@ -145,13 +143,9 @@ export const BagPage: React.FC<BagPageProps> = ({
 
     const selectedAddress =
         addresses.find((address) => address.id === selectedAddressId) ?? null;
-    const checkoutAmount = Number(checkoutItem?.winning_bid_amount ?? 0);
     const selectedAddressPreview = selectedAddress
         ? formatAddress(selectedAddress)
         : 'No delivery address selected yet.';
-    const remainingBalance = Number(
-        (walletBalance - checkoutAmount).toFixed(2),
-    );
 
     const handleOpenCheckout = (item: BagAuctionItem) => {
         setCheckoutItem(item);
@@ -171,13 +165,6 @@ export const BagPage: React.FC<BagPageProps> = ({
 
         if (!selectedAddress) {
             setCheckoutError('Select a delivery address before checkout.');
-            return;
-        }
-
-        if (walletBalance < totalAmount) {
-            setCheckoutError(
-                'Your wallet balance does not have enough funds for this payment.',
-            );
             return;
         }
 
@@ -216,8 +203,6 @@ export const BagPage: React.FC<BagPageProps> = ({
                         media_url: resolveMediaUrl(checkoutItem.media?.[0]?.url),
                     },
                 });
-
-                deductFunds(totalAmount);
 
                 addOrder({
                     id: `${checkoutItem.id}-${Date.now()}`,
@@ -277,7 +262,7 @@ export const BagPage: React.FC<BagPageProps> = ({
                 setCheckoutItem(null);
                 setCheckoutError('');
                 toast.success(
-                    `Checkout complete. Deducted ${formatCurrency(totalAmount)} from your wallet.`,
+                    'Checkout complete. Your order is now queued for seller fulfillment.',
                     { autoClose: 2800 },
                 );
             } catch (error) {
@@ -467,6 +452,10 @@ export const BagPage: React.FC<BagPageProps> = ({
                                                 ),
                                             )}
                                         </p>
+                                        <p className="bag-checkout-item-meta">
+                                            Wallet payment is automatically
+                                            deducted when you win.
+                                        </p>
                                     </div>
                                     <label className="bag-checkout-label">
                                         Delivery address
@@ -501,31 +490,41 @@ export const BagPage: React.FC<BagPageProps> = ({
                                     </label>
                                     <div className="checkout-deduction-box" aria-live="polite">
                                         <div className="checkout-deduction-row">
-                                            <span>Wallet balance</span>
-                                            <strong>
-                                                {formatCurrency(walletBalance)}
-                                            </strong>
-                                        </div>
-                                        <div className="checkout-deduction-row">
-                                            <span>Balance after payment</span>
+                                            <span>Winning amount</span>
                                             <strong>
                                                 {formatCurrency(
-                                                    Math.max(0, remainingBalance),
+                                                    Number(
+                                                        checkoutItem.winning_bid_amount ??
+                                                            0,
+                                                    ),
                                                 )}
                                             </strong>
                                         </div>
+                                        <div className="checkout-deduction-row">
+                                            <span>Wallet deduction</span>
+                                            <strong>
+                                                {checkoutItem.bid_winner
+                                                    ?.wallet_deducted_at
+                                                    ? 'Completed'
+                                                    : 'Pending'}
+                                            </strong>
+                                        </div>
                                     </div>
+
+                                    {checkoutItem.bid_winner
+                                        ?.wallet_deduction_failure_reason && (
+                                        <p className="bag-checkout-hint">
+                                            {
+                                                checkoutItem.bid_winner
+                                                    .wallet_deduction_failure_reason
+                                            }
+                                        </p>
+                                    )}
 
                                     {!addresses.length && !addressLoading && (
                                         <p className="bag-checkout-hint">
                                             Add an address in your account
                                             before placing this order.
-                                        </p>
-                                    )}
-                                    {walletBalance <= 0 && (
-                                        <p className="bag-checkout-hint">
-                                            Add funds to your wallet before
-                                            placing this order.
                                         </p>
                                     )}
                                     {checkoutError && (
@@ -549,14 +548,12 @@ export const BagPage: React.FC<BagPageProps> = ({
                                         onClick={handleConfirmCheckout}
                                         disabled={
                                             isCheckingOut ||
-                                            !addresses.length ||
-                                            walletBalance <= 0 ||
-                                            walletBalance < checkoutAmount
+                                            !addresses.length
                                         }
                                     >
                                         {isCheckingOut
                                             ? 'Processing...'
-                                            : 'Pay Now'}
+                                            : 'Confirm Order'}
                                     </button>
                                 </div>
                             </div>

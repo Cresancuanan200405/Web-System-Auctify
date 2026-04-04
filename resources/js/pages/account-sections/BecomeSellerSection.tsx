@@ -64,6 +64,19 @@ export const BecomeSellerSection: React.FC = () => {
     const [primaryDocumentName, setPrimaryDocumentName] = useState('');
     const [governmentIdFrontName, setGovernmentIdFrontName] = useState('');
     const [birCertificateName, setBirCertificateName] = useState('');
+    const [primaryDocumentFile, setPrimaryDocumentFile] = useState<File | null>(
+        null,
+    );
+    const [governmentIdFrontFile, setGovernmentIdFrontFile] =
+        useState<File | null>(null);
+    const [birCertificateFile, setBirCertificateFile] = useState<File | null>(
+        null,
+    );
+    const [primaryDocumentPreviewUrl, setPrimaryDocumentPreviewUrl] =
+        useState('');
+    const [governmentIdPreviewUrl, setGovernmentIdPreviewUrl] = useState('');
+    const [birCertificatePreviewUrl, setBirCertificatePreviewUrl] =
+        useState('');
     const [isSubmittingSeller, setIsSubmittingSeller] = useState(false);
     const [isCheckingRegistration, setIsCheckingRegistration] = useState(true);
     const [sellerRegistrationStatus, setSellerRegistrationStatus] =
@@ -92,6 +105,68 @@ export const BecomeSellerSection: React.FC = () => {
     const goBack = () => {
         setStep((current) =>
             current === 1 ? 1 : ((current - 1) as 1 | 2 | 3),
+        );
+    };
+
+    const formatFileSize = (size: number) => {
+        if (size >= 1024 * 1024) {
+            return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+        }
+
+        return `${Math.max(1, Math.round(size / 1024))} KB`;
+    };
+
+    const handleDocumentSelection = (
+        file: File | null,
+        setFile: React.Dispatch<React.SetStateAction<File | null>>,
+        setName: React.Dispatch<React.SetStateAction<string>>,
+        setPreview: React.Dispatch<React.SetStateAction<string>>,
+    ) => {
+        setFile(file);
+        setName(file?.name ?? '');
+
+        setPreview((previousUrl) => {
+            if (previousUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(previousUrl);
+            }
+
+            if (!file || !file.type.startsWith('image/')) {
+                return '';
+            }
+
+            return URL.createObjectURL(file);
+        });
+    };
+
+    const renderFilePreview = (
+        file: File | null,
+        previewUrl: string,
+        emptyLabel: string,
+    ) => {
+        if (!file) {
+            return (
+                <div className="seller-upload-preview-empty">{emptyLabel}</div>
+            );
+        }
+
+        return (
+            <div className="seller-upload-preview">
+                {previewUrl ? (
+                    <img
+                        src={previewUrl}
+                        alt={file.name}
+                        className="seller-upload-preview-image"
+                    />
+                ) : (
+                    <div className="seller-upload-preview-file">No image preview</div>
+                )}
+                <div className="seller-upload-preview-meta">
+                    <p className="seller-upload-preview-name">{file.name}</p>
+                    <p className="seller-upload-preview-size">
+                        {formatFileSize(file.size)}
+                    </p>
+                </div>
+            </div>
         );
     };
 
@@ -132,6 +207,24 @@ export const BecomeSellerSection: React.FC = () => {
 
         void loadSellerRegistration();
     }, []);
+
+    useEffect(() => {
+        return () => {
+            [
+                primaryDocumentPreviewUrl,
+                governmentIdPreviewUrl,
+                birCertificatePreviewUrl,
+            ].forEach((previewUrl) => {
+                if (previewUrl.startsWith('blob:')) {
+                    URL.revokeObjectURL(previewUrl);
+                }
+            });
+        };
+    }, [
+        primaryDocumentPreviewUrl,
+        governmentIdPreviewUrl,
+        birCertificatePreviewUrl,
+    ]);
 
     const handleRegionSelect = async (regionCode: string) => {
         setSelectedRegion(regionCode);
@@ -311,6 +404,9 @@ export const BecomeSellerSection: React.FC = () => {
                 tax_tin: taxTin || undefined,
                 vat_status: vatStatus || undefined,
                 bir_certificate_name: birCertificateName || undefined,
+                primary_document_file: primaryDocumentFile || undefined,
+                government_id_front_file: governmentIdFrontFile || undefined,
+                bir_certificate_file: birCertificateFile || undefined,
                 submit_sworn_declaration: submitSwornDeclaration || undefined,
                 agree_business_terms: agreeBusinessTerms,
             });
@@ -966,13 +1062,22 @@ export const BecomeSellerSection: React.FC = () => {
                                             <input
                                                 type="file"
                                                 className="seller-file-input"
+                                                accept=".jpg,.jpeg,.png,.webp,.pdf"
                                                 onChange={(event) =>
-                                                    setPrimaryDocumentName(
-                                                        event.target.files?.[0]
-                                                            ?.name ?? '',
+                                                    handleDocumentSelection(
+                                                        event.target.files?.[0] ??
+                                                            null,
+                                                        setPrimaryDocumentFile,
+                                                        setPrimaryDocumentName,
+                                                        setPrimaryDocumentPreviewUrl,
                                                     )
                                                 }
                                             />
+                                            {renderFilePreview(
+                                                primaryDocumentFile,
+                                                primaryDocumentPreviewUrl,
+                                                'Upload your DTI/SEC/CDA document file',
+                                            )}
                                         </div>
                                     </div>
 
@@ -1010,13 +1115,22 @@ export const BecomeSellerSection: React.FC = () => {
                                             <input
                                                 type="file"
                                                 className="seller-file-input"
+                                                accept=".jpg,.jpeg,.png,.webp,.pdf"
                                                 onChange={(event) =>
-                                                    setGovernmentIdFrontName(
-                                                        event.target.files?.[0]
-                                                            ?.name ?? '',
+                                                    handleDocumentSelection(
+                                                        event.target.files?.[0] ??
+                                                            null,
+                                                        setGovernmentIdFrontFile,
+                                                        setGovernmentIdFrontName,
+                                                        setGovernmentIdPreviewUrl,
                                                     )
                                                 }
                                             />
+                                            {renderFilePreview(
+                                                governmentIdFrontFile,
+                                                governmentIdPreviewUrl,
+                                                'Upload your government ID front image',
+                                            )}
                                         </div>
                                     </div>
 
@@ -1185,13 +1299,22 @@ export const BecomeSellerSection: React.FC = () => {
                                             <input
                                                 type="file"
                                                 className="seller-file-input"
+                                                accept=".jpg,.jpeg,.png,.webp,.pdf"
                                                 onChange={(event) =>
-                                                    setBirCertificateName(
-                                                        event.target.files?.[0]
-                                                            ?.name ?? '',
+                                                    handleDocumentSelection(
+                                                        event.target.files?.[0] ??
+                                                            null,
+                                                        setBirCertificateFile,
+                                                        setBirCertificateName,
+                                                        setBirCertificatePreviewUrl,
                                                     )
                                                 }
                                             />
+                                            {renderFilePreview(
+                                                birCertificateFile,
+                                                birCertificatePreviewUrl,
+                                                'Upload your BIR certificate file',
+                                            )}
                                         </div>
                                     </div>
 
@@ -1262,267 +1385,162 @@ export const BecomeSellerSection: React.FC = () => {
                                         Review &amp; Submit
                                     </h3>
                                     <p className="seller-hint seller-review-intro">
-                                        Review all your seller details before
-                                        final submission.
+                                        Confirm your profile, business data, and
+                                        uploaded documents before final
+                                        submission.
                                     </p>
 
-                                    <div className="seller-review-cards">
+                                    <div className="seller-review-grid">
                                         <section className="seller-review-card">
                                             <h4 className="seller-review-card-title">
                                                 Shop Information
                                             </h4>
-                                            <ul className="seller-review-list">
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Shop name
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {shopName || 'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Contact email
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {email || 'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Contact phone
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {phoneNumber ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Pickup address
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {locationSummary ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                            </ul>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Shop name</span>
+                                                <span className="seller-review-value">{shopName || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Contact email</span>
+                                                <span className="seller-review-value">{email || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Contact phone</span>
+                                                <span className="seller-review-value">{phoneNumber || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Pickup address</span>
+                                                <span className="seller-review-value">{locationSummary || 'Not set'}</span>
+                                            </div>
                                         </section>
 
                                         <section className="seller-review-card">
                                             <h4 className="seller-review-card-title">
-                                                Entity Information
+                                                Business Profile
                                             </h4>
-                                            <ul className="seller-review-list">
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Submit mode
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {submitBusinessMode ===
-                                                        'now'
-                                                            ? 'Submit Now'
-                                                            : 'Submit Later'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Seller type
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {sellerTypeLabel}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Company registered name
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {companyRegisteredName ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Individual registered
-                                                        name
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {[
-                                                            registeredFirstName,
-                                                            registeredMiddleName,
-                                                            registeredLastName,
-                                                            registeredSuffix,
-                                                        ]
-                                                            .filter(Boolean)
-                                                            .join(' ') ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        General location
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {generalLocation ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Registered address
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {registeredAddress ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Zip code
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {zipCode || 'Not set'}
-                                                    </span>
-                                                </li>
-                                            </ul>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Submit mode</span>
+                                                <span className="seller-review-value">
+                                                    {submitBusinessMode === 'now'
+                                                        ? 'Submit Now'
+                                                        : 'Submit Later'}
+                                                </span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Seller type</span>
+                                                <span className="seller-review-value">{sellerTypeLabel}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Company registered name</span>
+                                                <span className="seller-review-value">{companyRegisteredName || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Individual registered name</span>
+                                                <span className="seller-review-value">
+                                                    {[
+                                                        registeredFirstName,
+                                                        registeredMiddleName,
+                                                        registeredLastName,
+                                                        registeredSuffix,
+                                                    ]
+                                                        .filter(Boolean)
+                                                        .join(' ') || 'Not set'}
+                                                </span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">General location</span>
+                                                <span className="seller-review-value">{generalLocation || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Registered address</span>
+                                                <span className="seller-review-value">{registeredAddress || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Zip code</span>
+                                                <span className="seller-review-value">{zipCode || 'Not set'}</span>
+                                            </div>
                                         </section>
 
                                         <section className="seller-review-card">
                                             <h4 className="seller-review-card-title">
-                                                Documents &amp; Verification
+                                                Compliance &amp; Contacts
                                             </h4>
-                                            <ul className="seller-review-list">
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Primary document type
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {
-                                                            selectedPrimaryDocLabel
-                                                        }
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Primary document file
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {primaryDocumentName ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Government ID type
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {
-                                                            selectedGovernmentIdLabel
-                                                        }
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Government ID (front)
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {governmentIdFrontName ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Business email
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {businessEmail ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Business email OTP
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {businessEmailOtp ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Business phone
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {businessPhoneNumber ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Business phone OTP
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {businessPhoneOtp ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                            </ul>
-                                        </section>
-
-                                        <section className="seller-review-card">
-                                            <h4 className="seller-review-card-title">
-                                                Tax Information
-                                            </h4>
-                                            <ul className="seller-review-list">
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        TIN
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {taxTin || 'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        VAT status
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {selectedVatStatusLabel}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        BIR certificate file
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {birCertificateName ||
-                                                            'Not set'}
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Sworn declaration
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {
-                                                            selectedSwornDeclarationLabel
-                                                        }
-                                                    </span>
-                                                </li>
-                                                <li>
-                                                    <span className="seller-review-label">
-                                                        Terms accepted
-                                                    </span>
-                                                    <span className="seller-review-value">
-                                                        {agreeBusinessTerms
-                                                            ? 'Yes'
-                                                            : 'No'}
-                                                    </span>
-                                                </li>
-                                            </ul>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Business email</span>
+                                                <span className="seller-review-value">{businessEmail || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Business email OTP</span>
+                                                <span className="seller-review-value">{businessEmailOtp || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Business phone</span>
+                                                <span className="seller-review-value">{businessPhoneNumber || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Business phone OTP</span>
+                                                <span className="seller-review-value">{businessPhoneOtp || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">TIN</span>
+                                                <span className="seller-review-value">{taxTin || 'Not set'}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">VAT status</span>
+                                                <span className="seller-review-value">{selectedVatStatusLabel}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Sworn declaration</span>
+                                                <span className="seller-review-value">{selectedSwornDeclarationLabel}</span>
+                                            </div>
+                                            <div className="seller-review-row">
+                                                <span className="seller-review-label">Terms accepted</span>
+                                                <span className="seller-review-value">{agreeBusinessTerms ? 'Yes' : 'No'}</span>
+                                            </div>
                                         </section>
                                     </div>
+
+                                    <section className="seller-review-documents">
+                                        <h4 className="seller-review-card-title">
+                                            Document Previews
+                                        </h4>
+                                        <div className="seller-review-doc-grid">
+                                            <article className="seller-review-doc-card">
+                                                <div className="seller-review-doc-head">
+                                                    <p className="seller-review-doc-title">Primary Business Document</p>
+                                                    <p className="seller-review-doc-type">{selectedPrimaryDocLabel}</p>
+                                                </div>
+                                                {renderFilePreview(
+                                                    primaryDocumentFile,
+                                                    primaryDocumentPreviewUrl,
+                                                    'No primary document uploaded yet',
+                                                )}
+                                            </article>
+
+                                            <article className="seller-review-doc-card">
+                                                <div className="seller-review-doc-head">
+                                                    <p className="seller-review-doc-title">Government ID (Front)</p>
+                                                    <p className="seller-review-doc-type">{selectedGovernmentIdLabel}</p>
+                                                </div>
+                                                {renderFilePreview(
+                                                    governmentIdFrontFile,
+                                                    governmentIdPreviewUrl,
+                                                    'No government ID uploaded yet',
+                                                )}
+                                            </article>
+
+                                            <article className="seller-review-doc-card">
+                                                <div className="seller-review-doc-head">
+                                                    <p className="seller-review-doc-title">BIR Certificate</p>
+                                                    <p className="seller-review-doc-type">Tax Compliance</p>
+                                                </div>
+                                                {renderFilePreview(
+                                                    birCertificateFile,
+                                                    birCertificatePreviewUrl,
+                                                    'No BIR certificate uploaded yet',
+                                                )}
+                                            </article>
+                                        </div>
+                                    </section>
                                 </div>
                             )}
                         </div>

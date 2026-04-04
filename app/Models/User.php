@@ -146,6 +146,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\WalletTransaction::class)->latest();
     }
 
+    public function walletReservations(): HasMany
+    {
+        return $this->hasMany(\App\Models\WalletReservation::class)->latest();
+    }
+
     public function buyerOrders(): HasMany
     {
         return $this->hasMany(Order::class, 'buyer_user_id')->latest();

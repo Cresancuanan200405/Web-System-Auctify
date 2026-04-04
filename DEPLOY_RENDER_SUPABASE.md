@@ -42,6 +42,8 @@ This repository is now prepared for Docker-based deployment on Render with a Sup
 6. Set SANCTUM_STATEFUL_DOMAINS and CORS_ALLOWED_ORIGINS to your deployed domain.
 7. Keep RUN_MIGRATIONS=true for first deploy to auto-run migrations.
 8. Keep SKIP_MIGRATIONS_IF_SCHEMA_PRESENT=true to avoid duplicate-table failures on redeploy when schema already exists.
+9. Keep RUN_AUCTION_SETTLEMENT_AT_BOOT=true so closed auctions are reconciled during startup.
+10. Keep RUN_SCHEDULER_WORKER=true so Laravel scheduled commands run continuously.
 
 ## Redeploy after manual schema restore
 
@@ -50,6 +52,8 @@ If your Supabase schema was restored outside Laravel's migration tracking (for e
 Use this setup:
 - RUN_MIGRATIONS=true
 - SKIP_MIGRATIONS_IF_SCHEMA_PRESENT=true
+- RUN_AUCTION_SETTLEMENT_AT_BOOT=true
+- RUN_SCHEDULER_WORKER=true
 
 With this guard, startup skips auto-migrate when the `users` table is already present.
 

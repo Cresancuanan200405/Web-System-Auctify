@@ -243,10 +243,10 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
                                             <td>{formatDateTime(account.lastSeenAt)}</td>
                                             <td>{formatDateTime(account.createdAt)}</td>
                                             <td>
-                                                <div className="admin-monitor-action-list">
+                                                <div className="admin-account-action-stack">
                                                     <button
                                                         type="button"
-                                                        className="admin-monitor-action-btn"
+                                                        className="admin-account-action-btn is-neutral"
                                                         onClick={() => {
                                                             void runAction(account, 'force-logout');
                                                         }}
@@ -256,7 +256,7 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
                                                     </button>
                                                     <button
                                                         type="button"
-                                                        className="admin-monitor-action-btn"
+                                                        className="admin-account-action-btn is-accent"
                                                         onClick={() => {
                                                             void runAction(account, 'require-reset');
                                                         }}
@@ -267,7 +267,7 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
                                                     {!account.isInactive ? (
                                                         <button
                                                             type="button"
-                                                            className="admin-monitor-action-btn danger"
+                                                            className="admin-account-action-btn is-danger"
                                                             onClick={() => {
                                                                 void runAction(account, 'deactivate');
                                                             }}
@@ -286,7 +286,7 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
                                                     ) : (
                                                         <button
                                                             type="button"
-                                                            className="admin-monitor-action-btn"
+                                                            className="admin-account-action-btn is-success"
                                                             onClick={() => {
                                                                 void runAction(account, 'reactivate');
                                                             }}

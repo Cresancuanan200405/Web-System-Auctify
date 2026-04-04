@@ -4,11 +4,16 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\WalletTransaction;
+use App\Services\Wallet\WalletReservationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class WalletController extends Controller
 {
+    public function __construct(private readonly WalletReservationService $reservationService)
+    {
+    }
+
     public function history(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -39,9 +44,16 @@ class WalletController extends Controller
     public function show(Request $request): JsonResponse
     {
         $user = $request->user();
+        $totalBalance = (float) ($user?->wallet_balance ?? 0);
+        $reservedBalance = $user
+            ? $this->reservationService->getActiveAmountForUser($user->id)
+            : 0.0;
+        $availableBalance = max(0, round($totalBalance - $reservedBalance, 2));
 
         return response()->json([
-            'wallet_balance' => (float) ($user?->wallet_balance ?? 0),
+            'wallet_balance' => $availableBalance,
+            'wallet_total_balance' => $totalBalance,
+            'wallet_reserved_balance' => $reservedBalance,
         ]);
     }
 
@@ -70,9 +82,16 @@ class WalletController extends Controller
             ]);
         }
 
+        $reservedBalance = $user
+            ? $this->reservationService->getActiveAmountForUser($user->id)
+            : 0.0;
+        $availableBalance = max(0, round($nextBalance - $reservedBalance, 2));
+
         return response()->json([
             'message' => 'Wallet balance updated.',
-            'wallet_balance' => $nextBalance,
+            'wallet_balance' => $availableBalance,
+            'wallet_total_balance' => $nextBalance,
+            'wallet_reserved_balance' => $reservedBalance,
         ]);
     }
 
@@ -85,11 +104,17 @@ class WalletController extends Controller
         $user = $request->user();
         $currentBalance = (float) ($user?->wallet_balance ?? 0);
         $amount = round((float) $validated['amount'], 2);
+        $reservedBalance = $user
+            ? $this->reservationService->getActiveAmountForUser($user->id)
+            : 0.0;
+        $availableBalance = max(0, round($currentBalance - $reservedBalance, 2));
 
-        if ($currentBalance < $amount) {
+        if ($availableBalance < $amount) {
             return response()->json([
                 'message' => 'Insufficient wallet balance.',
-                'wallet_balance' => $currentBalance,
+                'wallet_balance' => $availableBalance,
+                'wallet_total_balance' => $currentBalance,
+                'wallet_reserved_balance' => $reservedBalance,
             ], 422);
         }
 
@@ -110,9 +135,13 @@ class WalletController extends Controller
             ]);
         }
 
+        $nextAvailableBalance = max(0, round($nextBalance - $reservedBalance, 2));
+
         return response()->json([
             'message' => 'Wallet balance updated.',
-            'wallet_balance' => $nextBalance,
+            'wallet_balance' => $nextAvailableBalance,
+            'wallet_total_balance' => $nextBalance,
+            'wallet_reserved_balance' => $reservedBalance,
         ]);
     }
 }

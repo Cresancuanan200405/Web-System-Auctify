@@ -40,13 +40,14 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 }) => {
     const dashboardGracePeriodMs = 30 * 60 * 1000;
     const { authUser } = useAuth();
-    const { walletBalance, deductFunds } = useWallet();
+    const { walletBalance } = useWallet();
     const { orders, addOrder } = useOrderHistory();
     const [selectedAuction, setSelectedAuction] =
         useState<AuctionProductDetail | null>(null);
     const [auctionDetailLoading, setAuctionDetailLoading] = useState(true);
     const [auctionDetailError, setAuctionDetailError] = useState('');
     const [isBidDialogOpen, setIsBidDialogOpen] = useState(false);
+    const [isFirstBidNoticeOpen, setIsFirstBidNoticeOpen] = useState(false);
     const [bidAmount, setBidAmount] = useState('');
     const [bidError, setBidError] = useState('');
     const [placingBid, setPlacingBid] = useState(false);
@@ -184,6 +185,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
             setAuctionDetailError('');
             setSelectedAuction(null);
             setIsBidDialogOpen(false);
+            setIsFirstBidNoticeOpen(false);
             setBidAmount('');
             setBidError('');
 
@@ -400,7 +402,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     }, [authUser, isCheckoutDialogOpen]);
 
     useEffect(() => {
-        if (!isBidDialogOpen && !isCheckoutDialogOpen) {
+        if (!isBidDialogOpen && !isCheckoutDialogOpen && !isFirstBidNoticeOpen) {
             return;
         }
 
@@ -411,7 +413,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         return () => {
             body.style.overflow = previousOverflow;
         };
-    }, [isBidDialogOpen, isCheckoutDialogOpen]);
+    }, [isBidDialogOpen, isCheckoutDialogOpen, isFirstBidNoticeOpen]);
 
     const minBidValue = selectedAuction
         ? Math.ceil(
@@ -443,7 +445,9 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         hasValidBidAmount && parsedBidAmount > walletBalance;
     const highestBid = selectedAuction ? getHighestBid(selectedAuction) : null;
 
-    const handlePlaceBid = async () => {
+    const handlePlaceBid = async (options?: {
+        acknowledgeAutoDeduct?: boolean;
+    }) => {
         if (!selectedAuction || !authUser) {
             return;
         }
@@ -473,9 +477,13 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
         setPlacingBid(true);
         setBidError('');
         try {
-            await auctionService.placeBid(selectedAuction.id, amount);
+            await auctionService.placeBid(selectedAuction.id, amount, {
+                acknowledge_auto_deduct:
+                    options?.acknowledgeAutoDeduct === true,
+            });
             await fetchAuctionDetail(selectedAuction.id);
             setIsBidDialogOpen(false);
+            setIsFirstBidNoticeOpen(false);
             setBidAmount('');
             toast.success(
                 `Bid placed successfully at ${formatPeso(amount.toFixed(2))}.`,
@@ -484,12 +492,28 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 },
             );
         } catch (error) {
-            const message =
+            const responseData =
                 typeof error === 'object' &&
                 error !== null &&
-                'message' in error &&
-                typeof (error as { message?: unknown }).message === 'string'
-                    ? (error as { message: string }).message
+                'response' in error
+                    ? (error as { response?: { data?: { code?: string; message?: string } } }).response?.data
+                    : undefined;
+
+            if (responseData?.code === 'FIRST_BID_ACK_REQUIRED') {
+                setIsFirstBidNoticeOpen(true);
+                setBidError('');
+                return;
+            }
+
+            const message =
+                typeof responseData?.message === 'string'
+                    ? responseData.message
+                    : typeof error === 'object' &&
+                        error !== null &&
+                        'message' in error &&
+                        typeof (error as { message?: unknown }).message ===
+                            'string'
+                      ? (error as { message: string }).message
                     : 'Failed to place bid.';
             setBidError(message);
         } finally {
@@ -729,7 +753,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     const selectedAddress =
         addresses.find((address) => address.id === selectedAddressId) ?? null;
     const checkoutAmount = Number(finalWinner?.amount ?? 0);
-    const remainingBalance = Number((walletBalance - checkoutAmount).toFixed(2));
     const selectedAddressPreview = selectedAddress
         ? formatAddress(selectedAddress)
         : 'No delivery address selected yet.';
@@ -751,13 +774,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 
         if (!selectedAddress) {
             setCheckoutError('Select a delivery address before checkout.');
-            return;
-        }
-
-        if (walletBalance < totalAmount) {
-            setCheckoutError(
-                'Your wallet balance does not have enough funds for this payment.',
-            );
             return;
         }
 
@@ -794,8 +810,6 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                         media_url: resolveMediaUrl(primaryMedia?.url),
                     },
                 });
-
-                deductFunds(totalAmount);
 
                 addOrder({
                     id: `${selectedAuction.id}-${Date.now()}`,
@@ -861,7 +875,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                 setCheckoutError('');
                 setIsCheckoutDialogOpen(false);
                 toast.success(
-                    `Checkout complete. Deducted ${formatPeso(finalWinner.amount)} from your wallet.`,
+                    'Checkout complete. Your order is now queued for seller fulfillment.',
                     { autoClose: 2800 },
                 );
             } catch (error) {
@@ -1710,9 +1724,9 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         </div>
                                         <p className="auction-checkout-info-note">
                                             Make sure your delivery address is
-                                            correct and your wallet has enough
-                                            balance. Payment is charged
-                                            immediately after you click Pay Now.
+                                            correct. Wallet payment for winning
+                                            bids is deducted automatically when
+                                            the auction closes.
                                         </p>
                                     </div>
 
@@ -1753,7 +1767,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         aria-live="polite"
                                     >
                                         <div className="checkout-deduction-row">
-                                            <span>Total deduction</span>
+                                            <span>Winning amount</span>
                                             <strong>
                                                 {formatPeso(
                                                     checkoutAmount.toFixed(2),
@@ -1761,34 +1775,37 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                             </strong>
                                         </div>
                                         <div className="checkout-deduction-row">
-                                            <span>Wallet balance</span>
+                                            <span>Wallet deduction</span>
                                             <strong>
-                                                {formatPeso(walletBalance.toFixed(2))}
+                                                {selectedAuction.bid_winner
+                                                    ?.wallet_deducted_at
+                                                    ? `Completed (${formatDate(selectedAuction.bid_winner.wallet_deducted_at)})`
+                                                    : 'Pending'}
                                             </strong>
                                         </div>
                                         <div className="checkout-deduction-row">
-                                            <span>Balance after payment</span>
+                                            <span>Status</span>
                                             <strong>
-                                                {formatPeso(
-                                                    Math.max(
-                                                        0,
-                                                        remainingBalance,
-                                                    ).toFixed(2),
-                                                )}
+                                                {selectedAuction.bid_winner
+                                                    ?.wallet_deduction_failed_at
+                                                    ? 'Needs retry'
+                                                    : 'Ready for shipping'}
                                             </strong>
                                         </div>
                                     </div>
+
+                                    {selectedAuction.bid_winner
+                                        ?.wallet_deduction_failure_reason && (
+                                        <p className="bag-checkout-hint">
+                                            {selectedAuction.bid_winner
+                                                .wallet_deduction_failure_reason}
+                                        </p>
+                                    )}
 
                                     {!addresses.length && !addressLoading && (
                                         <p className="bag-checkout-hint">
                                             Add an address in your account
                                             before placing this order.
-                                        </p>
-                                    )}
-                                    {walletBalance <= 0 && (
-                                        <p className="bag-checkout-hint">
-                                            Add funds to your wallet before
-                                            placing this order.
                                         </p>
                                     )}
                                     {checkoutError && (
@@ -1815,14 +1832,89 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         onClick={handleConfirmCheckout}
                                         disabled={
                                             isCheckingOut ||
-                                            !addresses.length ||
-                                            walletBalance <= 0 ||
-                                            walletBalance < checkoutAmount
+                                            !addresses.length
                                         }
                                     >
                                         {isCheckingOut
                                             ? 'Processing...'
-                                            : 'Pay Now'}
+                                            : 'Confirm Order'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>,
+                        document.body,
+                    )}
+
+                {selectedAuction &&
+                    authUser &&
+                    isFirstBidNoticeOpen &&
+                    canRenderPortal &&
+                    createPortal(
+                        <div
+                            className="auction-bid-dialog-backdrop"
+                            onClick={() =>
+                                !placingBid && setIsFirstBidNoticeOpen(false)
+                            }
+                            role="presentation"
+                        >
+                            <div
+                                className="auction-bid-dialog auction-first-bid-dialog"
+                                role="dialog"
+                                aria-modal="true"
+                                aria-label="First bid reminder"
+                                onClick={(event) => event.stopPropagation()}
+                            >
+                                <h4 className="auction-bid-title">
+                                    First Bid Reminder
+                                </h4>
+                                <p className="auction-bid-subtitle">
+                                    When you win an auction, your winning amount
+                                    is automatically deducted from your wallet.
+                                    Please make sure your wallet has enough
+                                    funds for your bid commitments.
+                                </p>
+                                <ul className="auction-first-bid-list">
+                                    <li>
+                                        You are bidding{' '}
+                                        {hasValidBidAmount
+                                            ? formatPeso(
+                                                  parsedBidAmount.toFixed(2),
+                                              )
+                                            : formatPeso(
+                                                  minBidValue.toFixed(2),
+                                              )}{' '}
+                                        for this auction.
+                                    </li>
+                                    <li>
+                                        Deduction is applied automatically once
+                                        this auction closes and you are the
+                                        winner.
+                                    </li>
+                                </ul>
+                                <div className="auction-bid-actions">
+                                    <button
+                                        type="button"
+                                        className="auction-bid-cancel"
+                                        onClick={() =>
+                                            setIsFirstBidNoticeOpen(false)
+                                        }
+                                        disabled={placingBid}
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="auction-bid-submit"
+                                        onClick={() => {
+                                            void handlePlaceBid({
+                                                acknowledgeAutoDeduct: true,
+                                            });
+                                        }}
+                                        disabled={placingBid}
+                                    >
+                                        {placingBid
+                                            ? 'Placing...'
+                                            : 'I Understand, Place Bid'}
                                     </button>
                                 </div>
                             </div>

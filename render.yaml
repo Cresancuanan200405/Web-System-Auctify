@@ -61,3 +61,7 @@ services:
         value: "true"
       - key: SKIP_MIGRATIONS_IF_SCHEMA_PRESENT
         value: "true"
+      - key: RUN_AUCTION_SETTLEMENT_AT_BOOT
+        value: "true"
+      - key: RUN_SCHEDULER_WORKER
+        value: "true"

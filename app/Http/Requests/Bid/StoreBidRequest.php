@@ -15,6 +15,7 @@ class StoreBidRequest extends FormRequest
     {
         return [
             'amount' => ['required', 'integer', 'min:1'],
+            'acknowledge_auto_deduct' => ['nullable', 'boolean'],
         ];
     }
 }

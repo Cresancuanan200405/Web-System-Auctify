@@ -5,11 +5,16 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Auction;
 use App\Models\Bid;
+use App\Services\Bids\BidWinnerSettlementService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 class BidNotificationController extends Controller
 {
+    public function __construct(private readonly BidWinnerSettlementService $settlementService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $user = $request->user();
@@ -37,6 +42,7 @@ class BidNotificationController extends Controller
         $notifications = collect();
 
         foreach ($auctions as $auction) {
+            /** @var Auction $auction */
             $bids = $auction->bids;
             if ($bids->isEmpty()) {
                 continue;
@@ -69,6 +75,9 @@ class BidNotificationController extends Controller
             });
 
             $auctionEnded = $auction->ends_at && $auction->ends_at->lessThanOrEqualTo(now());
+            $winnerRecord = $auctionEnded
+                ? $this->settlementService->syncForAuction($auction)
+                : null;
             $firstMedia = $auction->media->first();
             $mediaUrl = $firstMedia?->url;
             $myLatestBidAtIso = $myLatestBid?->created_at?->toISOString();
@@ -98,7 +107,9 @@ class BidNotificationController extends Controller
             }
 
             if ($auctionEnded) {
-                $won = $highestBid && (int) $highestBid->user_id === $userId;
+                $won = $winnerRecord
+                    ? (int) $winnerRecord->winner_user_id === $userId
+                    : ($highestBid && (int) $highestBid->user_id === $userId);
 
                 $notifications->push([
                     'key' => ($won ? 'won-' : 'ended-') . $auction->id,

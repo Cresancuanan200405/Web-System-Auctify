@@ -7,8 +7,8 @@ use App\Http\Requests\Auction\StoreAuctionRequest;
 use App\Models\AdminNotification;
 use App\Models\AdminSetting;
 use App\Models\Auction;
-use App\Models\Bid;
 use App\Models\BidWinner;
+use App\Services\Bids\BidWinnerSettlementService;
 use App\Models\SellerRegistration;
 use App\Support\MediaStorage;
 use Illuminate\Http\JsonResponse;
@@ -19,37 +19,9 @@ use Illuminate\Support\Carbon;
 
 class AuctionController extends Controller
 {
-    private function resolveWinningBid(Auction $auction): ?Bid
-    {
-        if ($auction->getComputedStatus() !== 'closed') {
-            return null;
-        }
-
-        return $auction->bids()
-            ->where('amount', $auction->current_price)
-            ->orderByDesc('created_at')
-            ->orderByDesc('id')
-            ->first();
-    }
-
     private function syncBidWinnerRecord(Auction $auction): ?BidWinner
     {
-        $winningBid = $this->resolveWinningBid($auction);
-
-        if (! $winningBid) {
-            return null;
-        }
-
-        return BidWinner::query()->updateOrCreate(
-            ['auction_id' => $auction->id],
-            [
-                'bid_id' => $winningBid->id,
-                'winner_user_id' => $winningBid->user_id,
-                'seller_user_id' => $auction->user_id,
-                'winning_amount' => $winningBid->amount,
-                'won_at' => $winningBid->created_at,
-            ]
-        );
+        return app(BidWinnerSettlementService::class)->syncForAuction($auction);
     }
 
     private function ensureSellerCanManageAuctions(Request $request): ?JsonResponse
@@ -112,6 +84,9 @@ class AuctionController extends Controller
                 'seller_user_id' => $auction->bidWinner->seller_user_id,
                 'winning_amount' => $auction->bidWinner->winning_amount,
                 'won_at' => optional($auction->bidWinner->won_at)?->toISOString(),
+                'wallet_deducted_at' => optional($auction->bidWinner->wallet_deducted_at)?->toISOString(),
+                'wallet_deduction_failed_at' => optional($auction->bidWinner->wallet_deduction_failed_at)?->toISOString(),
+                'wallet_deduction_failure_reason' => $auction->bidWinner->wallet_deduction_failure_reason,
             ];
         }
 
@@ -267,6 +242,9 @@ class AuctionController extends Controller
                         'seller_user_id' => $winnerRecord->seller_user_id,
                         'winning_amount' => $winnerRecord->winning_amount,
                         'won_at' => optional($winnerRecord->won_at)?->toISOString(),
+                        'wallet_deducted_at' => optional($winnerRecord->wallet_deducted_at)?->toISOString(),
+                        'wallet_deduction_failed_at' => optional($winnerRecord->wallet_deduction_failed_at)?->toISOString(),
+                        'wallet_deduction_failure_reason' => $winnerRecord->wallet_deduction_failure_reason,
                     ],
                 ];
             });

@@ -2186,6 +2186,23 @@
     color: #fff;
 }
 
+.auction-first-bid-dialog {
+    width: min(600px, calc(100vw - 32px));
+}
+
+.auction-first-bid-list {
+    margin: 14px 0 0;
+    padding: 12px 14px 12px 28px;
+    border: 1px solid rgba(191, 219, 254, 0.8);
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #1e3a8a;
+    display: grid;
+    gap: 8px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
 .auction-chat-card {
     margin-top: 24px;
     border: 1px solid var(--border);

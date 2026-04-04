@@ -8,11 +8,16 @@ use App\Models\Order;
 use App\Models\OrderPayment;
 use App\Models\OrderShipment;
 use App\Models\User;
+use App\Services\Bids\BidWinnerSettlementService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class OrderLifecycleService
 {
+    public function __construct(private readonly BidWinnerSettlementService $settlementService)
+    {
+    }
+
     public function createOrderFromBidWinner(User $actor, BidWinner $winner, array $payload): Order
     {
         if ($winner->winner_user_id !== $actor->id && ! $actor->is_admin) {
@@ -27,6 +32,17 @@ class OrderLifecycleService
 
         if ($existing) {
             return $this->loadOrderGraph($existing);
+        }
+
+        $winner = $this->settlementService->settleWallet($winner->fresh() ?? $winner);
+
+        if (! $winner->wallet_deducted_at) {
+            $reason = $winner->wallet_deduction_failure_reason
+                ?: 'Wallet deduction is still pending for this winning bid.';
+
+            throw ValidationException::withMessages([
+                'bid_winner_id' => $reason,
+            ]);
         }
 
         $addressId = $payload['shipping_address_id'] ?? null;
