@@ -24,6 +24,8 @@ class AdminSettingController extends Controller
 
     public function index(): JsonResponse
     {
+        AdminSetting::ensureCatalog();
+
         $settings = AdminSetting::orderBy('group')->orderBy('label')->get()
             ->map(fn (AdminSetting $s) => $this->mapSetting($s));
 
@@ -32,6 +34,8 @@ class AdminSettingController extends Controller
 
     public function publicIndex(): JsonResponse
     {
+        AdminSetting::ensureCatalog();
+
         return response()->json([
             'settings' => [
                 'allow_registrations' => (bool) AdminSetting::getValue('allow_registrations', true),
@@ -53,6 +57,8 @@ class AdminSettingController extends Controller
 
     public function update(Request $request): JsonResponse
     {
+        AdminSetting::ensureCatalog();
+
         $validated = $request->validate([
             'settings'   => 'required|array',
             'settings.*' => 'nullable|string|max:2000',

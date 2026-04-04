@@ -13,7 +13,7 @@ import {
     getSubcategoryLabel,
     getSubcategoryOptions,
 } from '../../lib/homeCategories';
-import { sellerService } from '../../services/api';
+import { orderService, sellerService } from '../../services/api';
 import type {
     AuctionProduct,
     SellerRegistration,
@@ -860,13 +860,20 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
 
             setMarkedAsShipped((prev) => new Set([...prev, orderId]));
 
+            const numericOrderId = Number.parseInt(
+                orderId.replace(/-seller$/, ''),
+                10,
+            );
+
             // Update order status on the backend
             void (async () => {
                 try {
-                    await sellerService.updateSellerShippingStatus(
-                        parseInt(orderId.replace(/-seller$/, ''), 10),
-                        { status: 'delivered' },
-                    );
+                    if (Number.isFinite(numericOrderId)) {
+                        await orderService.updateSellerShippingStatus(
+                            numericOrderId,
+                            { status: 'delivered' },
+                        );
+                    }
 
                     // Update seller's local state
                     updateOrderStatus(orderId, 'delivered');

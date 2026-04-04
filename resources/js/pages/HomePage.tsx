@@ -119,6 +119,7 @@ export const HomePage: React.FC<HomePageProps> = ({
 }) => {
     void selectedSubcategory;
     void featureFlags;
+    void onNavigateToRegister;
     void onNavigateToBrowse;
 
     const { authUser } = useAuth();
@@ -707,17 +708,10 @@ export const HomePage: React.FC<HomePageProps> = ({
                             <button
                                 className="hero-btn"
                                 onClick={() => {
-                                    if (onNavigateToBrowse) {
-                                        onNavigateToBrowse();
-                                        return;
-                                    }
-
-                                    if (onNavigateHome) {
-                                        onNavigateHome();
-                                        return;
-                                    }
-
-                                    onNavigateToRegister();
+                                    productsSectionRef.current?.scrollIntoView({
+                                        behavior: 'smooth',
+                                        block: 'start',
+                                    });
                                 }}
                             >
                                 BID NOW →

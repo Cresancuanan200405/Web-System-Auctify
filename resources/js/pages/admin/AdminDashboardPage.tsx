@@ -5452,9 +5452,11 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                             </td>
                                                             <td>
                                                                 <span
-                                                                    className={`admin-user-chip ${(user.sellerStatus ?? '').toLowerCase() === 'approved' ? 'verified' : 'pending'}`}
+                                                                    className={`admin-user-chip ${!user.isSeller && !(user.sellerStatus ?? '').trim() ? '' : (user.sellerStatus ?? '').toLowerCase() === 'approved' ? 'verified' : 'pending'}`}
                                                                 >
-                                                                    {(user.sellerStatus ?? '').toLowerCase() === 'approved'
+                                                                    {!user.isSeller && !(user.sellerStatus ?? '').trim()
+                                                                        ? 'Not a seller'
+                                                                        : (user.sellerStatus ?? '').toLowerCase() === 'approved'
                                                                         ? 'Approved seller'
                                                                         : (user.sellerStatus ?? '').toLowerCase() === 'revoked'
                                                                             ? 'Revoked'
