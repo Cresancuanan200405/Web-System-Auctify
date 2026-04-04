@@ -38,8 +38,8 @@ schema_has_migrations_table() {
     php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$stmt=$pdo->query("select to_regclass(\x27public.migrations\x27)");$val=$stmt?$stmt->fetchColumn():null;exit($val?0:1);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
 }
 
-backfill_existing_create_table_migration_rows() {
-    php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$files=glob("/var/www/html/database/migrations/*.php")?:[];sort($files);$batch=((int)$pdo->query("select coalesce(max(batch), 0) from migrations")->fetchColumn())+1;$tableExists=$pdo->prepare("select to_regclass(?)");$migrationExists=$pdo->prepare("select count(*) from migrations where migration = ?");$insert=$pdo->prepare("insert into migrations (migration, batch) values (?, ?)");$inserted=0;foreach($files as $file){$migration=pathinfo($file, PATHINFO_FILENAME);if(!preg_match("/^\\d{4}_\\d{2}_\\d{2}_\\d{6}_create_(.+)_table$/",$migration,$matches)){continue;}$table=$matches[1];$tableExists->execute(["public.".$table]);$tableRef=$tableExists->fetchColumn();if(!$tableRef){continue;}$migrationExists->execute([$migration]);$already=(int)$migrationExists->fetchColumn()>0;if($already){continue;}$insert->execute([$migration,$batch]);$inserted++;}fwrite(STDOUT,"Boot config: backfilled {$inserted} existing create-table migration row(s)\n");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
+backfill_all_local_migration_rows() {
+    php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$files=glob("/var/www/html/database/migrations/*.php")?:[];sort($files);$batch=((int)$pdo->query("select coalesce(max(batch), 0) from migrations")->fetchColumn())+1;$migrationExists=$pdo->prepare("select count(*) from migrations where migration = ?");$insert=$pdo->prepare("insert into migrations (migration, batch) values (?, ?)");$inserted=0;foreach($files as $file){$migration=pathinfo($file, PATHINFO_FILENAME);$migrationExists->execute([$migration]);$already=(int)$migrationExists->fetchColumn()>0;if($already){continue;}$insert->execute([$migration,$batch]);$inserted++;}fwrite(STDOUT,"Boot config: backfilled {$inserted} local migration row(s)\n");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
 }
 
 ensure_bid_winner_wallet_columns() {
@@ -110,16 +110,11 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     # rerunning bootstrap migrations causes duplicate-table deploy failures.
     if [ "${SKIP_MIGRATIONS_IF_SCHEMA_PRESENT:-true}" = "true" ] && schema_has_users_table >/dev/null 2>&1; then
         if schema_has_migrations_table >/dev/null 2>&1; then
-            echo "Boot config: schema exists and migrations table present; reconciling migration rows for existing tables"
-            if backfill_existing_create_table_migration_rows; then
-                echo "Boot config: migration reconciliation complete; running pending migrations"
-                php artisan migrate --force
+            echo "Boot config: schema exists and migrations table present; backfilling local migration history and skipping replay"
+            if backfill_all_local_migration_rows; then
+                echo "Boot config: local migration history reconciled; skipping php artisan migrate for restored schema"
             else
-                echo "Boot config: migration reconciliation failed; skipping auto migrations to avoid duplicate-table crash"
-                echo "Boot config: applying safe additive schema patch for bid winner wallet deduction fields"
-                ensure_bid_winner_wallet_columns || true
-                echo "Boot config: ensuring wallet reservations table exists for bidding holds"
-                ensure_wallet_reservations_table || true
+                echo "Boot config: migration history reconciliation failed; skipping replay to avoid duplicate-table crash"
             fi
         else
             echo "Boot config: users table exists without migrations history; skipping auto migrations"
