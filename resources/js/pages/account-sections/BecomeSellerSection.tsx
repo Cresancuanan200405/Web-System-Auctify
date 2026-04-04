@@ -210,21 +210,27 @@ export const BecomeSellerSection: React.FC = () => {
 
     useEffect(() => {
         return () => {
-            [
-                primaryDocumentPreviewUrl,
-                governmentIdPreviewUrl,
-                birCertificatePreviewUrl,
-            ].forEach((previewUrl) => {
-                if (previewUrl.startsWith('blob:')) {
-                    URL.revokeObjectURL(previewUrl);
-                }
-            });
+            if (primaryDocumentPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(primaryDocumentPreviewUrl);
+            }
         };
-    }, [
-        primaryDocumentPreviewUrl,
-        governmentIdPreviewUrl,
-        birCertificatePreviewUrl,
-    ]);
+    }, [primaryDocumentPreviewUrl]);
+
+    useEffect(() => {
+        return () => {
+            if (governmentIdPreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(governmentIdPreviewUrl);
+            }
+        };
+    }, [governmentIdPreviewUrl]);
+
+    useEffect(() => {
+        return () => {
+            if (birCertificatePreviewUrl.startsWith('blob:')) {
+                URL.revokeObjectURL(birCertificatePreviewUrl);
+            }
+        };
+    }, [birCertificatePreviewUrl]);
 
     const handleRegionSelect = async (regionCode: string) => {
         setSelectedRegion(regionCode);

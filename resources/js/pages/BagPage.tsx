@@ -26,6 +26,7 @@ export const BagPage: React.FC<BagPageProps> = ({
         null,
     );
     const [selectedAddressId, setSelectedAddressId] = useState('');
+    const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const canRenderPortal = typeof document !== 'undefined';
@@ -156,6 +157,7 @@ export const BagPage: React.FC<BagPageProps> = ({
     const handleOpenCheckout = (item: BagAuctionItem) => {
         setCheckoutItem(item);
         setSelectedAddressId(addresses[0]?.id || '');
+        setIsAddressConfirmed(false);
         setCheckoutError('');
     };
 
@@ -174,6 +176,13 @@ export const BagPage: React.FC<BagPageProps> = ({
             return;
         }
 
+        if (!isAddressConfirmed) {
+            setCheckoutError(
+                'Confirm the selected delivery address before submitting your order.',
+            );
+            return;
+        }
+
         setIsCheckingOut(true);
 
         const bidWinnerId = checkoutItem.bid_winner?.id;
@@ -188,7 +197,7 @@ export const BagPage: React.FC<BagPageProps> = ({
 
         void (async () => {
             try {
-                await orderService.createFromBidWinner({
+                const response = await orderService.createFromBidWinner({
                     bid_winner_id: bidWinnerId,
                     shipping_address_id: Number(selectedAddressId),
                     subtotal_amount: totalAmount,
@@ -210,58 +219,93 @@ export const BagPage: React.FC<BagPageProps> = ({
                     },
                 });
 
+                const createdOrder = response.order;
+                const createdShipping = createdOrder.shipping_address;
+                const createdAddressSummary = [
+                    createdShipping?.first_name && createdShipping?.last_name
+                        ? `${createdShipping.first_name} ${createdShipping.last_name}`
+                        : '',
+                    createdShipping?.street_address,
+                    createdShipping?.barangay,
+                    createdShipping?.city,
+                    createdShipping?.province,
+                    createdShipping?.region,
+                ]
+                    .filter(Boolean)
+                    .join(', ');
+                const firstMedia =
+                    createdOrder.auction?.media?.[0] ?? checkoutItem.media?.[0];
+                const sellerName =
+                    createdOrder.seller?.name ||
+                    checkoutItem.user?.seller_registration?.shop_name?.trim() ||
+                    checkoutItem.user?.name ||
+                    'Unknown Seller';
+
                 addOrder({
-                    id: `${checkoutItem.id}-${Date.now()}`,
-                    auction_id: checkoutItem.id,
-                    title: checkoutItem.title,
-                    category: checkoutItem.category,
-                    seller_user_id: checkoutItem.user?.id ?? checkoutItem.user_id,
-                    seller_name:
-                        checkoutItem.user?.seller_registration?.shop_name?.trim() ||
-                        checkoutItem.user?.name ||
-                        'Unknown Seller',
-                    seller_shop_name:
-                        checkoutItem.user?.seller_registration?.shop_name?.trim() ||
-                        checkoutItem.user?.name ||
-                        'Unknown Seller',
-                    buyer_user_id: authUser?.id,
-                    buyer_name: authUser?.name,
-                    buyer_email: authUser?.email,
-                    amount_paid: checkoutItem.winning_bid_amount,
+                    id: String(createdOrder.id),
+                    auction_id: createdOrder.auction_id,
+                    title:
+                        createdOrder.auction?.title ??
+                        checkoutItem.title,
+                    category:
+                        createdOrder.auction?.category ?? checkoutItem.category,
+                    seller_user_id:
+                        createdOrder.seller?.id ??
+                        checkoutItem.user?.id ??
+                        checkoutItem.user_id,
+                    seller_name: sellerName,
+                    seller_shop_name: sellerName,
+                    buyer_user_id: createdOrder.buyer?.id ?? authUser?.id,
+                    buyer_name: createdOrder.buyer?.name ?? authUser?.name,
+                    buyer_email:
+                        createdOrder.buyer?.email ?? authUser?.email,
+                    amount_paid: String(createdOrder.total_amount ?? totalAmount),
                     status: 'processing',
-                    address_summary: formatAddress(selectedAddress),
-                    payment_card_label: 'Auctify Wallet',
-                    media_url: resolveMediaUrl(checkoutItem.media?.[0]?.url),
-                    media_type: checkoutItem.media?.[0]?.media_type,
-                    purchased_at: new Date().toISOString(),
+                    address_summary:
+                        createdAddressSummary || formatAddress(selectedAddress),
+                    payment_card_label:
+                        createdOrder.payments?.[0]?.method?.toUpperCase() ||
+                        'Auctify Wallet',
+                    media_url: resolveMediaUrl(firstMedia?.url),
+                    media_type: firstMedia?.media_type,
+                    purchased_at:
+                        createdOrder.placed_at ??
+                        createdOrder.created_at ??
+                        new Date().toISOString(),
                 });
 
-                if ((checkoutItem.user?.id ?? checkoutItem.user_id) > 0) {
-                    addSellerOrder(checkoutItem.user?.id ?? checkoutItem.user_id, {
-                        id: `${checkoutItem.id}-${Date.now()}-seller`,
-                        auction_id: checkoutItem.id,
-                        title: checkoutItem.title,
-                        category: checkoutItem.category,
+                if ((createdOrder.seller?.id ?? checkoutItem.user?.id ?? checkoutItem.user_id) > 0) {
+                    addSellerOrder(createdOrder.seller?.id ?? checkoutItem.user?.id ?? checkoutItem.user_id, {
+                        id: String(createdOrder.id),
+                        auction_id: createdOrder.auction_id,
+                        title:
+                            createdOrder.auction?.title ??
+                            checkoutItem.title,
+                        category:
+                            createdOrder.auction?.category ?? checkoutItem.category,
                         seller_user_id:
-                            checkoutItem.user?.id ?? checkoutItem.user_id,
-                        seller_name:
-                            checkoutItem.user?.seller_registration?.shop_name?.trim() ||
-                            checkoutItem.user?.name ||
-                            'Unknown Seller',
-                        seller_shop_name:
-                            checkoutItem.user?.seller_registration?.shop_name?.trim() ||
-                            checkoutItem.user?.name ||
-                            'Unknown Seller',
-                        buyer_user_id: authUser?.id,
-                        buyer_name: authUser?.name,
-                        buyer_email: authUser?.email,
-                        amount_paid: checkoutItem.winning_bid_amount,
+                            createdOrder.seller?.id ??
+                            checkoutItem.user?.id ??
+                            checkoutItem.user_id,
+                        seller_name: sellerName,
+                        seller_shop_name: sellerName,
+                        buyer_user_id: createdOrder.buyer?.id ?? authUser?.id,
+                        buyer_name: createdOrder.buyer?.name ?? authUser?.name,
+                        buyer_email:
+                            createdOrder.buyer?.email ?? authUser?.email,
+                        amount_paid: String(createdOrder.total_amount ?? totalAmount),
                         status: 'processing',
-                        address_summary: formatAddress(selectedAddress),
-                        payment_card_label: 'Auctify Wallet',
-                        media_url: resolveMediaUrl(checkoutItem.media?.[0]?.url),
-                        media_type: checkoutItem.media?.[0]?.media_type,
-                        purchased_at: new Date().toISOString(),
+                        address_summary:
+                            createdAddressSummary || formatAddress(selectedAddress),
+                        payment_card_label:
+                            createdOrder.payments?.[0]?.method?.toUpperCase() ||
+                            'Auctify Wallet',
+                        media_url: resolveMediaUrl(firstMedia?.url),
+                        media_type: firstMedia?.media_type,
+                        purchased_at:
+                            createdOrder.placed_at ??
+                            createdOrder.created_at ??
+                            new Date().toISOString(),
                     });
                 }
 
@@ -469,11 +513,13 @@ export const BagPage: React.FC<BagPageProps> = ({
                                         Delivery address
                                         <select
                                             value={selectedAddressId}
-                                            onChange={(event) =>
+                                            onChange={(event) => {
                                                 setSelectedAddressId(
                                                     event.target.value,
-                                                )
-                                            }
+                                                );
+                                                setIsAddressConfirmed(false);
+                                                setCheckoutError('');
+                                            }}
                                             disabled={
                                                 addressLoading || isCheckingOut
                                             }
@@ -495,6 +541,22 @@ export const BagPage: React.FC<BagPageProps> = ({
                                         <p className="bag-checkout-field-preview">
                                             {selectedAddressPreview}
                                         </p>
+                                    </label>
+                                    <label className="bag-checkout-confirm-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={isAddressConfirmed}
+                                            onChange={(event) => {
+                                                setIsAddressConfirmed(
+                                                    event.target.checked,
+                                                );
+                                                setCheckoutError('');
+                                            }}
+                                            disabled={isCheckingOut || !selectedAddressId}
+                                        />
+                                        <span>
+                                            I confirm this delivery address is correct and can be shared with the seller.
+                                        </span>
                                     </label>
                                     <div className="checkout-deduction-box" aria-live="polite">
                                         <div className="checkout-deduction-row">
@@ -556,7 +618,9 @@ export const BagPage: React.FC<BagPageProps> = ({
                                         onClick={handleConfirmCheckout}
                                         disabled={
                                             isCheckingOut ||
-                                            !addresses.length
+                                            !addresses.length ||
+                                            !selectedAddressId ||
+                                            !isAddressConfirmed
                                         }
                                     >
                                         {isCheckingOut

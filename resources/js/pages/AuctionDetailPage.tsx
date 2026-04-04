@@ -68,6 +68,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
     const [addresses, setAddresses] = useState<Address[]>([]);
     const [addressLoading, setAddressLoading] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState('');
+    const [isAddressConfirmed, setIsAddressConfirmed] = useState(false);
     const [checkoutError, setCheckoutError] = useState('');
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [isOwnerActionMenuOpen, setIsOwnerActionMenuOpen] = useState(false);
@@ -759,6 +760,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 
     const handleOpenCheckoutDialog = () => {
         setCheckoutError('');
+        setIsAddressConfirmed(false);
         setIsCheckoutDialogOpen(true);
     };
 
@@ -777,6 +779,13 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
             return;
         }
 
+        if (!isAddressConfirmed) {
+            setCheckoutError(
+                'Confirm the selected delivery address before submitting your order.',
+            );
+            return;
+        }
+
         setIsCheckingOut(true);
 
         const bidWinnerId = selectedAuction.bid_winner?.id;
@@ -789,7 +798,7 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
 
         void (async () => {
             try {
-                await orderService.createFromBidWinner({
+                const response = await orderService.createFromBidWinner({
                     bid_winner_id: bidWinnerId,
                     shipping_address_id: Number(selectedAddressId),
                     subtotal_amount: totalAmount,
@@ -811,63 +820,101 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                     },
                 });
 
+                const createdOrder = response.order;
+                const createdShipping = createdOrder.shipping_address;
+                const createdAddressSummary = [
+                    createdShipping?.first_name && createdShipping?.last_name
+                        ? `${createdShipping.first_name} ${createdShipping.last_name}`
+                        : '',
+                    createdShipping?.street_address,
+                    createdShipping?.barangay,
+                    createdShipping?.city,
+                    createdShipping?.province,
+                    createdShipping?.region,
+                ]
+                    .filter(Boolean)
+                    .join(', ');
+                const createdMedia =
+                    createdOrder.auction?.media?.[0] ?? primaryMedia;
+                const sellerName =
+                    createdOrder.seller?.name ||
+                    selectedAuction.user?.seller_registration?.shop_name?.trim() ||
+                    selectedAuction.user?.name ||
+                    'Unknown Seller';
+
                 addOrder({
-                    id: `${selectedAuction.id}-${Date.now()}`,
-                    auction_id: selectedAuction.id,
-                    title: selectedAuction.title,
-                    category: selectedAuction.category,
-                    subcategory: selectedAuction.subcategory,
+                    id: String(createdOrder.id),
+                    auction_id: createdOrder.auction_id,
+                    title: createdOrder.auction?.title ?? selectedAuction.title,
+                    category:
+                        createdOrder.auction?.category ?? selectedAuction.category,
+                    subcategory:
+                        createdOrder.auction?.subcategory ?? selectedAuction.subcategory,
                     seller_user_id:
-                        selectedAuction.user?.id ?? selectedAuction.user_id,
-                    seller_name:
-                        selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                        selectedAuction.user?.name ||
-                        'Unknown Seller',
-                    seller_shop_name:
-                        selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                        selectedAuction.user?.name ||
-                        'Unknown Seller',
-                    buyer_user_id: authUser?.id,
-                    buyer_name: authUser?.name,
-                    buyer_email: authUser?.email,
-                    amount_paid: finalWinner.amount,
+                        createdOrder.seller?.id ??
+                        selectedAuction.user?.id ??
+                        selectedAuction.user_id,
+                    seller_name: sellerName,
+                    seller_shop_name: sellerName,
+                    buyer_user_id: createdOrder.buyer?.id ?? authUser?.id,
+                    buyer_name: createdOrder.buyer?.name ?? authUser?.name,
+                    buyer_email:
+                        createdOrder.buyer?.email ?? authUser?.email,
+                    amount_paid: String(createdOrder.total_amount ?? totalAmount),
                     status: 'processing',
-                    address_summary: formatAddress(selectedAddress),
-                    payment_card_label: 'Auctify Wallet',
-                    media_url: resolveMediaUrl(primaryMedia?.url),
-                    media_type: primaryMedia?.media_type,
-                    purchased_at: new Date().toISOString(),
+                    address_summary:
+                        createdAddressSummary || formatAddress(selectedAddress),
+                    payment_card_label:
+                        createdOrder.payments?.[0]?.method?.toUpperCase() ||
+                        'Auctify Wallet',
+                    media_url: resolveMediaUrl(createdMedia?.url),
+                    media_type: createdMedia?.media_type,
+                    purchased_at:
+                        createdOrder.placed_at ??
+                        createdOrder.created_at ??
+                        new Date().toISOString(),
                 });
 
-                if ((selectedAuction.user?.id ?? selectedAuction.user_id) > 0) {
+                if ((createdOrder.seller?.id ?? selectedAuction.user?.id ?? selectedAuction.user_id) > 0) {
                     addSellerOrder(
-                        selectedAuction.user?.id ?? selectedAuction.user_id,
+                        createdOrder.seller?.id ?? selectedAuction.user?.id ?? selectedAuction.user_id,
                         {
-                            id: `${selectedAuction.id}-${Date.now()}-seller`,
-                            auction_id: selectedAuction.id,
-                            title: selectedAuction.title,
-                            category: selectedAuction.category,
-                            subcategory: selectedAuction.subcategory,
+                            id: String(createdOrder.id),
+                            auction_id: createdOrder.auction_id,
+                            title:
+                                createdOrder.auction?.title ??
+                                selectedAuction.title,
+                            category:
+                                createdOrder.auction?.category ??
+                                selectedAuction.category,
+                            subcategory:
+                                createdOrder.auction?.subcategory ??
+                                selectedAuction.subcategory,
                             seller_user_id:
-                                selectedAuction.user?.id ?? selectedAuction.user_id,
-                            seller_name:
-                                selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                                selectedAuction.user?.name ||
-                                'Unknown Seller',
-                            seller_shop_name:
-                                selectedAuction.user?.seller_registration?.shop_name?.trim() ||
-                                selectedAuction.user?.name ||
-                                'Unknown Seller',
-                            buyer_user_id: authUser?.id,
-                            buyer_name: authUser?.name,
-                            buyer_email: authUser?.email,
-                            amount_paid: finalWinner.amount,
+                                createdOrder.seller?.id ??
+                                selectedAuction.user?.id ??
+                                selectedAuction.user_id,
+                            seller_name: sellerName,
+                            seller_shop_name: sellerName,
+                            buyer_user_id: createdOrder.buyer?.id ?? authUser?.id,
+                            buyer_name:
+                                createdOrder.buyer?.name ?? authUser?.name,
+                            buyer_email:
+                                createdOrder.buyer?.email ?? authUser?.email,
+                            amount_paid: String(createdOrder.total_amount ?? totalAmount),
                             status: 'processing',
-                            address_summary: formatAddress(selectedAddress),
-                            payment_card_label: 'Auctify Wallet',
-                            media_url: resolveMediaUrl(primaryMedia?.url),
-                            media_type: primaryMedia?.media_type,
-                            purchased_at: new Date().toISOString(),
+                            address_summary:
+                                createdAddressSummary ||
+                                formatAddress(selectedAddress),
+                            payment_card_label:
+                                createdOrder.payments?.[0]?.method?.toUpperCase() ||
+                                'Auctify Wallet',
+                            media_url: resolveMediaUrl(createdMedia?.url),
+                            media_type: createdMedia?.media_type,
+                            purchased_at:
+                                createdOrder.placed_at ??
+                                createdOrder.created_at ??
+                                new Date().toISOString(),
                         },
                     );
                 }
@@ -1734,11 +1781,13 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         Delivery address
                                         <select
                                             value={selectedAddressId}
-                                            onChange={(event) =>
+                                            onChange={(event) => {
                                                 setSelectedAddressId(
                                                     event.target.value,
-                                                )
-                                            }
+                                                );
+                                                setIsAddressConfirmed(false);
+                                                setCheckoutError('');
+                                            }}
                                             disabled={
                                                 addressLoading || isCheckingOut
                                             }
@@ -1760,6 +1809,22 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         <p className="bag-checkout-field-preview">
                                             {selectedAddressPreview}
                                         </p>
+                                    </label>
+                                    <label className="bag-checkout-confirm-label">
+                                        <input
+                                            type="checkbox"
+                                            checked={isAddressConfirmed}
+                                            onChange={(event) => {
+                                                setIsAddressConfirmed(
+                                                    event.target.checked,
+                                                );
+                                                setCheckoutError('');
+                                            }}
+                                            disabled={isCheckingOut || !selectedAddressId}
+                                        />
+                                        <span>
+                                            I confirm this delivery address is correct and can be shared with the seller.
+                                        </span>
                                     </label>
 
                                     <div
@@ -1832,7 +1897,9 @@ export const AuctionDetailPage: React.FC<AuctionDetailPageProps> = ({
                                         onClick={handleConfirmCheckout}
                                         disabled={
                                             isCheckingOut ||
-                                            !addresses.length
+                                            !addresses.length ||
+                                            !selectedAddressId ||
+                                            !isAddressConfirmed
                                         }
                                     >
                                         {isCheckingOut

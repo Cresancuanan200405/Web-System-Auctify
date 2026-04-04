@@ -272,16 +272,8 @@ export const useOrderHistory = () => {
                     },
                 );
 
-                // Keep optimistic local entries not yet in DB while preferring DB records for canonical status.
-                const currentRaw = window.localStorage.getItem(orderHistoryKey);
-                const currentLocal = currentRaw
-                    ? (JSON.parse(currentRaw) as OrderHistoryItem[])
-                    : [];
-
-                const map = new Map<string, OrderHistoryItem>();
-                currentLocal.forEach((order) => map.set(String(order.id), order));
-                mappedFromApi.forEach((order) => map.set(String(order.id), order));
-                setOrders(Array.from(map.values()));
+                // API is the source of truth for persisted orders.
+                setOrders(mappedFromApi);
             } catch {
                 // Keep local orders when API is temporarily unavailable.
             }
@@ -303,7 +295,15 @@ export const useOrderHistory = () => {
     }, [orderHistoryKey, setOrders, userStorageScope]);
 
     const addOrder = (order: OrderHistoryItem) => {
-        setOrders([order, ...orders]);
+        const map = new Map<string, OrderHistoryItem>();
+        map.set(String(order.id), order);
+        orders.forEach((existingOrder) => {
+            const id = String(existingOrder.id);
+            if (!map.has(id)) {
+                map.set(id, existingOrder);
+            }
+        });
+        setOrders(Array.from(map.values()));
     };
 
     const updateOrderStatus = (orderId: string, newStatus: string) => {

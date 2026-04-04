@@ -1460,6 +1460,19 @@ body {
     word-break: break-word;
 }
 
+.bag-checkout-confirm-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    font-size: 13px;
+    line-height: 1.45;
+    color: #334155;
+}
+
+.bag-checkout-confirm-label input {
+    margin-top: 2px;
+}
+
 .checkout-deduction-box {
     padding: 10px 12px;
     border-radius: 12px;
