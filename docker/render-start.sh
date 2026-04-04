@@ -38,6 +38,14 @@ schema_has_migrations_table() {
     php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$stmt=$pdo->query("select to_regclass(\x27public.migrations\x27)");$val=$stmt?$stmt->fetchColumn():null;exit($val?0:1);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
 }
 
+bootstrap_users_migration_recorded() {
+    php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$stmt=$pdo->prepare("select count(*) from migrations where migration = ?");$stmt->execute(["0001_01_01_000000_create_users_table"]);$count=(int)$stmt->fetchColumn();exit($count>0?0:1);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
+}
+
+backfill_bootstrap_migration_rows() {
+    php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$bootstrap=["0001_01_01_000000_create_users_table"=>"users","0001_01_01_000001_create_cache_table"=>"cache","0001_01_01_000002_create_jobs_table"=>"jobs"];$batch=((int)$pdo->query("select coalesce(max(batch), 0) from migrations")->fetchColumn())+1;$tableExists=$pdo->prepare("select to_regclass(?)");$migrationExists=$pdo->prepare("select count(*) from migrations where migration = ?");$insert=$pdo->prepare("insert into migrations (migration, batch) values (?, ?)");$inserted=0;foreach($bootstrap as $migration=>$table){$tableExists->execute(["public.".$table]);$tableRef=$tableExists->fetchColumn();if(!$tableRef){continue;}$migrationExists->execute([$migration]);$already=(int)$migrationExists->fetchColumn()>0;if($already){continue;}$insert->execute([$migration,$batch]);$inserted++;}fwrite(STDOUT,"Boot config: backfilled {$inserted} bootstrap migration row(s)\n");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
+}
+
 ensure_bid_winner_wallet_columns() {
     php -r '$host=getenv("DB_HOST");$port=getenv("DB_PORT")?:"5432";$user=getenv("DB_USERNAME");$pass=getenv("DB_PASSWORD")?:"";$db=getenv("DB_DATABASE")?:"postgres";$ssl=getenv("DB_SSLMODE")?:"require";try{$pdo=new PDO("pgsql:host={$host};port={$port};dbname={$db};sslmode={$ssl}",$user,$pass,[PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION]);$pdo->exec("alter table if exists public.bid_winners add column if not exists wallet_deducted_at timestamp null");$pdo->exec("alter table if exists public.bid_winners add column if not exists wallet_deduction_failed_at timestamp null");$pdo->exec("alter table if exists public.bid_winners add column if not exists wallet_deduction_failure_reason varchar(255) null");$pdo->exec("create index if not exists bid_winners_wallet_deducted_at_index on public.bid_winners(wallet_deducted_at)");$pdo->exec("create index if not exists bid_winners_wallet_deduction_failed_at_index on public.bid_winners(wallet_deduction_failed_at)");exit(0);}catch(Throwable $e){fwrite(STDERR,$e->getMessage());exit(1);}';
 }
@@ -106,8 +114,22 @@ if [ "${RUN_MIGRATIONS:-true}" = "true" ]; then
     # rerunning bootstrap migrations causes duplicate-table deploy failures.
     if [ "${SKIP_MIGRATIONS_IF_SCHEMA_PRESENT:-true}" = "true" ] && schema_has_users_table >/dev/null 2>&1; then
         if schema_has_migrations_table >/dev/null 2>&1; then
-            echo "Boot config: schema exists and migrations table present; running pending migrations"
-            php artisan migrate --force
+            if bootstrap_users_migration_recorded >/dev/null 2>&1; then
+                echo "Boot config: schema exists and migrations table present; running pending migrations"
+                php artisan migrate --force
+            else
+                echo "Boot config: schema exists but bootstrap migration row is missing; backfilling migration records"
+                if backfill_bootstrap_migration_rows; then
+                    echo "Boot config: bootstrap migration backfill complete; running pending migrations"
+                    php artisan migrate --force
+                else
+                    echo "Boot config: bootstrap migration backfill failed; skipping auto migrations to avoid duplicate-table crash"
+                    echo "Boot config: applying safe additive schema patch for bid winner wallet deduction fields"
+                    ensure_bid_winner_wallet_columns || true
+                    echo "Boot config: ensuring wallet reservations table exists for bidding holds"
+                    ensure_wallet_reservations_table || true
+                fi
+            fi
         else
             echo "Boot config: users table exists without migrations history; skipping auto migrations"
             echo "Boot config: applying safe additive schema patch for bid winner wallet deduction fields"
