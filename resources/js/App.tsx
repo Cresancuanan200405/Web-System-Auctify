@@ -414,7 +414,7 @@ const AppContent: React.FC = () => {
             window.clearInterval(interval);
             window.removeEventListener('focus', handleFocus);
         };
-    }, [authToken, updateUser]);
+    }, [authToken, authUser, updateUser]);
 
     useEffect(() => {
         const handleAuctifyToast = (event: Event) => {

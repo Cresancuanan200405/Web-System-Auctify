@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
     adminApi,
@@ -52,7 +52,7 @@ export const AdminPaymentHistoryPage: React.FC<AdminPaymentHistoryPageProps> = (
     const [methodFilter, setMethodFilter] = useState('all');
     const [search, setSearch] = useState('');
 
-    const load = async () => {
+    const load = useCallback(async () => {
         if (!token) {
             setPayments([]);
             setLoading(false);
@@ -78,11 +78,11 @@ export const AdminPaymentHistoryPage: React.FC<AdminPaymentHistoryPageProps> = (
         } finally {
             setLoading(false);
         }
-    };
+    }, [methodFilter, search, statusFilter, token]);
 
     useEffect(() => {
         void load();
-    }, [token, statusFilter, methodFilter]);
+    }, [load]);
 
     const summary = useMemo(() => {
         let paidCount = 0;

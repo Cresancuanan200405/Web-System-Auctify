@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
     adminApi,
@@ -51,7 +51,7 @@ export const AdminOrderShipmentTrackingPage: React.FC<
     const [statusFilter, setStatusFilter] = useState('all');
     const [search, setSearch] = useState('');
 
-    const load = async () => {
+    const load = useCallback(async () => {
         if (!token) {
             setOrders([]);
             setLoading(false);
@@ -76,11 +76,11 @@ export const AdminOrderShipmentTrackingPage: React.FC<
         } finally {
             setLoading(false);
         }
-    };
+    }, [search, statusFilter, token]);
 
     useEffect(() => {
         void load();
-    }, [token, statusFilter]);
+    }, [load]);
 
     const summary = useMemo(() => {
         let pending = 0;

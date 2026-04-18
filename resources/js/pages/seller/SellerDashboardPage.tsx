@@ -5,8 +5,6 @@ import {
     useSellerOrderHistory,
     updateBuyerOrderStatus,
 } from '../../hooks/useOrderHistory';
-import { SellerOrderShipmentTrackingPage } from './SellerOrderShipmentTrackingPage';
-import { SellerPaymentHistoryPage } from './SellerPaymentHistoryPage';
 import {
     HOME_CATEGORY_OPTIONS,
     getCategoryLabel,
@@ -23,6 +21,8 @@ import {
     getAuctionDisplayStatus,
     parseAuctionTimestamp,
 } from '../../utils/auctionStatus';
+import { SellerOrderShipmentTrackingPage } from './SellerOrderShipmentTrackingPage';
+import { SellerPaymentHistoryPage } from './SellerPaymentHistoryPage';
 
 interface SellerDashboardPageProps {
     onNavigateAddProduct: () => void;
@@ -816,6 +816,7 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
         }));
     };
 
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const SellerOrdersSection: React.FC = () => {
         const { orders, updateOrderStatus } = useSellerOrderHistory(
             authUser?.id,

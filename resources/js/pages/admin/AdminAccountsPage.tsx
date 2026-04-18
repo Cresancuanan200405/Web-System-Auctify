@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { toast } from 'react-toastify';
 import {
     adminApi,
@@ -43,7 +43,7 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
         null,
     );
 
-    const loadAccounts = async () => {
+    const loadAccounts = useCallback(async () => {
         if (!token) {
             setAccounts([]);
             setLoading(false);
@@ -65,11 +65,11 @@ export const AdminAccountsPage: React.FC<AdminAccountsPageProps> = ({
         } finally {
             setLoading(false);
         }
-    };
+    }, [token]);
 
     useEffect(() => {
         void loadAccounts();
-    }, [token]);
+    }, [loadAccounts]);
 
     const runAction = async (
         account: AdminAccountIdentity,
