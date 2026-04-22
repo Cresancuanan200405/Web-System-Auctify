@@ -120,8 +120,6 @@ class HomepageContentPageController extends Controller
     public function storeVideoAd(Request $request)
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:160'],
-            'description' => ['nullable', 'string', 'max:2000'],
             'video_url' => ['nullable', 'url', 'max:500'],
             'image_url' => ['nullable', 'string', 'max:500'],
             'sort_order' => ['nullable', 'integer', 'min:0'],
@@ -136,8 +134,6 @@ class HomepageContentPageController extends Controller
     public function updateVideoAd(Request $request, VideoAd $videoAd)
     {
         $validated = $request->validate([
-            'title' => ['required', 'string', 'max:160'],
-            'description' => ['nullable', 'string', 'max:2000'],
             'video_url' => ['nullable', 'url', 'max:500'],
             'image_url' => ['nullable', 'string', 'max:500'],
             'sort_order' => ['nullable', 'integer', 'min:0'],

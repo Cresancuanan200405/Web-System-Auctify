@@ -868,15 +868,6 @@ export const HomePage: React.FC<HomePageProps> = ({
                                             />
                                         )}
                                         <div className="video-ad-overlay" />
-                                        <div className="video-ad-copy">
-                                            <div className="video-ad-label">
-                                                {video.title}
-                                            </div>
-                                            <div className="video-ad-size">
-                                                {video.description ||
-                                                    video.subtitle}
-                                            </div>
-                                        </div>
                                     </article>
                                 );
                             })}

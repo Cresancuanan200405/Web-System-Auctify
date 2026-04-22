@@ -28,10 +28,7 @@ export interface HomeCarouselSlide {
 
 export interface HomeVideoAd {
     id: string;
-    title: string;
-    subtitle: string;
     image: string;
-    description?: string;
     videoUrl?: string;
     imageUrl?: string;
 }
@@ -139,10 +136,7 @@ export const DEFAULT_HOME_PAGE_CONFIG: HomePageConfig = {
     videoAds: [
         {
             id: 'v1',
-            title: 'VIDEO ADS PLACEHOLDER',
-            subtitle: '1920 x 600 recommended',
             image: '',
-            description: 'Featured ad slot',
             videoUrl: '',
             imageUrl: '',
         },
@@ -238,10 +232,6 @@ const normalizeVideoAd = (value: unknown, index: number): HomeVideoAd => {
         typeof value === 'object' && value !== null
             ? (value as Partial<HomeVideoAd>)
             : {};
-    const description = toSafeString(
-        candidate.description,
-        toSafeString(candidate.subtitle, '1920 x 600 recommended'),
-    );
     const videoUrl = toSafeString(candidate.videoUrl, '');
     const imageUrl = toSafeString(
         candidate.imageUrl,
@@ -250,10 +240,7 @@ const normalizeVideoAd = (value: unknown, index: number): HomeVideoAd => {
 
     return {
         id: toSafeString(candidate.id, `video-${index + 1}`),
-        title: toSafeString(candidate.title, `Video Ad ${index + 1}`),
-        subtitle: toSafeString(candidate.subtitle, description),
         image: toSafeString(candidate.image, imageUrl),
-        description,
         videoUrl,
         imageUrl,
     };
@@ -288,7 +275,7 @@ export const normalizeHomePageConfig = (value: unknown): HomePageConfig => {
         .filter((item) => item.title.trim().length > 0);
     const videoAds = videoSource
         .map(normalizeVideoAd)
-        .filter((item) => item.title.trim().length > 0);
+        .filter((item) => item.id.trim().length > 0);
 
     return {
         circles:

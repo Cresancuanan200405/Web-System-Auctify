@@ -80,9 +80,9 @@ class HomepageConfigController extends Controller
             'videoAds' => [
                 [
                     'id' => 'v1',
-                    'title' => 'VIDEO ADS PLACEHOLDER',
-                    'subtitle' => '1920 x 600 recommended',
                     'image' => '',
+                    'videoUrl' => '',
+                    'imageUrl' => '',
                 ],
             ],
             'miniSlides' => [

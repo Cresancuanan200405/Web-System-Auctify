@@ -10,8 +10,6 @@ class VideoAd extends Model
     use HasFactory;
 
     protected $fillable = [
-        'title',
-        'description',
         'video_url',
         'image_url',
         'sort_order',

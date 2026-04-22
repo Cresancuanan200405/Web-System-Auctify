@@ -53,10 +53,7 @@ class HomepageConfigController extends Controller
             'miniSlides.*.image' => ['nullable', 'string', 'max:500'],
             'videoAds' => ['required', 'array', 'min:1'],
             'videoAds.*.id' => ['required', 'string', 'max:120'],
-            'videoAds.*.title' => ['required', 'string', 'max:160'],
-            'videoAds.*.subtitle' => ['nullable', 'string', 'max:500'],
             'videoAds.*.image' => ['nullable', 'string', 'max:500'],
-            'videoAds.*.description' => ['nullable', 'string', 'max:2000'],
             'videoAds.*.videoUrl' => ['nullable', 'string', 'max:500'],
             'videoAds.*.imageUrl' => ['nullable', 'string', 'max:500'],
         ]);
@@ -90,8 +87,6 @@ class HomepageConfigController extends Controller
             VideoAd::query()->delete();
             foreach ($validated['videoAds'] as $index => $video) {
                 VideoAd::query()->create([
-                    'title' => $video['title'],
-                    'description' => $this->nullableTrimmed($video['description'] ?? $video['subtitle'] ?? null),
                     'video_url' => $this->nullableTrimmed($video['videoUrl'] ?? null),
                     'image_url' => $this->nullableTrimmed($video['imageUrl'] ?? $video['image'] ?? null),
                     'sort_order' => $index,

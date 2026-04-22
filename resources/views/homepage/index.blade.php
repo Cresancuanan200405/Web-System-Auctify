@@ -59,14 +59,12 @@
         <div class="row">
             @forelse ($videoAds as $ad)
                 <article class="card">
-                    <h3>{{ $ad->title }}</h3>
-                    <p>{{ $ad->description }}</p>
                     @if (!empty($ad->video_url))
                         <video controls>
                             <source src="{{ $ad->video_url }}">
                         </video>
                     @elseif (!empty($ad->image_url))
-                        <img src="{{ $ad->image_url }}" alt="{{ $ad->title }}">
+                        <img src="{{ $ad->image_url }}" alt="Video ad image">
                     @endif
                 </article>
             @empty

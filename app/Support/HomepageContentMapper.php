@@ -115,10 +115,7 @@ class HomepageContentMapper
                 'videoAds' => $videoAds->map(function (VideoAd $videoAd): array {
                     return [
                         'id' => (string) $videoAd->id,
-                        'title' => $videoAd->title,
-                        'subtitle' => $videoAd->description ?? '1920 x 600 recommended',
                         'image' => self::normalizeMediaReference($videoAd->image_url ?? ''),
-                        'description' => $videoAd->description ?? '',
                         'videoUrl' => self::normalizeMediaReference($videoAd->video_url ?? ''),
                         'imageUrl' => self::normalizeMediaReference($videoAd->image_url ?? ''),
                     ];

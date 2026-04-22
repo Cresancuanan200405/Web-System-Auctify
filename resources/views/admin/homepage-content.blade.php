@@ -112,8 +112,6 @@
         <form method="post" action="{{ route('admin.homepage-content.video-ads.store') }}">
             @csrf
             <div class="grid">
-                <input name="title" placeholder="Title" required>
-                <textarea name="description" placeholder="Description"></textarea>
                 <input name="video_url" placeholder="Video URL">
                 <input name="image_url" placeholder="Image URL">
                 <input name="sort_order" type="number" min="0" value="0">
@@ -127,8 +125,6 @@
                     <form method="post" action="{{ route('admin.homepage-content.video-ads.update', $ad) }}">
                         @csrf
                         @method('put')
-                        <input name="title" value="{{ $ad->title }}" required>
-                        <textarea name="description">{{ $ad->description }}</textarea>
                         <input name="video_url" value="{{ $ad->video_url }}">
                         <input name="image_url" value="{{ $ad->image_url }}">
                         <input name="sort_order" type="number" min="0" value="{{ $ad->sort_order }}">

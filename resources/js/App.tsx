@@ -552,6 +552,9 @@ const AppContent: React.FC = () => {
             }
 
             if (status === 'seller-revoked') {
+                const isSellerRejected = /\brejected\b/i.test(
+                    detail.message || '',
+                );
                 setCanAccessSellerDashboard(false);
                 if (authUser) {
                     updateUser({
@@ -562,11 +565,17 @@ const AppContent: React.FC = () => {
                     });
                 }
                 setAccountStatusDialog({
-                    title: 'Seller Access Revoked',
+                    title: isSellerRejected
+                        ? 'Seller Application Rejected'
+                        : 'Seller Access Revoked',
                     message: reason
-                        ? `Seller privileges were revoked. Reason: ${reason}`
+                        ? isSellerRejected
+                          ? `Your seller application was rejected. Reason: ${reason}`
+                          : `Seller privileges were revoked. Reason: ${reason}`
                         : detail.message ||
-                          'Seller privileges were revoked by admin.',
+                          (isSellerRejected
+                              ? 'Your seller application was rejected by admin.'
+                              : 'Seller privileges were revoked by admin.'),
                     status: 'seller-revoked',
                 });
 

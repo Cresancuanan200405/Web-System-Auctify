@@ -1280,10 +1280,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             type: 'video',
             draft: {
                 id: makeId('video'),
-                title: '',
-                subtitle: '',
                 image: '',
-                description: '',
                 videoUrl: '',
                 imageUrl: '',
             },
@@ -1356,16 +1353,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
             }));
             setCreateDialog(null);
             setDialogErrors({});
-            return;
-        }
-
-        const errors: Record<string, string> = {};
-        if (!createDialog.draft.title.trim())
-            errors.videoTitle = 'Ad title is required.';
-        if (!createDialog.draft.description?.trim())
-            errors.description = 'Description is required.';
-        if (Object.keys(errors).length > 0) {
-            setDialogErrors(errors);
             return;
         }
 
@@ -5098,8 +5085,7 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                         openDeleteDialog(
                                                                             'video',
                                                                             video.id,
-                                                                            video.title ||
-                                                                                'Video ad',
+                                                                            `Video ad ${videoIndex + 1}`,
                                                                         )
                                                                     }
                                                                     title="Delete this video ad"
@@ -5164,15 +5150,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                 )}
                                                                 <div className="admin-home-video-preview-overlay" />
                                                                 <div className="admin-home-video-preview-copy">
-                                                                    <strong>
-                                                                        {video.title ||
-                                                                            'Ad title'}
-                                                                    </strong>
-                                                                    <p>
-                                                                        {video.description ||
-                                                                            video.subtitle ||
-                                                                            'Ad description'}
-                                                                    </p>
                                                                     <span
                                                                         className={`admin-video-status-pill ${video.videoUrl ? 'is-active' : ''}`}
                                                                     >
@@ -5183,60 +5160,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
                                                                 </div>
                                                             </div>
                                                             <div className="admin-editor-card-modern-fields admin-editor-video-fields">
-                                                                <label className="admin-editor-field-label">
-                                                                    <span>
-                                                                        Ad Title
-                                                                    </span>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={
-                                                                            video.title
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            updateVideo(
-                                                                                video.id,
-                                                                                {
-                                                                                    title: event
-                                                                                        .target
-                                                                                        .value,
-                                                                                },
-                                                                            )
-                                                                        }
-                                                                        placeholder="e.g. Luxury Drop"
-                                                                    />
-                                                                </label>
-                                                                <label className="admin-editor-field-label">
-                                                                    <span>
-                                                                        Description
-                                                                    </span>
-                                                                    <input
-                                                                        type="text"
-                                                                        value={
-                                                                            video.description ??
-                                                                            ''
-                                                                        }
-                                                                        onChange={(
-                                                                            event,
-                                                                        ) =>
-                                                                            updateVideo(
-                                                                                video.id,
-                                                                                {
-                                                                                    description:
-                                                                                        event
-                                                                                            .target
-                                                                                            .value,
-                                                                                    subtitle:
-                                                                                        event
-                                                                                            .target
-                                                                                            .value,
-                                                                                },
-                                                                            )
-                                                                        }
-                                                                        placeholder="Short campaign description"
-                                                                    />
-                                                                </label>
                                                                 <label className="admin-editor-field-label">
                                                                     <span>
                                                                         Video
@@ -6412,87 +6335,6 @@ export const AdminDashboardPage: React.FC<AdminDashboardPageProps> = ({
 
                             {createDialog.type === 'video' && (
                                 <div className="admin-home-dialog-grid">
-                                    <label>
-                                        <span>
-                                            Ad title{' '}
-                                            <em className="admin-dialog-required">
-                                                *
-                                            </em>
-                                        </span>
-                                        <input
-                                            type="text"
-                                            value={createDialog.draft.title}
-                                            onChange={(event) => {
-                                                setCreateDialog({
-                                                    ...createDialog,
-                                                    draft: {
-                                                        ...createDialog.draft,
-                                                        title: event.target
-                                                            .value,
-                                                    },
-                                                });
-                                                setDialogErrors((prev) => {
-                                                    const n = { ...prev };
-                                                    delete n.videoTitle;
-                                                    return n;
-                                                });
-                                            }}
-                                            placeholder="Luxury drop"
-                                            className={
-                                                dialogErrors.videoTitle
-                                                    ? 'is-invalid'
-                                                    : ''
-                                            }
-                                        />
-                                        {dialogErrors.videoTitle && (
-                                            <p className="admin-dialog-field-error">
-                                                {dialogErrors.videoTitle}
-                                            </p>
-                                        )}
-                                    </label>
-                                    <label>
-                                        <span>
-                                            Description{' '}
-                                            <em className="admin-dialog-required">
-                                                *
-                                            </em>
-                                        </span>
-                                        <input
-                                            type="text"
-                                            value={
-                                                createDialog.draft
-                                                    .description ?? ''
-                                            }
-                                            onChange={(event) => {
-                                                setCreateDialog({
-                                                    ...createDialog,
-                                                    draft: {
-                                                        ...createDialog.draft,
-                                                        description:
-                                                            event.target.value,
-                                                        subtitle:
-                                                            event.target.value,
-                                                    },
-                                                });
-                                                setDialogErrors((prev) => {
-                                                    const n = { ...prev };
-                                                    delete n.description;
-                                                    return n;
-                                                });
-                                            }}
-                                            placeholder="A short campaign description"
-                                            className={
-                                                dialogErrors.description
-                                                    ? 'is-invalid'
-                                                    : ''
-                                            }
-                                        />
-                                        {dialogErrors.description && (
-                                            <p className="admin-dialog-field-error">
-                                                {dialogErrors.description}
-                                            </p>
-                                        )}
-                                    </label>
                                     <label className="admin-home-dialog-grid-full">
                                         <span>Video File</span>
                                         <div className="admin-dialog-upload-row">
