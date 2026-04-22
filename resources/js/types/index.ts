@@ -371,12 +371,10 @@ export type AccountSection =
     | 'details'
     | 'addresses'
     | 'preferences'
-    | 'cashback'
     | 'wallet'
     | 'wishlist'
     | 'orders'
     | 'reviews'
-    | 'zvip'
     | 'verification'
     | 'seller'
     | 'delete-account';

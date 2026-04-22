@@ -37,8 +37,8 @@ export const DeleteAccountSection: React.FC<DeleteAccountSectionProps> = ({
                         <li>
                             Once your account is deleted, your profile,
                             preferences and saved auctions will be permanently
-                            removed. Any remaining wallet balance or cashback
-                            will be forfeited.
+                            removed. Any remaining wallet balance will be
+                            forfeited.
                         </li>
                         <li>
                             Make sure there are no ongoing auctions, unpaid

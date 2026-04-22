@@ -343,8 +343,6 @@ class UserMonitorController extends Controller
             'suspended_until' => $suspendedUntil,
         ])->save();
 
-        $user->tokens()->delete();
-
         $this->logAction($request, $user, 'suspend-account', $validated['reason']);
 
         AdminNotification::notify(

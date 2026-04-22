@@ -6,14 +6,12 @@ import { sellerService } from '../services/api';
 import type { AccountSection } from '../types';
 import { AddressesSection } from './account-sections/AddressesSection';
 import { BecomeSellerSection } from './account-sections/BecomeSellerSection';
-import { CashbackSection } from './account-sections/CashbackSection';
 import { DetailsSection } from './account-sections/DetailsSection';
 import { OrdersSection } from './account-sections/OrdersSection';
 import { PreferencesSection } from './account-sections/PreferencesSection';
 import { ReviewsSection } from './account-sections/ReviewsSection';
 import { WalletTopUpSection } from './account-sections/WalletTopUpSection';
 import { WishlistSection } from './account-sections/WishlistSection';
-import { ZVIPSection } from './account-sections/ZVIPSection';
 
 interface AccountPageProps {
     activeSection: AccountSection;
@@ -120,8 +118,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                 return <PreferencesSection />;
             case 'wallet':
                 return <WalletTopUpSection />;
-            case 'zvip':
-                return <ZVIPSection />;
             case 'orders':
                 return (
                     <OrdersSection
@@ -139,8 +135,6 @@ export const AccountPage: React.FC<AccountPageProps> = ({
                         onNavigateToAuction={onNavigateToAuction}
                     />
                 );
-            case 'cashback':
-                return <CashbackSection />;
             case 'seller':
                 return <BecomeSellerSection />;
             case 'verification':

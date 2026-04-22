@@ -44,8 +44,7 @@ resources/js/
 │       ├── AddressesSection.tsx     # Address management
 │       ├── PreferencesSection.tsx   # User preferences
 │       ├── WalletSection.tsx        # Wallet display
-│       ├── MyCardsSection.tsx       # Card management
-│       └── ZVIPSection.tsx          # ZVIP membership
+│       └── MyCardsSection.tsx       # Card management
 │
 └── api/
     └── client.ts                    # Axios API client
@@ -87,7 +86,6 @@ resources/js/
 - `PreferencesSection.tsx` - Notification preferences
 - `WalletSection.tsx` - Balance display, card selection
 - `MyCardsSection.tsx` - Add/delete cards
-- `ZVIPSection.tsx` - Membership benefits
 
 ---
 

@@ -21,8 +21,6 @@ export const AccountSidebar: React.FC<AccountSidebarProps> = ({
     const menuItems: { section: AccountSection; label: string }[] = [
         { section: 'details', label: 'Account information' },
         { section: 'wallet', label: 'My Wallet' },
-        { section: 'cashback', label: 'My Cashback' },
-        { section: 'zvip', label: 'My ZVIP' },
         { section: 'orders', label: 'Orders & Tracking' },
         { section: 'reviews', label: 'My Reviews' },
         { section: 'addresses', label: 'Saved Addresses' },

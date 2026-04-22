@@ -43,12 +43,10 @@ const VALID_ACCOUNT_SECTIONS: AccountSection[] = [
     'details',
     'addresses',
     'preferences',
-    'cashback',
     'wallet',
     'wishlist',
     'orders',
     'reviews',
-    'zvip',
     'seller',
     'verification',
     'delete-account',
@@ -58,12 +56,10 @@ const ACCOUNT_SECTION_TITLE_MAP: Record<AccountSection, string> = {
     details: 'Account Details',
     addresses: 'Saved Addresses',
     preferences: 'Preferences',
-    cashback: 'Cashback',
     wallet: 'Wallet',
     wishlist: 'Wishlist',
     orders: 'Orders',
     reviews: 'Reviews',
-    zvip: 'ZVIP',
     seller: 'Become a Seller',
     verification: 'Account Verification',
     'delete-account': 'Delete Account',
@@ -491,14 +487,20 @@ const AppContent: React.FC = () => {
                     hasAccess ? '1' : '0',
                 );
 
-                if (status === 'revoked') {
+                if (status === 'revoked' || status === 'rejected') {
                     const reason =
                         response.registration?.revoked_reason?.trim();
                     setAccountStatusDialog({
-                        title: 'Seller Access Revoked',
+                        title:
+                            status === 'rejected'
+                                ? 'Seller Application Rejected'
+                                : 'Seller Access Revoked',
                         message: reason
-                            ? `Seller privileges were revoked. Reason: ${reason}`
-                            : 'Seller privileges were revoked by admin.',
+                            ? `Seller privileges were ${status === 'rejected' ? 'rejected' : 'revoked'}. Reason: ${reason}`
+                            : status === 'rejected'
+                              ? 'Seller application was rejected by admin.'
+                              : 'Seller privileges were revoked by admin.',
+                        status: 'seller-revoked',
                     });
                 }
             } catch {
@@ -618,10 +620,16 @@ const AppContent: React.FC = () => {
                           ? 'This account is no longer available. Please contact support if this is unexpected.'
                           : 'Your session is no longer valid. Please sign in again.';
 
+                const baseMessage = detail.message || fallbackMessage;
+                const shouldAppendReason =
+                    Boolean(reason) &&
+                    status !== 'session-ended' &&
+                    !/\breason\s*:/i.test(baseMessage);
+
                 const message =
-                    reason && status !== 'session-ended'
-                        ? `${detail.message || fallbackMessage} Reason: ${reason}`
-                        : detail.message || fallbackMessage;
+                    shouldAppendReason && reason
+                        ? `${baseMessage} Reason: ${reason}`
+                        : baseMessage;
 
                 logout();
                 setAuctionOrigin(null);
@@ -1682,21 +1690,6 @@ const AppContent: React.FC = () => {
 
     return (
         <div className={isAdminView ? 'page page-admin' : 'page'}>
-            {!isAdminView && !isSellerContextView && (
-                <div className="promo-banner">
-                    <div className="promo-item">
-                        🎯 7 Days Free Returns | T&C Apply
-                    </div>
-                    <div className="promo-item">
-                        ⭐ Become an AUCTIFY VIP today!
-                    </div>
-                    <div className="promo-item">
-                        📱 Save more on the AUCTIFY App! 25% Off + ₱150 Off +
-                        Free Shipping
-                    </div>
-                </div>
-            )}
-
             {!isAdminView && (
                 <Header
                     onNavigateHome={handleNavigateHome}

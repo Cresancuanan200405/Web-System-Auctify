@@ -1526,9 +1526,6 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                     >
                         My Orders
                     </button>
-                    <button type="button" className="seller-dashboard-link">
-                        Mass Ship
-                    </button>
                     <button
                         type="button"
                         className={`seller-dashboard-link ${activeSection === 'shipping' ? 'seller-dashboard-link-active' : ''}`}
@@ -1567,15 +1564,6 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                         Seller Page
                     </button>
                 </div>
-                <div className="seller-dashboard-group">
-                    <p className="seller-dashboard-group-title">Marketing</p>
-                    <button type="button" className="seller-dashboard-link">
-                        Campaign
-                    </button>
-                    <button type="button" className="seller-dashboard-link">
-                        Best Price
-                    </button>
-                </div>
             </aside>
 
             <div className="seller-dashboard-main">
@@ -1583,8 +1571,8 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                     <div>
                         <h2>Seller Dashboard</h2>
                         <p className="seller-dashboard-subtext">
-                            {shopName} • Manage orders, products, and campaigns
-                            in one place.
+                            {shopName} • Manage orders and products in one
+                            place.
                         </p>
                     </div>
                     <div className="seller-dashboard-topbar-right">
@@ -2363,15 +2351,6 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                     </p>
                                 </article>
 
-                                <article className="seller-dashboard-card">
-                                    <h3 className="seller-dashboard-card-title">
-                                        Campaigns
-                                    </h3>
-                                    <p className="seller-dashboard-card-text">
-                                        Join upcoming campaigns and boost your
-                                        product reach.
-                                    </p>
-                                </article>
                             </div>
                         )}
                     </div>
@@ -2400,8 +2379,8 @@ export const SellerDashboardPage: React.FC<SellerDashboardPageProps> = ({
                                         Friday
                                     </li>
                                     <li>
-                                        New campaign slots now open for eligible
-                                        shops
+                                        New featured slots now open for
+                                        eligible shops
                                     </li>
                                 </ul>
                             </article>

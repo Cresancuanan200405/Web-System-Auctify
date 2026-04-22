@@ -34,7 +34,7 @@ Route::prefix('auth')->group(function () {
     Route::get('google/redirect', [AuthController::class, 'googleRedirect']);
     Route::get('google/callback', [AuthController::class, 'googleCallback']);
 
-    Route::middleware('auth:sanctum')->group(function () {
+    Route::middleware(['auth:sanctum', 'account.active'])->group(function () {
         Route::get('me', [AuthController::class, 'me']);
         Route::post('logout', [AuthController::class, 'logout']);
         Route::post('update-profile', [AuthController::class, 'updateProfile']);
@@ -113,7 +113,7 @@ Route::get('auctions', [AuctionController::class, 'index']);
 Route::get('auctions/{auction}', [AuctionController::class, 'show']);
 Route::get('auctions/{auction}/messages', [AuctionMessageController::class, 'index']);
 
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'account.active'])->group(function () {
     Route::post('broadcasting/auth', function (Request $request) {
         return Broadcast::auth($request);
     });
