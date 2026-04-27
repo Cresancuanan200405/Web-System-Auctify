@@ -15,6 +15,7 @@ class PromoCircle extends Model
         'color',
         'sort_order',
         'is_active',
+        'updated_by_admin_user_id',
     ];
 
     protected function casts(): array
@@ -22,6 +23,7 @@ class PromoCircle extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'updated_by_admin_user_id' => 'integer',
         ];
     }
 }

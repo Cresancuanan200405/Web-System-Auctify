@@ -1,0 +1,281 @@
+erDiagram
+    users {
+        bigint id PK
+        string name
+        string email
+        decimal wallet_balance
+        datetime email_verified_at
+    }
+
+    addresses {
+        bigint id PK
+        bigint user_id FK
+        string first_name
+        string last_name
+        string phone
+        string region
+        string province
+        string city
+    }
+
+    auctions {
+        bigint id PK
+        bigint user_id FK
+        string title
+        decimal starting_price
+        decimal current_price
+        string category
+        string subcategory
+        string status
+        datetime starts_at
+        datetime ends_at
+    }
+
+    auction_media {
+        bigint id PK
+        bigint auction_id FK
+        string media_type
+        string media_url
+        int sort_order
+    }
+
+    bids {
+        bigint id PK
+        bigint auction_id FK
+        bigint user_id FK
+        decimal amount
+        datetime created_at
+    }
+
+    bid_winners {
+        bigint id PK
+        bigint auction_id FK
+        bigint bid_id FK
+        bigint winner_user_id FK
+        bigint seller_user_id FK
+        decimal winning_amount
+        datetime won_at
+        datetime wallet_deducted_at
+    }
+
+    orders {
+        bigint id PK
+        bigint bid_winner_id FK
+        bigint auction_id FK
+        bigint buyer_user_id FK
+        bigint seller_user_id FK
+        bigint shipping_address_id FK
+        string order_number
+        string status
+        string payment_status
+        string shipping_status
+        decimal total_amount
+    }
+
+    order_shipments {
+        bigint id PK
+        bigint order_id FK
+        bigint shipped_by_user_id FK
+        string carrier
+        string tracking_number
+        string status
+        datetime shipped_at
+        datetime delivered_at
+    }
+
+    order_payments {
+        bigint id PK
+        bigint order_id FK
+        bigint payer_user_id FK
+        bigint payee_user_id FK
+        string method
+        string provider
+        string status
+        decimal amount
+        datetime paid_at
+    }
+
+    wallet_transactions {
+        bigint id PK
+        bigint user_id FK
+        string type
+        decimal amount
+        decimal balance_before
+        decimal balance_after
+        string reference
+    }
+
+    wallet_reservations {
+        bigint id PK
+        bigint user_id FK
+        bigint auction_id FK
+        bigint bid_id FK
+        decimal amount
+        string status
+        datetime reserved_at
+        datetime released_at
+        datetime consumed_at
+    }
+
+    seller_registrations {
+        bigint id PK
+        bigint user_id FK
+        string shop_name
+        string seller_type
+        string status
+        datetime submitted_at
+        datetime revoked_at
+    }
+
+    account_verifications {
+        bigint id PK
+        bigint user_id FK
+        string status
+        string full_name
+        string phone
+        datetime submitted_at
+        datetime reviewed_at
+    }
+
+    auction_messages {
+        bigint id PK
+        bigint auction_id FK
+        bigint user_id FK
+        text message
+        datetime created_at
+    }
+
+    auction_message_reads {
+        bigint id PK
+        bigint auction_id FK
+        bigint user_id FK
+        datetime last_read_at
+    }
+
+    direct_messages {
+        bigint id PK
+        bigint sender_id FK
+        bigint recipient_id FK
+        text message
+        datetime read_at
+    }
+
+    direct_message_attachments {
+        bigint id PK
+        bigint direct_message_id FK
+        string file_name
+        string mime_type
+        string file_path
+    }
+
+    homepage_configs {
+        bigint id PK
+        json circles
+        json slides
+        json mini_slides
+        json video_ads
+        bigint updated_by_admin_user_id FK
+    }
+
+    carousel_slides {
+        bigint id PK
+        string small_header_text
+        string main_title
+        string discount_text
+        string image_path
+        int sort_order
+        bool is_active
+        bigint updated_by_admin_user_id FK
+    }
+
+    video_ads {
+        bigint id PK
+        string video_url
+        string image_url
+        int sort_order
+        bool is_active
+        bigint updated_by_admin_user_id FK
+    }
+
+    promo_circles {
+        bigint id PK
+        string title
+        string subtitle_text
+        string color
+        int sort_order
+        bool is_active
+        bigint updated_by_admin_user_id FK
+    }
+
+    admin_notifications {
+        bigint id PK
+        bigint admin_user_id FK
+        bigint target_user_id FK
+        string type
+        string title
+        text message
+        datetime read_at
+    }
+
+    admin_settings {
+        bigint id PK
+        string key
+        text value
+        string type
+        string label
+        string group
+        bigint updated_by_admin_user_id FK
+    }
+
+    admin_user_actions {
+        bigint id PK
+        bigint admin_user_id FK
+        string action
+        text reason
+        datetime created_at
+    }
+
+    users ||--o{ addresses : has
+    users ||--o{ auctions : sells
+    users ||--o{ bids : places
+    users ||--o{ seller_registrations : submits
+    users ||--o{ account_verifications : requests
+    users ||--o{ wallet_transactions : owns
+    users ||--o{ wallet_reservations : holds
+
+    auctions ||--o{ auction_media : has
+    auctions ||--o{ bids : receives
+    auctions ||--|| bid_winners : resolves_to
+    bids ||--|| bid_winners : wins
+
+    bid_winners ||--|| orders : creates
+    auctions ||--o{ orders : ordered_from
+    users ||--o{ orders : buyer_user_id
+    users ||--o{ orders : seller_user_id
+    addresses ||--o{ orders : shipping_address_id
+
+    orders ||--o{ order_shipments : shipped_by
+    orders ||--o{ order_payments : paid_by
+    users ||--o{ order_shipments : shipped_by_user_id
+    users ||--o{ order_payments : payer_or_payee
+
+    auctions ||--o{ wallet_reservations : reserves_for
+    bids ||--o{ wallet_reservations : optional_bid_link
+
+    auctions ||--o{ auction_messages : has_chat
+    users ||--o{ auction_messages : writes
+    auctions ||--o{ auction_message_reads : read_state
+    users ||--o{ auction_message_reads : read_state
+
+    users ||--o{ direct_messages : sender
+    users ||--o{ direct_messages : recipient
+    direct_messages ||--o{ direct_message_attachments : has
+
+    users ||--o{ admin_notifications : admin_actor
+    users ||--o{ admin_notifications : target_user
+    users ||--o{ admin_settings : updated_by_admin
+    users ||--o{ homepage_configs : updated_by_admin
+    users ||--o{ carousel_slides : updated_by_admin
+    users ||--o{ video_ads : updated_by_admin
+    users ||--o{ promo_circles : updated_by_admin
+    users ||--o{ admin_user_actions : performed_by

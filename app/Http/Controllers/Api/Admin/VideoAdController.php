@@ -29,6 +29,7 @@ class VideoAdController extends Controller
             'image_url' => $validated['image_url'] ?? null,
             'sort_order' => $validated['sort_order'] ?? 0,
             'is_active' => $validated['is_active'] ?? true,
+            'updated_by_admin_user_id' => $request->user()?->id,
         ]);
 
         return response()->json(['data' => $videoAd], 201);
@@ -49,6 +50,7 @@ class VideoAdController extends Controller
         ]);
 
         $videoAd->fill($validated);
+        $videoAd->updated_by_admin_user_id = $request->user()?->id;
         $videoAd->save();
 
         return response()->json(['data' => $videoAd]);

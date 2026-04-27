@@ -14,6 +14,7 @@ class VideoAd extends Model
         'image_url',
         'sort_order',
         'is_active',
+        'updated_by_admin_user_id',
     ];
 
     protected function casts(): array
@@ -21,6 +22,7 @@ class VideoAd extends Model
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'updated_by_admin_user_id' => 'integer',
         ];
     }
 }

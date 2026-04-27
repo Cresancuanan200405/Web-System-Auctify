@@ -14,6 +14,7 @@ class AdminSetting extends Model
         'label',
         'description',
         'group',
+        'updated_by_admin_user_id',
     ];
 
     /**

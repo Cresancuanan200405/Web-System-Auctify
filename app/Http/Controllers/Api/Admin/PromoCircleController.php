@@ -31,6 +31,7 @@ class PromoCircleController extends Controller
             'color' => $validated['color'],
             'sort_order' => $validated['sort_order'] ?? 0,
             'is_active' => $validated['is_active'] ?? true,
+            'updated_by_admin_user_id' => $request->user()?->id,
         ]);
 
         return response()->json(['data' => $circle], 201);
@@ -52,6 +53,7 @@ class PromoCircleController extends Controller
         ]);
 
         $promoCircle->fill($validated);
+        $promoCircle->updated_by_admin_user_id = $request->user()?->id;
         $promoCircle->save();
 
         return response()->json(['data' => $promoCircle]);

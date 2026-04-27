@@ -18,6 +18,7 @@ class CarouselSlide extends Model
         'description_text',
         'sort_order',
         'is_active',
+        'updated_by_admin_user_id',
     ];
 
     protected function casts(): array
@@ -26,6 +27,7 @@ class CarouselSlide extends Model
             'brand_tags' => 'array',
             'is_active' => 'boolean',
             'sort_order' => 'integer',
+            'updated_by_admin_user_id' => 'integer',
         ];
     }
 }

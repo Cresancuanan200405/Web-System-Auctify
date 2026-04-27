@@ -19,6 +19,7 @@ class AdminSettingController extends Controller
             'label'       => $s->label,
             'description' => $s->description,
             'group'       => $s->group,
+            'updatedByAdminUserId' => $s->updated_by_admin_user_id,
         ];
     }
 
@@ -67,6 +68,7 @@ class AdminSettingController extends Controller
         foreach ($validated['settings'] as $key => $value) {
             AdminSetting::where('key', $key)->update([
                 'value'      => $value,
+                'updated_by_admin_user_id' => $request->user()?->id,
                 'updated_at' => now(),
             ]);
         }

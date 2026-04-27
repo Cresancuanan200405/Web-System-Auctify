@@ -58,7 +58,9 @@ class HomepageConfigController extends Controller
             'videoAds.*.imageUrl' => ['nullable', 'string', 'max:500'],
         ]);
 
-        DB::transaction(function () use ($validated) {
+        DB::transaction(function () use ($validated, $request) {
+            $adminUserId = $request->user()?->id;
+
             PromoCircle::query()->delete();
             foreach ($validated['circles'] as $index => $circle) {
                 PromoCircle::query()->create([
@@ -67,6 +69,7 @@ class HomepageConfigController extends Controller
                     'color' => $circle['tone'],
                     'sort_order' => $index,
                     'is_active' => true,
+                    'updated_by_admin_user_id' => $adminUserId,
                 ]);
             }
 
@@ -81,6 +84,7 @@ class HomepageConfigController extends Controller
                     'description_text' => $this->nullableTrimmed($slide['disclaimer'] ?? null),
                     'sort_order' => $index,
                     'is_active' => true,
+                    'updated_by_admin_user_id' => $adminUserId,
                 ]);
             }
 
@@ -91,6 +95,7 @@ class HomepageConfigController extends Controller
                     'image_url' => $this->nullableTrimmed($video['imageUrl'] ?? $video['image'] ?? null),
                     'sort_order' => $index,
                     'is_active' => true,
+                    'updated_by_admin_user_id' => $adminUserId,
                 ]);
             }
 
@@ -103,9 +108,13 @@ class HomepageConfigController extends Controller
             ];
 
             if ($legacyConfig) {
-                $legacyConfig->update($legacyPayload);
+                $legacyConfig->update($legacyPayload + [
+                    'updated_by_admin_user_id' => $adminUserId,
+                ]);
             } else {
-                HomepageConfig::query()->create($legacyPayload);
+                HomepageConfig::query()->create($legacyPayload + [
+                    'updated_by_admin_user_id' => $adminUserId,
+                ]);
             }
         });
 

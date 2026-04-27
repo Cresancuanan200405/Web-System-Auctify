@@ -14,6 +14,7 @@ class HomepageConfig extends Model
         'slides',
         'mini_slides',
         'video_ads',
+        'updated_by_admin_user_id',
     ];
 
     protected function casts(): array
@@ -23,6 +24,7 @@ class HomepageConfig extends Model
             'slides' => 'array',
             'mini_slides' => 'array',
             'video_ads' => 'array',
+            'updated_by_admin_user_id' => 'integer',
         ];
     }
 }

@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\DB;
 class AdminNotification extends Model
 {
     protected $fillable = [
+        'admin_user_id',
+        'target_user_id',
         'type',
         'title',
         'message',
@@ -23,6 +25,16 @@ class AdminNotification extends Model
         'data'    => 'array',
         'read_at' => 'datetime',
     ];
+
+    public function adminUser()
+    {
+        return $this->belongsTo(User::class, 'admin_user_id');
+    }
+
+    public function targetUser()
+    {
+        return $this->belongsTo(User::class, 'target_user_id');
+    }
 
     public function isRead(): bool
     {
@@ -36,9 +48,18 @@ class AdminNotification extends Model
         }
     }
 
-    public static function notify(string $type, string $title, string $message, array $data = []): self
+    public static function notify(
+        string $type,
+        string $title,
+        string $message,
+        array $data = [],
+        ?int $adminUserId = null,
+        ?int $targetUserId = null
+    ): self
     {
         return self::create([
+            'admin_user_id' => $adminUserId,
+            'target_user_id' => $targetUserId,
             'type'    => $type,
             'title'   => $title,
             'message' => $message,

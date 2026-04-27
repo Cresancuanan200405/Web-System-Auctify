@@ -38,6 +38,7 @@ class CarouselSlideController extends Controller
             'description_text' => $validated['description_text'] ?? null,
             'sort_order' => $validated['sort_order'] ?? 0,
             'is_active' => $validated['is_active'] ?? true,
+            'updated_by_admin_user_id' => $request->user()?->id,
         ]);
 
         return response()->json(['data' => $slide], 201);
@@ -63,6 +64,7 @@ class CarouselSlideController extends Controller
         ]);
 
         $carouselSlide->fill($validated);
+        $carouselSlide->updated_by_admin_user_id = $request->user()?->id;
         $carouselSlide->save();
 
         return response()->json(['data' => $carouselSlide]);
